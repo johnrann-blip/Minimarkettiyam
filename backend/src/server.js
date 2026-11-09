@@ -15,10 +15,25 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
+// Trust only the reverse-proxy hop(s) explicitly configured by the deployment.
+// Never default to trusting every forwarded header.
+const trustProxyRaw = String(process.env.TRUST_PROXY || '').trim();
+function parseTrustProxySetting(raw) {
+  if (!raw) return false;
+  if (/^true$/i.test(raw)) return 1;
+  if (/^false$/i.test(raw)) return false;
+  if (/^\\d+$/.test(raw)) return Number(raw);
+  return raw; // Express also accepts trusted IPs/CIDRs and named ranges.
+}
+app.set('trust proxy', parseTrustProxySetting(trustProxyRaw));
+
 function validateRuntimeConfig() {
   const errors = [];
   if (!process.env.DATABASE_URL) errors.push('DATABASE_URL is required.');
   if (!Number.isInteger(port) || port < 1 || port > 65535) errors.push('PORT must be an integer from 1 to 65535.');
+  if (process.env.NODE_ENV === 'production' && !trustProxyRaw) {
+    errors.push('TRUST_PROXY must be explicitly configured for the hosting proxy in production.');
+  }
 
   if (process.env.NODE_ENV === 'production') {
     let publicUrl;
