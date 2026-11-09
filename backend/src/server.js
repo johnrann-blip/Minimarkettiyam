@@ -620,7 +620,7 @@ app.get('/api/admin/customers', adminOnly, async (_req,res) => {
       SELECT c.id,c.full_name,c.phone,c.is_active,c.created_at,
              COUNT(o.id)::int AS order_count,
              COALESCE(SUM(o.total_toman) FILTER (WHERE o.payment_status='verified' AND o.status<>'cancelled'),0)::bigint AS total_spent_toman
-      FROM customers c LEFT JOIN orders o ON o.customer_id=c.id
+      FROM customers c LEFT JOIN orders o ON (o.customer_id=c.id OR o.phone=c.phone)
       GROUP BY c.id ORDER BY c.created_at DESC LIMIT 500
     `);
     res.json(result.rows);
@@ -721,10 +721,10 @@ app.patch('/api/admin/customers/:id/status', adminOnly, async (req,res) => {
   const client=await pool.connect();
   try {
     await client.query('BEGIN');
-    const found=await client.query('SELECT id,is_active FROM customers WHERE id=$1 FOR UPDATE',[id]);
+    const found=await client.query('SELECT id,is_active,phone FROM customers WHERE id=$1 FOR UPDATE',[id]);
     if(!found.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'مشتری پیدا نشد.'});}
     if(!active){
-      const orders=await client.query('SELECT 1 FROM orders WHERE customer_id=$1 LIMIT 1',[id]);
+      const orders=await client.query('SELECT 1 FROM orders WHERE customer_id=$1 OR phone=$2 LIMIT 1',[id,found.rows[0].phone]);
       if(orders.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'این مشتری سابقه سفارش دارد و قابل غیرفعال‌سازی از این بخش نیست.'});}
       await client.query('DELETE FROM customer_sessions WHERE customer_id=$1',[id]);
     }
