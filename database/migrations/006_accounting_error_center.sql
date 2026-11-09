@@ -29,16 +29,9 @@ CREATE TABLE IF NOT EXISTS accounting_expenses (
 );
 ALTER TABLE accounting_expenses
   DROP CONSTRAINT IF EXISTS accounting_expenses_amount_toman_check;
-DO $
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname='accounting_expenses_amount_nonzero'
-      AND conrelid='accounting_expenses'::regclass
-  ) THEN
-    ALTER TABLE accounting_expenses
-      ADD CONSTRAINT accounting_expenses_amount_nonzero CHECK (amount_toman <> 0);
-  END IF;
-END $;
+ALTER TABLE accounting_expenses
+  DROP CONSTRAINT IF EXISTS accounting_expenses_amount_nonzero;
+ALTER TABLE accounting_expenses
+  ADD CONSTRAINT accounting_expenses_amount_nonzero CHECK (amount_toman <> 0);
 CREATE INDEX IF NOT EXISTS idx_accounting_expenses_date
   ON accounting_expenses(expense_date DESC);
