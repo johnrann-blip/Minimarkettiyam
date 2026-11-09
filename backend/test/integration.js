@@ -26,6 +26,8 @@ const db = new Pool({ connectionString: env.DATABASE_URL });
 let productId = null;
 let orderCode = null;
 let uploadedImageFile = null;
+let uploadedImageUrl = null;
+let secondProductId = null;
 
 function assert(condition, message) {
   if (!condition) throw new Error('FAIL: ' + message);
@@ -83,6 +85,7 @@ async function run() {
     r.data.image_url.startsWith('/uploads/products/') && r.data.image_url.endsWith('.png'),
     'آپلود امن عکس محصول با کلید مدیر');
   uploadedImageFile = path.basename(r.data.image_url);
+  uploadedImageUrl = r.data.image_url;
 
   const uploadedImage = await fetch(BASE + r.data.image_url);
   const uploadedBytes = Buffer.from(await uploadedImage.arrayBuffer());
@@ -104,6 +107,9 @@ async function run() {
 
   r = await request('/api/categories');
   assert(r.status === 200 && r.data.length >= 3, 'دریافت دسته‌بندی‌ها');
+  const bagsCategory = r.data.find(x => x.slug === 'bags-accessories');
+  const beautyCategory = r.data.find(x => x.slug === 'beauty');
+  assert(!!bagsCategory && !!beautyCategory, 'وجود دسته‌های مستقل کیف و لوازم آرایشی');
 
   r = await request('/api/admin/products');
   assert(r.status === 401, 'رد دسترسی مدیر بدون کلید');
@@ -118,7 +124,7 @@ async function run() {
   r = await request('/api/admin/products', { admin: true });
   assert(r.status === 200 && Array.isArray(r.data), 'دریافت فهرست محصولات مدیر');
 
-  const categoryId = r = (await request('/api/categories')).data[0].id;
+  const categoryId = bagsCategory.id;
 
   r = await request('/api/admin/products', {
     method: 'POST',
@@ -131,15 +137,37 @@ async function run() {
       price_toman: 12000,
       sale_price_toman: 10000,
       stock: 5,
+      image_url: uploadedImageUrl,
+      is_active: true
+    }
+  });
+  assert(r.status === 201 && r.data.id && r.data.image_url === uploadedImageUrl, 'ثبت محصول همراه با تصویر آپلودشده');
+  productId = r.data.id;
+
+  r = await request('/api/admin/products', {
+    method: 'POST',
+    admin: true,
+    body: {
+      sku: SKU + '-BEAUTY',
+      name: 'نمونه آزمایشی لوازم آرایشی',
+      category_id: beautyCategory.id,
+      description: 'این محصول فقط برای آزمون دسته‌بندی است.',
+      price_toman: 18000,
+      sale_price_toman: null,
+      stock: 2,
       image_url: '',
       is_active: true
     }
   });
-  assert(r.status === 201 && r.data.id, 'ایجاد محصول');
-  productId = r.data.id;
+  assert(r.status === 201 && r.data.id, 'ثبت نمونه آزمایشی لوازم آرایشی');
+  secondProductId = r.data.id;
 
   r = await request('/api/products');
-  assert(r.status === 200 && r.data.some(p => String(p.id) === String(productId)), 'نمایش محصول در فروشگاه');
+  assert(r.status === 200 && r.data.some(p => String(p.id) === String(productId)) && r.data.some(p => String(p.id) === String(secondProductId)), 'نمایش نمونه‌های کیف و لوازم آرایشی در فروشگاه');
+  r = await request('/api/products?category=bags-accessories');
+  assert(r.status === 200 && r.data.some(p => String(p.id) === String(productId)) && !r.data.some(p => String(p.id) === String(secondProductId)), 'فیلتر مستقل دسته کیف');
+  r = await request('/api/products?category=beauty');
+  assert(r.status === 200 && r.data.some(p => String(p.id) === String(secondProductId)) && !r.data.some(p => String(p.id) === String(productId)), 'فیلتر مستقل دسته لوازم آرایشی');
 
   r = await request(`/api/admin/products/${productId}`, {
     method: 'PATCH',
@@ -326,6 +354,7 @@ async function run() {
       }
       if (orderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [orderCode]);
       if (productId) await db.query('DELETE FROM products WHERE id=$1', [productId]);
+      if (secondProductId) await db.query('DELETE FROM products WHERE id=$1', [secondProductId]);
     } catch (error) {
       console.error('Test cleanup warning:', error.message);
       process.exitCode = 1;
