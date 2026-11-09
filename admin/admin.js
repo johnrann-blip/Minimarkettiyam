@@ -65,6 +65,7 @@ $('#imageFile').addEventListener('change', () => {
   }
   $('#imagePreview').src = URL.createObjectURL(file);
   $('#imagePreview').hidden = false;
+  message('عکس انتخاب شد و پیش‌نمایش آن آماده است. برای آپلود و ذخیره عکس، دکمه «ذخیره تغییرات» را بزن.');
 });
 
 $('#saveKey').onclick = async () => {
@@ -95,6 +96,11 @@ $('#productForm').onsubmit = async event => {
     data.sale_price_toman === '' ? null : Number(data.sale_price_toman);
 
   const editing = Boolean(id);
+
+  const submitButton = $('#submitProduct');
+  submitButton.disabled = true;
+  submitButton.textContent = imageFile ? 'در حال آپلود عکس و ذخیره...' : 'در حال ذخیره...';
+  message(imageFile ? 'در حال آپلود عکس؛ لطفاً صفحه را نبند...' : 'در حال ذخیره محصول...');
 
   try {
     if (imageFile) {
@@ -129,7 +135,10 @@ $('#productForm').onsubmit = async event => {
     resetProductForm();
     await products();
   } catch (error) {
-    message(error.message);
+    message('ذخیره محصول انجام نشد: ' + error.message);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = editing ? 'ذخیره تغییرات' : 'ثبت محصول';
   }
 };
 
