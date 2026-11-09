@@ -31,6 +31,8 @@ let orderCode = null;
 let uploadedImageFile = null;
 let uploadedImageUrl = null;
 let secondProductId = null;
+let memberProductId = null;
+let memberSessionCookie = null;
 
 function assert(condition, message) {
   if (!condition) throw new Error('FAIL: ' + message);
@@ -49,7 +51,7 @@ async function request(path, options = {}) {
 
   let data = {};
   try { data = await response.json(); } catch {}
-  return { status: response.status, data };
+  return { status: response.status, data, cookie: response.headers.get('set-cookie') };
 }
 
 async function waitForServer() {
@@ -64,6 +66,8 @@ async function waitForServer() {
 }
 
 async function run() {
+  const membershipMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/004_customer_membership.sql'), 'utf8');
+  await db.query(membershipMigration);
   await waitForServer();
 
   let staticResponse = await fetch(BASE + '/admin/');
@@ -130,6 +134,16 @@ async function run() {
   r = await request('/api/health');
   assert(r.status === 200 && r.data.status === 'ok', 'سلامت API و اتصال دیتابیس');
 
+  const memberPhone = '0912' + String(crypto.randomInt(1000000,9999999));
+  r = await request('/api/auth/register', {method:'POST',body:{name:'عضو آزمایشی',phone:memberPhone,password:'TestMemberPass123'}});
+  assert(r.status === 201 && r.data.discount_percent === 5 && !!r.cookie, 'ثبت‌نام مشتری و ایجاد نشست عضویت با تخفیف ۵ درصد');
+  memberSessionCookie = r.cookie;
+  r = await request('/api/auth/me', {headers:{cookie:memberSessionCookie}});
+  assert(r.status === 200 && r.data.customer && r.data.customer.phone === memberPhone, 'بازیابی امن وضعیت ورود مشتری');
+  r = await request('/api/auth/login', {method:'POST',body:{phone:memberPhone,password:'WrongPassword123'}});
+  assert(r.status === 401, 'رد رمز عبور اشتباه مشتری');
+
+
   r = await request('/api/categories');
   assert(r.status === 200 && r.data.length >= 3, 'دریافت دسته‌بندی‌ها');
   const bagsCategory = r.data.find(x => x.slug === 'bags-accessories');
@@ -186,6 +200,20 @@ async function run() {
   });
   assert(r.status === 201 && r.data.id, 'ثبت نمونه آزمایشی لوازم آرایشی');
   secondProductId = r.data.id;
+
+  r = await request('/api/admin/products', {method:'POST',admin:true,body:{
+    sku:SKU+'-MEMBER',name:'محصول واجد تخفیف عضویت',category_id:categoryId,
+    description:'آزمون تخفیف عضویت',price_toman:12000,sale_price_toman:null,
+    cost_price_toman:7000,stock:5,image_url:'',is_active:true
+  }});
+  assert(r.status===201 && r.data.id && Number(r.data.cost_price_toman)===7000, 'ثبت بهای تمام‌شده محصول برای کنترل حاشیه سود');
+  memberProductId=r.data.id;
+  r=await request('/api/products');
+  assert(r.status===200 && Number(r.data.find(p=>String(p.id)===String(memberProductId)).sale_price_toman||12000)===12000, 'نمایش قیمت عادی برای مشتری مهمان');
+  r=await request('/api/products',{headers:{cookie:memberSessionCookie}});
+  const memberProduct=r.data.find(p=>String(p.id)===String(memberProductId));
+  assert(r.status===200 && Number(memberProduct.sale_price_toman)===11400 && Number(memberProduct.member_discount_toman)===600, 'اعمال تخفیف ۵ درصدی عضو فقط بالاتر از قیمت خرید');
+
 
   r = await request('/api/products');
   assert(r.status === 200 && r.data.some(p => String(p.id) === String(productId)) && r.data.some(p => String(p.id) === String(secondProductId)), 'نمایش نمونه‌های کیف و لوازم آرایشی در فروشگاه');
@@ -390,6 +418,11 @@ async function run() {
       if (orderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [orderCode]);
       if (productId) await db.query('DELETE FROM products WHERE id=$1', [productId]);
       if (secondProductId) await db.query('DELETE FROM products WHERE id=$1', [secondProductId]);
+      if (memberProductId) await db.query('DELETE FROM products WHERE id=$1', [memberProductId]);
+      if (memberSessionCookie) {
+        const token=(memberSessionCookie.match(/avelora_session=([^;]+)/)||[])[1];
+        if(token) await db.query('DELETE FROM customer_sessions WHERE token_hash=$1',[crypto.createHash('sha256').update(decodeURIComponent(token)).digest('hex')]);
+      }
     } catch (error) {
       console.error('Test cleanup warning:', error.message);
       process.exitCode = 1;
