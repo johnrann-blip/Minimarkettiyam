@@ -9,13 +9,13 @@ function escapeHtml(value) {
 let adminUser = null;
 const ALL_ADMIN_PERMISSIONS = [
   'products.view','products.create','products.update','products.archive',
-  'orders.view','orders.update','customers.view','customers.manage','settings.view','settings.update','payments.view','payments.manage',
+  'orders.view','orders.update','customers.view','customers.manage','payments.view','payments.manage',
   'reports.view','audit.view'
 ];
 const PERMISSION_LABELS = {
   'products.view':'مشاهده محصولات','products.create':'ثبت محصول','products.update':'ویرایش محصول',
   'products.archive':'بایگانی محصول','orders.view':'مشاهده سفارش‌ها','orders.update':'تغییر وضعیت سفارش',
-  'customers.view':'مشاهده مشتریان','customers.manage':'غیرفعال‌سازی مشتری بدون سفارش','settings.view':'مشاهده تنظیمات','settings.update':'تغییر تنظیمات','payments.view':'مشاهده اطلاعات بانکی و پرداخت','payments.manage':'مدیریت اطلاعات بانکی و پرداخت',
+  'customers.view':'مشاهده مشتریان','customers.manage':'غیرفعال‌سازی مشتری بدون سفارش','payments.view':'مشاهده اطلاعات بانکی و پرداخت','payments.manage':'مدیریت اطلاعات بانکی و پرداخت',
   'reports.view':'گزارش‌ها','audit.view':'سوابق فعالیت'
 };
 function adminCan(permission) {
