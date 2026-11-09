@@ -306,8 +306,8 @@ function renderProductCard(p, archived = false) {
         ${archived
           ? (adminCan('products.archive') ? `<button type="button" data-restore="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">فعال‌سازی مجدد</button>` : '')
           : `
-            ${adminCan('products.update') ? `<button type="button" data-edit="${escapeHtml(p.id)}">ویرایش محصول</button>${adminCan('products.archive') ? `<button type="button" data-toggle="${escapeHtml(p.id)}" data-active="1">غیرفعال‌کردن</button>` : ''}` : ''}
-            ${adminCan('products.archive') ? `<button type="button" data-remove="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">انتقال به بایگانی</button>` : ''}
+            ${adminCan('products.update') ? `<button type="button" data-edit="${escapeHtml(p.id)}">ویرایش محصول</button>` : ''}
+            ${adminCan('products.archive') ? `<button type="button" data-toggle="${escapeHtml(p.id)}" data-active="1">غیرفعال‌کردن</button><button type="button" data-remove="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">انتقال به بایگانی</button>` : ''}
           `}
       </div>
     </div>
