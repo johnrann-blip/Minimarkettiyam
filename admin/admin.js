@@ -152,6 +152,19 @@ $('#imageFile').addEventListener('change', () => {
   message('عکس انتخاب شد و پیش‌نمایش آن آماده است. برای آپلود و ذخیره عکس، دکمه «ذخیره تغییرات» را بزن.');
 });
 
+function showAdminPage(page) {
+  const sections=Array.from(document.querySelectorAll('#adminWorkspace section[data-page]'));
+  const allowedPages=new Set(sections.filter(x=>x.dataset.allowed==='true').map(x=>x.dataset.page));
+  if(!allowedPages.has(page)) page=allowedPages.values().next().value || '';
+  sections.forEach(section=>{section.hidden=section.dataset.page!==page || section.dataset.allowed!=='true';});
+  document.querySelectorAll('[data-nav-page]').forEach(button=>{
+    button.hidden=!allowedPages.has(button.dataset.navPage);
+    button.classList.toggle('active',button.dataset.navPage===page);
+  });
+}
+document.querySelectorAll('[data-nav-page]').forEach(button=>{
+  button.addEventListener('click',()=>showAdminPage(button.dataset.navPage));
+});
 function setAdminSession(admin) {
   adminUser = admin || null;
   $('#adminAuth').hidden = Boolean(adminUser);
@@ -162,14 +175,18 @@ function setAdminSession(admin) {
   }
   document.body.classList.add('admin-authenticated');
   $('#adminIdentity').textContent = 'واردشده: ' + adminUser.display_name + ' (' + (adminUser.role === 'owner' ? 'مالک فروشگاه' : 'مدیر') + ')';
-  $('#managerSection').hidden = adminUser.role !== 'owner';
-  $('#auditSection').hidden = !adminCan('audit.view');
-  $('#productFormSection').hidden = !(adminCan('products.create') || adminCan('products.update'));
-  $('#productsSection').hidden = !adminCan('products.view');
-  $('#archiveSection').hidden = !adminCan('products.view');
-  $('#settingsSection').hidden = !(adminCan('settings.view') || adminCan('settings.update'));
-  $('#customersSection').hidden = !adminCan('customers.view');
-  $('#ordersSection').hidden = !adminCan('orders.view');
+  const pageAccess = {
+    managers:adminUser.role==='owner',
+    audit:adminCan('audit.view'),
+    products:adminCan('products.view') || adminCan('products.create') || adminCan('products.update') || adminCan('products.archive'),
+    settings:adminCan('settings.view') || adminCan('settings.update'),
+    customers:adminCan('customers.view'),
+    orders:adminCan('orders.view') || adminCan('orders.update')
+  };
+  for (const section of document.querySelectorAll('#adminWorkspace section[data-page]')) {
+    section.dataset.allowed = String(Boolean(pageAccess[section.dataset.page]));
+  }
+  showAdminPage(pageAccess.products?'products':Object.keys(pageAccess).find(page=>pageAccess[page]));
   for (const field of $('#settingsForm').elements) field.disabled = !adminCan('settings.update');
   Promise.all([
     adminCan('products.view') || adminCan('products.create') || adminCan('products.update') ? products() : Promise.resolve(),
