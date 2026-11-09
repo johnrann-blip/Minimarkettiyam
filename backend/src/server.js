@@ -100,8 +100,14 @@ const orderRateLimit = createRateLimiter({
   message: 'تعداد تلاش‌های ثبت سفارش بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
 });
 
+const paymentRateLimit = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  max: 8,
+  message: 'تعداد درخواست‌های پرداخت بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
+});
+
 app.use('/api/admin', adminRateLimit);
-app.use('/api/payments/zarinpal', createZarinpalRouter({ pool }));
+app.use('/api/payments/zarinpal', createZarinpalRouter({ pool, paymentRateLimit }));
 
 const toman = n => Number.isSafeInteger(Number(n)) && Number(n) >= 0;
 const orderCode = () => 'MM' + Date.now().toString().slice(-9) + crypto.randomBytes(2).toString('hex').toUpperCase();
