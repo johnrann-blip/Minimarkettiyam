@@ -647,7 +647,7 @@ app.post('/api/admin/accounting/expenses', adminOnly, async (req,res) => {
   const description=String(req.body?.description||'').trim();
   const amount=Number(req.body?.amount_toman);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(rawDate))||Number.isNaN(Date.parse(String(rawDate)+'T00:00:00Z'))||
-     !category||category.length>80||description.length>500||!Number.isSafeInteger(amount)||amount<=0){
+     !category||category.length>80||description.length>500||!Number.isSafeInteger(amount)||amount===0){
     return res.status(400).json({error:'تاریخ، دسته‌بندی، توضیح و مبلغ هزینه معتبر الزامی است.'});
   }
   try{
