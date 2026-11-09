@@ -58,3 +58,14 @@ jobs:
       - name: Full integration tests
         working-directory: backend
         run: npm run test:integration
+      - name: Create isolated restore-test database
+        run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE avelora_restore_test"
+      - name: Backup PostgreSQL and uploads
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          BACKUP_DIR: ${{ runner.temp }}/avelora-backups
+        run: bash backend/scripts/backup.sh
+      - name: Restore backup into isolated empty database
+        env:
+          RESTORE_TEST_DATABASE_URL: postgresql://u0_a289:test-password@127.0.0.1:5432/avelora_restore_test
+        run: bash backend/scripts/verify-backup.sh "${{ runner.temp }}/avelora-backups/"*.tar.gz
