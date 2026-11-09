@@ -40,6 +40,65 @@ function message(text) {
   $('#msg').textContent = text;
 }
 
+async function loadManagers() {
+  try {
+    const managers = await request('/api/admin/auth/managers');
+    $('#managerList').innerHTML = managers.map(manager => `
+      <div class="order manager-card" data-manager-id="${escapeHtml(manager.id)}">
+        <b>${escapeHtml(manager.display_name)} — @${escapeHtml(manager.username)}</b>
+        <p>آخرین ورود: ${manager.last_login_at ? new Date(manager.last_login_at).toLocaleString('fa-IR') : 'هنوز وارد نشده'}</p>
+        <label class="setting-check"><input class="manager-active" type="checkbox" ${manager.is_active ? 'checked' : ''}> حساب فعال باشد</label>
+        <div class="permission-grid">
+          ${ALL_ADMIN_PERMISSIONS.map(permission => `
+            <label><input class="manager-permission" type="checkbox" value="${permission}" ${(manager.permissions || []).includes(permission) ? 'checked' : ''}> ${PERMISSION_LABELS[permission]}</label>
+          `).join('')}
+        </div>
+        <button type="button" data-manager-save="${escapeHtml(manager.id)}">ذخیره دسترسی‌های این مدیر</button>
+      </div>
+    `).join('') || 'هنوز مدیر دیگری تعریف نشده است.';
+  } catch(error) { $('#managerList').textContent = error.message; }
+}
+$('#managerForm').onsubmit = async event => {
+  event.preventDefault();
+  const form=event.currentTarget;
+  const data=Object.fromEntries(new FormData(form).entries());
+  data.permissions=Array.from(form.querySelectorAll('[name="permissions"]:checked')).map(x=>x.value);
+  try {
+    await request('/api/admin/auth/managers',{method:'POST',body:JSON.stringify(data)});
+    form.reset();
+    message('حساب مدیر ساخته شد. اطلاعات ورود را امن به خودش تحویل بده.');
+    await loadManagers();
+  } catch(error) { message(error.message); }
+};
+$('#managerList').addEventListener('click',async event=>{
+  const button=event.target.closest('[data-manager-save]');
+  if(!button) return;
+  const card=button.closest('[data-manager-id]');
+  const permissions=Array.from(card.querySelectorAll('.manager-permission:checked')).map(x=>x.value);
+  const is_active=card.querySelector('.manager-active').checked;
+  try {
+    await request('/api/admin/auth/managers/'+encodeURIComponent(button.dataset.managerSave),{
+      method:'PATCH',body:JSON.stringify({permissions,is_active})
+    });
+    message('دسترسی مدیر به‌روزرسانی شد؛ نشست‌های او در صورت غیرفعال‌سازی باطل می‌شوند.');
+    await loadManagers();
+  } catch(error) { message(error.message); }
+});
+async function loadAudit() {
+  try {
+    const rows=await request('/api/admin/auth/audit');
+    $('#auditLogs').innerHTML=rows.map(row=>`
+      <div class="order">
+        <b>${escapeHtml(row.username || 'حساب حذف‌شده')} — ${escapeHtml(row.action)}</b>
+        <p>بخش: ${escapeHtml(row.resource)} | مسیر: ${escapeHtml(row.request_path)}</p>
+        <p>روش: ${escapeHtml(row.request_method)} | نتیجه: ${escapeHtml(row.response_status)}</p>
+        <p class="muted">${new Date(row.created_at).toLocaleString('fa-IR')}</p>
+      </div>
+    `).join('') || 'هنوز فعالیتی ثبت نشده است.';
+  } catch(error) { $('#auditLogs').textContent=error.message; }
+}
+$('#refreshAudit').onclick=loadAudit;
+
 async function categories() {
   try {
     const data = await fetch('/api/categories').then(r => r.json());
@@ -236,11 +295,10 @@ function renderProductCard(p, archived = false) {
       <p>وضعیت: ${active ? 'فعال' : 'بایگانی‌شده'}</p>
       <div class="product-actions">
         ${archived
-          ? `<button type="button" data-restore="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">فعال‌سازی مجدد</button>`
+          ? (adminCan('products.archive') ? `<button type="button" data-restore="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">فعال‌سازی مجدد</button>` : '')
           : `
-            <button type="button" data-edit="${escapeHtml(p.id)}">ویرایش محصول</button>
-            <button type="button" data-toggle="${escapeHtml(p.id)}" data-active="1">غیرفعال‌کردن</button>
-            <button type="button" data-remove="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">انتقال به بایگانی</button>
+            ${adminCan('products.update') ? `<button type="button" data-edit="${escapeHtml(p.id)}">ویرایش محصول</button><button type="button" data-toggle="${escapeHtml(p.id)}" data-active="1">غیرفعال‌کردن</button>` : ''}
+            ${adminCan('products.archive') ? `<button type="button" data-remove="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">انتقال به بایگانی</button>` : ''}
           `}
       </div>
     </div>
@@ -441,15 +499,16 @@ async function orders() {
         <p class="muted">${(o.items || []).map(i =>
           `${escapeHtml(i.name)} × ${escapeHtml(i.quantity)}`
         ).join('، ')}</p>
-        <select id="s${escapeHtml(o.id)}">
-          <option value="awaiting_payment" ${o.status === 'awaiting_payment' ? 'selected' : ''}>در انتظار پرداخت</option>
-          <option value="paid" ${o.status === 'paid' ? 'selected' : ''}>پرداخت تأیید شد</option>
-          <option value="preparing" ${o.status === 'preparing' ? 'selected' : ''}>در حال آماده‌سازی</option>
-          <option value="shipped" ${o.status === 'shipped' ? 'selected' : ''}>ارسال شد</option>
-          <option value="completed" ${o.status === 'completed' ? 'selected' : ''}>تکمیل شد</option>
-          <option value="cancelled" ${o.status === 'cancelled' ? 'selected' : ''}>لغو شد</option>
-        </select>
-        <button type="button" data-status="${escapeHtml(o.id)}">ذخیره وضعیت</button>
+        ${adminCan('orders.update') ? `
+          <select id="s${escapeHtml(o.id)}">
+            <option value="awaiting_payment" ${o.status === 'awaiting_payment' ? 'selected' : ''}>در انتظار پرداخت</option>
+            <option value="paid" ${o.status === 'paid' ? 'selected' : ''}>پرداخت تأیید شد</option>
+            <option value="preparing" ${o.status === 'preparing' ? 'selected' : ''}>در حال آماده‌سازی</option>
+            <option value="shipped" ${o.status === 'shipped' ? 'selected' : ''}>ارسال شد</option>
+            <option value="completed" ${o.status === 'completed' ? 'selected' : ''}>تکمیل شد</option>
+            <option value="cancelled" ${o.status === 'cancelled' ? 'selected' : ''}>لغو شد</option>
+          </select>
+          <button type="button" data-status="${escapeHtml(o.id)}">ذخیره وضعیت</button>` : ''}
       </div>
     `).join('') || 'سفارشی ثبت نشده است.';
   } catch (error) {
