@@ -2,6 +2,7 @@ name: AVELORA CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     branches: [main]
   push:
     branches: [main, feature/admin-rbac-foundation]
