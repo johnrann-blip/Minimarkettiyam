@@ -37,6 +37,11 @@ CREATE TABLE IF NOT EXISTS orders (
   total_toman BIGINT NOT NULL CHECK (total_toman >= 0),
   payment_method VARCHAR(30) NOT NULL DEFAULT 'card_to_card',
   payment_status VARCHAR(30) NOT NULL DEFAULT 'unverified',
+  payment_provider VARCHAR(30),
+  payment_authority VARCHAR(80),
+  payment_reference VARCHAR(100),
+  payment_amount_rial BIGINT,
+  payment_verified_at TIMESTAMPTZ,
   status VARCHAR(30) NOT NULL DEFAULT 'awaiting_payment',
   customer_note TEXT NOT NULL DEFAULT '',
   idempotency_key VARCHAR(80),
@@ -67,6 +72,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_idempotency_key
   ON orders(idempotency_key)
   WHERE idempotency_key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_payment_authority
+  ON orders(payment_authority) WHERE payment_authority IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_orders_payment_provider_status
+  ON orders(payment_provider, payment_status);
 
 
 CREATE TABLE IF NOT EXISTS store_settings (

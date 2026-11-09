@@ -104,6 +104,15 @@ $('#cartOpen').addEventListener('click',()=>toggleCart(true));
 $('#cartClose').addEventListener('click',()=>toggleCart(false));
 $('#scrim').addEventListener('click',()=>toggleCart(false));
 $('#search').addEventListener('input',()=>loadProducts());
+function normalizeMobile(value){
+  let phone=String(value??'').replace(/[۰-۹٠-٩]/g,d=>{
+    const code=d.charCodeAt(0);
+    return String(code>=0x06F0&&code<=0x06F9?code-0x06F0:code-0x0660);
+  }).trim().replace(/[\s-]/g,'');
+  if(phone.startsWith('+98'))phone='0'+phone.slice(3);
+  else if(phone.startsWith('0098'))phone='0'+phone.slice(4);
+  return phone;
+}
 function selectedShipping(){
   if(!storeSettings)return null;
   const method=$('#orderForm').elements.delivery_method.value;
@@ -116,7 +125,7 @@ function updateCheckout(){
   const shipping=selectedShipping();
   const subtotal=cart.reduce((sum,item)=>sum+Number(item.price)*Number(item.quantity),0);
   if(!storeSettings){summary.textContent='تنظیمات فروشگاه دریافت نشد. فعلاً امکان ثبت سفارش وجود ندارد.';button.disabled=true;return}
-  if(storeSettings.payment_enabled!==true){summary.textContent='پرداخت فروشگاه هنوز فعال نشده است؛ امکان ثبت سفارش فعلاً وجود ندارد.';button.disabled=true;return}
+  if(storeSettings.payment_enabled!==true&&storeSettings.online_payment_enabled!==true){summary.textContent='هیچ روش پرداختی برای فروشگاه فعال نیست؛ امکان ثبت سفارش فعلاً وجود ندارد.';button.disabled=true;return}
   if(shipping===null||!Number.isSafeInteger(shipping)||shipping<0){summary.textContent='تعرفه روش ارسال انتخاب‌شده هنوز توسط مدیر تعیین نشده است.';button.disabled=true;return}
   summary.textContent=`جمع کالاها: ${toman(subtotal)} | هزینه ارسال: ${toman(shipping)} | مبلغ نهایی: ${toman(subtotal+shipping)}`;
   button.disabled=cart.length===0;
@@ -173,6 +182,20 @@ $('#orderForm').onsubmit=async e=>{
     },body:JSON.stringify(payload)});
     const data=await r.json();
     if(!r.ok)throw new Error(data.error||'ثبت سفارش انجام نشد');
+    if(storeSettings.online_payment_enabled===true){
+      $('#orderMessage').textContent='سفارش ثبت شد؛ در حال ساخت لینک امن پرداخت زرین‌پال...';
+      const paymentResponse=await fetch('/api/payments/zarinpal/request',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({order_code:data.order_code,phone:normalizeMobile(customer.phone)})
+      });
+      const paymentData=await paymentResponse.json().catch(()=>({}));
+      if(!paymentResponse.ok||!paymentData.redirect_url){
+        throw new Error(`سفارش ${data.order_code} ثبت شد، اما لینک پرداخت ساخته نشد. دوباره با همین سبد تلاش کن؛ سفارش تکراری ثبت نمی‌شود. ${paymentData.error||''}`);
+      }
+      window.location.assign(paymentData.redirect_url);
+      return;
+    }
     $('#orderMessage').textContent=`سفارش ${data.order_code} ثبت شد. جمع کالاها: ${toman(data.subtotal_toman)}؛ هزینه ارسال: ${toman(data.shipping_toman)}؛ مبلغ نهایی: ${toman(data.total_toman)}. لطفاً مبلغ را به حساب اعلام‌شده در بخش اطلاعات پرداخت واریز کنید.`;
     localStorage.removeItem('mm_pending_order');
     cart=[];saveCart();e.target.reset();
@@ -182,3 +205,22 @@ $('#orderForm').onsubmit=async e=>{
   updateCheckout();
 };
 loadCategories();loadProducts();saveCart();loadStoreSettings();
+
+(function showPaymentResult(){
+  const params=new URLSearchParams(location.search);
+  const status=params.get('payment');
+  const order=params.get('order');
+  if(!status)return;
+  const message=$('#orderMessage');
+  if(message){
+    message.textContent=status==='success'
+      ? 'پرداخت سفارش '+(order||'')+' توسط زرین‌پال تأیید شد. سفارش در پنل مدیریت ثبت شده است.'
+      : 'پرداخت سفارش '+(order||'')+' تکمیل یا تأیید نشد. اگر مبلغ از حسابت کسر شده، پیش از پرداخت دوباره با پشتیبانی فروشگاه تماس بگیر.';
+  }
+  if(status==='success'){
+    cart=[];localStorage.removeItem('mm_pending_order');saveCart();
+  }
+  params.delete('payment');params.delete('order');
+  const query=params.toString();
+  history.replaceState({},'',location.pathname+(query?'?'+query:'')+location.hash);
+})();

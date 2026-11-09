@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs/promises');
 const crypto = require('crypto');
 const { Pool } = require('pg');
+const { createZarinpalRouter, getConfig } = require('./zarinpal');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -99,7 +100,14 @@ const orderRateLimit = createRateLimiter({
   message: 'تعداد تلاش‌های ثبت سفارش بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
 });
 
+const paymentRateLimit = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  max: 8,
+  message: 'تعداد درخواست‌های پرداخت بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
+});
+
 app.use('/api/admin', adminRateLimit);
+app.use('/api/payments/zarinpal', createZarinpalRouter({ pool, paymentRateLimit }));
 
 const toman = n => Number.isSafeInteger(Number(n)) && Number(n) >= 0;
 const orderCode = () => 'MM' + Date.now().toString().slice(-9) + crypto.randomBytes(2).toString('hex').toUpperCase();
@@ -140,6 +148,8 @@ app.get('/api/store-settings', async (_req, res) => {
     const x = r.rows[0];
     res.json({
       payment_enabled: x.payment_enabled,
+      online_payment_enabled: getConfig().ready,
+      online_payment_mode: getConfig().mode,
       bank_name: x.payment_enabled ? x.bank_name : '',
       card_number: x.payment_enabled ? x.card_number : '',
       cardholder_name: x.payment_enabled ? x.cardholder_name : '',
@@ -407,8 +417,8 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
     if (!settingsResult.rowCount) throw new Error('تنظیمات فروشگاه کامل نیست.');
 
     const settings = settingsResult.rows[0];
-    if (!settings.payment_enabled) {
-      throw new Error('پرداخت فروشگاه هنوز توسط مدیر فعال نشده است.');
+    if (!settings.payment_enabled && !getConfig().ready) {
+      throw new Error('هیچ روش پرداختی برای فروشگاه فعال نیست.');
     }
 
     const shippingRaw = delivery_method === 'local'
@@ -512,6 +522,7 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
       'مبلغ سفارش معتبر نیست.',
       'تنظیمات فروشگاه کامل نیست.',
       'پرداخت فروشگاه هنوز توسط مدیر فعال نشده است.',
+      'هیچ روش پرداختی برای فروشگاه فعال نیست.',
       'تعرفه روش ارسال انتخاب‌شده هنوز توسط مدیر تعیین نشده است.',
       'تعرفه ارسال معتبر نیست.'
     ];
