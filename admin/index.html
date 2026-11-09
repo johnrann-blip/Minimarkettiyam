@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>مدیریت Minimarkettiyam</title>
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+<main>
+  <h1>مدیریت فروشگاه Minimarkettiyam</h1>
+  <p>کلید مدیریت را وارد کن. این کلید را در اختیار دیگران قرار نده.</p>
+  <input id="key" type="password" placeholder="کلید مدیریت" autocomplete="current-password">
+  <button id="saveKey" type="button">ورود</button>
+
+  <section>
+    <h2 id="formTitle">افزودن محصول</h2>
+    <form id="productForm">
+      <input type="hidden" name="id">
+      <input name="name" placeholder="نام محصول" maxlength="180" required>
+      <select name="category_id" id="cat">
+        <option value="">بدون دسته</option>
+      </select>
+      <input name="sku" placeholder="کد کالا (اختیاری)" maxlength="40">
+      <input name="price_toman" type="number" min="0" step="1" placeholder="قیمت فروش به تومان" required>
+      <input name="sale_price_toman" type="number" min="0" step="1" placeholder="قیمت تخفیفی (اختیاری)">
+      <input name="stock" type="number" min="0" step="1" placeholder="تعداد موجودی" required>
+      <input name="image_url" type="url" placeholder="نشانی تصویر HTTPS محصول">
+      <textarea name="description" maxlength="5000" placeholder="توضیحات محصول"></textarea>
+      <button id="submitProduct" type="submit">ثبت محصول</button>
+      <button id="cancelEdit" type="button" hidden>انصراف از ویرایش</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>محصولات فروشگاه</h2>
+    <button id="refreshProducts" type="button">به‌روزرسانی محصولات</button>
+    <div id="products"></div>
+  </section>
+
+  <section id="storeSettings">
+    <h2>تنظیمات فروشگاه و حساب بانکی</h2>
+    <p class="muted">اطلاعات این بخش فقط توسط مدیر قابل تغییر است.</p>
+
+    <form id="settingsForm">
+      <h3>اطلاعات حساب بانکی</h3>
+      <input name="bank_name" maxlength="100" placeholder="نام بانک">
+      <input name="card_number" inputmode="numeric" maxlength="19" placeholder="شماره کارت ۱۶ رقمی">
+      <input name="cardholder_name" maxlength="120" placeholder="نام و نام خانوادگی صاحب کارت">
+      <input name="iban" maxlength="34" placeholder="شماره شبا، مانند IR...">
+      <textarea name="payment_instructions" maxlength="1000"
+        placeholder="توضیحات پرداخت برای مشتری"></textarea>
+
+      <label class="setting-check">
+        <input type="checkbox" name="payment_enabled">
+        فعال‌سازی پرداخت کارت‌به‌کارت برای مشتریان
+      </label>
+
+      <h3>تعرفه ارسال به تومان</h3>
+      <label>هزینه ارسال داخل شهر</label>
+      <input name="local_shipping_toman" type="number" min="0" step="1"
+        placeholder="خالی = هنوز تعیین نشده">
+
+      <label>هزینه ارسال سراسری</label>
+      <input name="nationwide_shipping_toman" type="number" min="0" step="1"
+        placeholder="خالی = هنوز تعیین نشده">
+
+      <button type="submit">ذخیره تنظیمات فروشگاه</button>
+    </form>
+    <p id="settingsMessage" role="status"></p>
+  </section>
+
+  <section>
+    <h2>سفارش‌ها</h2>
+    <button id="refresh" type="button">دریافت سفارش‌ها</button>
+    <div id="orders"></div>
+  </section>
+
+  <p id="msg" role="status"></p>
+</main>
+<script src="/admin/admin.js"></script>
+</body>
+</html>

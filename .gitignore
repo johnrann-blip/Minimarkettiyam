@@ -1,0 +1,24 @@
+# Secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Logs and temporary files
+*.log
+npm-debug.log*
+.DS_Store
+
+# Local backups and generated data
+backups/
+*-backups/
+
+# Local code backups
+*.backup-*
+*.bak
