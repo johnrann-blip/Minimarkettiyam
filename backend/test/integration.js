@@ -230,7 +230,8 @@ async function run() {
   const memberCustomer=(await db.query('SELECT id FROM customers WHERE phone=$1',[memberPhone])).rows[0];
   const refuseCustomerDeactivate=await request('/api/admin/customers/'+memberCustomer.id+'/status',{method:'PATCH',admin:true,body:{is_active:false}});
   assert(refuseCustomerDeactivate.status===409,'جلوگیری از غیرفعال‌سازی مشتری دارای سابقه سفارش');
-  const noOrderCustomer=(await db.query("INSERT INTO customers(full_name,phone,password_hash,password_salt) VALUES('مشتری بدون سفارش','09120000001',$1,$2) RETURNING id",['0'.repeat(128),'0'.repeat(32)])).rows[0];
+  const noOrderPhone='09'+crypto.randomInt(100000000,999999999).toString();
+  const noOrderCustomer=(await db.query("INSERT INTO customers(full_name,phone,password_hash,password_salt) VALUES('مشتری بدون سفارش',$1,$2,$3) RETURNING id",[noOrderPhone,'0'.repeat(128),'0'.repeat(32)])).rows[0];
   const deactivateNoOrder=await request('/api/admin/customers/'+noOrderCustomer.id+'/status',{method:'PATCH',admin:true,body:{is_active:false}});
   assert(deactivateNoOrder.status===200 && deactivateNoOrder.data.customer.is_active===false,'غیرفعال‌سازی برگشت‌پذیر مشتری بدون سفارش');
   const reactivateNoOrder=await request('/api/admin/customers/'+noOrderCustomer.id+'/status',{method:'PATCH',admin:true,body:{is_active:true}});
