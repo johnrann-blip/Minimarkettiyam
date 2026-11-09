@@ -91,11 +91,16 @@ document.addEventListener('error',event=>{
   }
 },true);
 function openProductDetails(p){
-  const image=p.image_url
-    ? `<img class="detail-image product-image" src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}">`
-    : '<div class="placeholder detail-placeholder">👜</div>';
+  const images=Array.isArray(p.images)&&p.images.length?p.images:(p.image_url?[p.image_url]:[]);
+  const gallery=images.length?`<div class="detail-gallery">
+    <div class="detail-gallery-stage">
+      <img id="detailGalleryMain" class="detail-image product-image" src="${escapeHtml(images[0])}" alt="${escapeHtml(p.name)} — تصویر ۱">
+      ${images.length>1?'<button class="gallery-nav gallery-prev" type="button" data-gallery-prev aria-label="تصویر قبلی">‹</button><button class="gallery-nav gallery-next" type="button" data-gallery-next aria-label="تصویر بعدی">›</button>':''}
+    </div>
+    ${images.length>1?`<div class="detail-gallery-thumbs" aria-label="تصاویر دیگر محصول">${images.map((url,index)=>`<button type="button" class="detail-gallery-thumb ${index===0?'active':''}" data-gallery-index="${index}" aria-label="نمایش تصویر ${index+1}" aria-pressed="${index===0?'true':'false'}"><img src="${escapeHtml(url)}" alt=""></button>`).join('')}</div>`:''}
+  </div>`:'<div class="placeholder detail-placeholder">👜</div>';
   $('#productDialogContent').innerHTML=`
-    ${image}
+    ${gallery}
     <div class="detail-copy">
       <span class="eyebrow">${escapeHtml(p.category_name||'محصول AVELORA')}</span>
       <h2>${escapeHtml(p.name)}</h2>
@@ -106,6 +111,36 @@ function openProductDetails(p){
       <p class="stock">${p.stock>0?'موجود در انبار':'ناموجود'}</p>
       <button class="primary" type="button" data-detail-add="${escapeHtml(p.id)}" ${p.stock<1?'disabled':''}>افزودن به سبد خرید</button>
     </div>`;
+  const galleryElement=$('#productDialogContent').querySelector('.detail-gallery');
+  if(galleryElement&&images.length>1){
+    let activeIndex=0;
+    const showImage=index=>{
+      activeIndex=(index+images.length)%images.length;
+      const main=galleryElement.querySelector('#detailGalleryMain');
+      main.src=images[activeIndex];
+      main.alt=`${p.name} — تصویر ${activeIndex+1}`;
+      galleryElement.querySelectorAll('[data-gallery-index]').forEach(button=>{
+        const selected=Number(button.dataset.galleryIndex)===activeIndex;
+        button.classList.toggle('active',selected);
+        button.setAttribute('aria-pressed',selected?'true':'false');
+      });
+    };
+    galleryElement.addEventListener('click',event=>{
+      const thumb=event.target.closest('[data-gallery-index]');
+      if(thumb)showImage(Number(thumb.dataset.galleryIndex));
+      else if(event.target.closest('[data-gallery-prev]'))showImage(activeIndex-1);
+      else if(event.target.closest('[data-gallery-next]'))showImage(activeIndex+1);
+    });
+    let touchStartX=null;
+    const main=galleryElement.querySelector('#detailGalleryMain');
+    main.addEventListener('touchstart',event=>{touchStartX=event.changedTouches[0].clientX;},{passive:true});
+    main.addEventListener('touchend',event=>{
+      if(touchStartX===null)return;
+      const delta=event.changedTouches[0].clientX-touchStartX;
+      if(Math.abs(delta)>45)showImage(activeIndex+(delta<0?1:-1));
+      touchStartX=null;
+    },{passive:true});
+  }
   const add=$('#productDialogContent').querySelector('[data-detail-add]');
   add.addEventListener('click',()=>{addCart(p.id);$('#productDialog').close()});
   $('#productDialog').showModal();
