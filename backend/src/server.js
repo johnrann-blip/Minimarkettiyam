@@ -595,7 +595,7 @@ app.patch('/api/admin/orders/:id/status', adminOnly, async (req,res) => {
     await client.query('BEGIN');
 
     const found = await client.query(
-      'SELECT id,status,payment_status FROM orders WHERE id=$1 FOR UPDATE',
+      'SELECT id,status,payment_status,payment_method,payment_provider FROM orders WHERE id=$1 FOR UPDATE',
       [id]
     );
 
@@ -620,8 +620,17 @@ app.patch('/api/admin/orders/:id/status', adminOnly, async (req,res) => {
     }
 
     if (next === 'paid') {
+      const payment = found.rows[0];
+      // A ZarinPal payment can only become paid after the provider callback verifies it.
+      // Manual card-to-card orders remain confirmable by the store administrator.
+      if (payment.payment_provider === 'zarinpal' || payment.payment_method === 'zarinpal') {
+        throw new Error('پرداخت زرین‌پال فقط پس از تأیید مستقیم درگاه قابل نهایی‌شدن است.');
+      }
+      if (payment.payment_status === 'verified') {
+        throw new Error('وضعیت تأیید پرداخت با وضعیت سفارش سازگار نیست؛ بررسی دستی لازم است.');
+      }
       await client.query(
-        "UPDATE orders SET status='paid',payment_status='verified',updated_at=NOW() WHERE id=$1",
+        "UPDATE orders SET status='paid',payment_status='verified',payment_verified_at=NOW(),updated_at=NOW() WHERE id=$1",
         [id]
       );
     } else {
@@ -653,9 +662,13 @@ app.patch('/api/admin/orders/:id/status', adminOnly, async (req,res) => {
     if (client) {
       try { await client.query('ROLLBACK'); } catch {}
     }
-    res.status(e.message === 'تغییر وضعیت از حالت فعلی مجاز نیست.' ? 409 : 503)
-      .json({error:e.message === 'تغییر وضعیت از حالت فعلی مجاز نیست.'
-        ? e.message : 'به‌روزرسانی سفارش انجام نشد.'});
+    const conflict = [
+      'تغییر وضعیت از حالت فعلی مجاز نیست.',
+      'پرداخت زرین‌پال فقط پس از تأیید مستقیم درگاه قابل نهایی‌شدن است.',
+      'وضعیت تأیید پرداخت با وضعیت سفارش سازگار نیست؛ بررسی دستی لازم است.'
+    ].includes(e.message);
+    res.status(conflict ? 409 : 503)
+      .json({error:conflict ? e.message : 'به‌روزرسانی سفارش انجام نشد.'});
   } finally {
     if (client) client.release();
   }

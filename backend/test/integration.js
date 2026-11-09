@@ -339,6 +339,16 @@ async function run() {
   const order = r.data.find(x => x.order_code === orderCode);
   assert(!!order, 'یافتن سفارش آزمایشی');
 
+  // Simulate an order with a pending ZarinPal authority: admin UI must not bypass gateway verification.
+  await db.query("UPDATE orders SET payment_method='zarinpal',payment_provider='zarinpal',payment_status='pending',payment_authority='TESTAUTHORITY1234567890' WHERE id=$1", [order.id]);
+  r = await request(`/api/admin/orders/${order.id}/status`, {
+    method: 'PATCH', admin: true, body: { status: 'paid' }
+  });
+  assert(r.status === 409, 'جلوگیری از تأیید دستی پرداخت زرین‌پال بدون تأیید درگاه');
+  const guardedOrder = await db.query('SELECT status,payment_status FROM orders WHERE id=$1', [order.id]);
+  assert(guardedOrder.rows[0].status === 'awaiting_payment' && guardedOrder.rows[0].payment_status === 'pending', 'حفظ وضعیت پرداخت زرین‌پال تا تأیید واقعی');
+  await db.query("UPDATE orders SET payment_method='card_to_card',payment_provider=NULL,payment_status='unverified',payment_authority=NULL WHERE id=$1", [order.id]);
+
   r = await request(`/api/admin/orders/${order.id}/status`, {
     method: 'PATCH',
     admin: true,
