@@ -239,6 +239,19 @@ $('#submitProduct').addEventListener('click', () => {
   message('دکمه ذخیره انتخاب شد؛ در حال بررسی اطلاعات محصول...');
 });
 
+$('#productForm [name="image_url"]').addEventListener('change', () => {
+  const url = $('#productForm [name="image_url"]').value.trim();
+  if (!url) return;
+  const existingIndex = productGallery.findIndex(item => !item.file && item.url === url);
+  if (existingIndex >= 0) productGallery.unshift(productGallery.splice(existingIndex, 1)[0]);
+  else productGallery.unshift({url,preview:url,file:null});
+  if (productGallery.length > 10) {
+    productGallery.shift();
+    message('هر محصول حداکثر می‌تواند ۱۰ تصویر داشته باشد.');
+  }
+  renderProductGallery();
+});
+
 $('#imageFile').addEventListener('change', () => {
   const files = Array.from($('#imageFile').files || []);
   if (!files.length) return;
@@ -399,7 +412,10 @@ $('#productForm').onsubmit = async event => {
     if (existingIndex >= 0) productGallery.unshift(productGallery.splice(existingIndex, 1)[0]);
     else productGallery.unshift({url:typedImageUrl,preview:typedImageUrl,file:null});
   }
-  if (productGallery.length > 10) throw new Error('هر محصول حداکثر می‌تواند ۱۰ تصویر داشته باشد.');
+  if (productGallery.length > 10) {
+    message('هر محصول حداکثر می‌تواند ۱۰ تصویر داشته باشد.');
+    return;
+  }
 
   data.price_toman = Number(data.price_toman);
   data.cost_price_toman = data.cost_price_toman === '' ? null : Number(data.cost_price_toman);
