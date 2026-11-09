@@ -11,12 +11,14 @@
 ترتیب مهاجرت‌های افزوده‌شده:
 - `005_admin_rbac.sql`: حساب مالک، مدیران مستقل، نشست‌ها و سوابق فعالیت
 - `006_accounting_error_center.sql`: snapshot بهای تمام‌شده اقلام سفارش، دفتر هزینه‌ها با ردیف اصلاحی، و مرکز خطاها
+- `007_product_image_gallery.sql`: ایجاد گالری تصاویر و حفظ تصویر اصلی موجود هر محصول
 
 ابتدا روی دیتابیس آزمایشی:
 ```bash
 cd ~/Minimarkettiyam/backend
 psql -d minimarkettiyam_test -v ON_ERROR_STOP=1 -f ../database/migrations/005_admin_rbac.sql
 psql -d minimarkettiyam_test -v ON_ERROR_STOP=1 -f ../database/migrations/006_accounting_error_center.sql
+psql -d minimarkettiyam_test -v ON_ERROR_STOP=1 -f ../database/migrations/007_product_image_gallery.sql
 npm run check
 npm run test:zarinpal
 npm run test:integration
@@ -26,7 +28,7 @@ npm run test:integration
 
 ## راه‌اندازی مالک و مدیران
 
-پس از تأیید آزمون‌ها و آماده‌شدن نسخه پشتیبان، مهاجرت‌های 005 و 006 را روی دیتابیس اصلی اجرا کن. سپس سرور را با تنظیمات محیطی امن راه‌اندازی کن و در `/admin/` حساب مالک را فقط یک‌بار بساز. کلید `ADMIN_API_KEY` فقط برای bootstrap است؛ آن را در کد، GitHub یا پیام‌ها قرار نده.
+پس از تأیید آزمون‌ها و آماده‌شدن نسخه پشتیبان، مهاجرت‌های 005، 006 و 007 را روی دیتابیس اصلی اجرا کن. سپس سرور را با تنظیمات محیطی امن راه‌اندازی کن و در `/admin/` حساب مالک را فقط یک‌بار بساز. کلید `ADMIN_API_KEY` فقط برای bootstrap است؛ آن را در کد، GitHub یا پیام‌ها قرار نده.
 
 هر مدیر حساب مستقل دارد. فقط مالک می‌تواند مدیر بسازد، مجوزها را تغییر دهد، رمز را بازنشانی کند یا مدیر را غیرفعال کند. مجوزهای پرداخت مستقل‌اند:
 - مشاهده اطلاعات بانکی و پرداخت
