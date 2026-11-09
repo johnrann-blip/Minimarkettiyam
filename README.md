@@ -31,7 +31,7 @@
 5. بهای تمام‌شده و موجودی واقعی همه محصولات باید بازبینی شوند.
 6. زرین‌پال فقط پس از HTTPS، تنظیم امن پذیرنده و آزمون sandbox/callback قابل فعال‌سازی است.
 
-فهرست جزئیات و معیارهای پذیرش در [docs/PRELAUNCH_AUDIT.md](docs/PRELAUNCH_AUDIT.md) آمده است.
+فهرست جزئیات و معیارهای پذیرش در [docs/PRELAUNCH_AUDIT.md](docs/PRELAUNCH_AUDIT.md) آمده است. راهنمای استقرار و تنظیمات محیطی در [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) قرار دارد.
 
 ## نیازمندی‌ها
 
