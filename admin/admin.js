@@ -46,6 +46,8 @@ async function categories() {
 
 function resetProductForm() {
   $('#productForm').reset();
+  $('#imagePreview').hidden = true;
+  $('#imagePreview').removeAttribute('src');
   $('#productForm [name="id"]').value = '';
   $('#formTitle').textContent = 'افزودن محصول';
   $('#submitProduct').textContent = 'ثبت محصول';
@@ -53,6 +55,17 @@ function resetProductForm() {
 }
 
 $('#cancelEdit').onclick = resetProductForm;
+$('#imageFile').addEventListener('change', () => {
+  const file = $('#imageFile').files[0];
+  if (!file) return;
+  if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+    message('عکس باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.');
+    $('#imageFile').value = '';
+    return;
+  }
+  $('#imagePreview').src = URL.createObjectURL(file);
+  $('#imagePreview').hidden = false;
+});
 
 $('#saveKey').onclick = async () => {
   key = $('#key').value.trim();
@@ -70,6 +83,8 @@ $('#productForm').onsubmit = async event => {
 
   const form = event.currentTarget;
   const data = Object.fromEntries(new FormData(form).entries());
+  const imageFile = form.elements.image_file.files[0];
+  delete data.image_file;
   const id = data.id;
   delete data.id;
 
@@ -82,6 +97,26 @@ $('#productForm').onsubmit = async event => {
   const editing = Boolean(id);
 
   try {
+    if (imageFile) {
+      if (!['image/jpeg','image/png','image/webp'].includes(imageFile.type)) {
+        throw new Error('فقط تصویر JPG، PNG یا WebP قابل قبول است.');
+      }
+      if (imageFile.size > 5 * 1024 * 1024) {
+        throw new Error('حجم عکس باید حداکثر ۵ مگابایت باشد.');
+      }
+      const imageBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.onerror = () => reject(new Error('خواندن عکس انجام نشد.'));
+        reader.readAsDataURL(imageFile);
+      });
+      const uploaded = await request('/api/admin/uploads/product', {
+        method: 'POST',
+        body: JSON.stringify({ image_base64: imageBase64, mime_type: imageFile.type })
+      });
+      data.image_url = uploaded.image_url;
+    }
+
     await request(
       editing ? `/api/admin/products/${encodeURIComponent(id)}` : '/api/admin/products',
       {
@@ -146,6 +181,14 @@ $('#products').addEventListener('click', async event => {
       form.elements.sale_price_toman.value = p.sale_price_toman ?? '';
       form.elements.stock.value = p.stock;
       form.elements.image_url.value = p.image_url || '';
+      if (p.image_url) {
+        $('#imagePreview').src = p.image_url;
+        $('#imagePreview').hidden = false;
+      } else {
+        $('#imagePreview').hidden = true;
+        $('#imagePreview').removeAttribute('src');
+      }
+      form.elements.image_file.value = '';
       form.elements.description.value = p.description || '';
 
       $('#formTitle').textContent = 'ویرایش محصول';
