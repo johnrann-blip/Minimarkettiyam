@@ -69,7 +69,7 @@ async function providerPost(config, endpoint, payload) {
   return data;
 }
 
-function createZarinpalRouter({ pool }) {
+function createZarinpalRouter({ pool, paymentRateLimit }) {
   const router = express.Router();
 
   router.get('/status', (_req, res) => {
@@ -82,7 +82,7 @@ function createZarinpalRouter({ pool }) {
     });
   });
 
-  router.post('/request', async (req, res) => {
+  router.post('/request', ...(paymentRateLimit ? [paymentRateLimit] : []), async (req, res) => {
     const config = getConfig();
     if (!config.ready) {
       return res.status(503).json({
@@ -196,7 +196,7 @@ function createZarinpalRouter({ pool }) {
         return res.redirect(303, '/?payment=success&order=' + encodeURIComponent(order.order_code));
       }
 
-      if (order.status === 'cancelled') {
+      if (order.status !== 'awaiting_payment') {
         await client.query('ROLLBACK');
         return res.redirect(303, '/?payment=failed&order=' + encodeURIComponent(order.order_code));
       }
