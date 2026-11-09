@@ -2,7 +2,7 @@
   "name": "minimarkettiyam-store",
   "version": "0.1.0",
   "private": true,
-  "description": "Minimarkettiyam Persian ecommerce MVP",
+  "description": "AVELORA Persian ecommerce store",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
