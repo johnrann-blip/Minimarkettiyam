@@ -175,18 +175,24 @@ function setAdminSession(admin) {
   }
   document.body.classList.add('admin-authenticated');
   $('#adminIdentity').textContent = 'واردشده: ' + adminUser.display_name + ' (' + (adminUser.role === 'owner' ? 'مالک فروشگاه' : 'مدیر') + ')';
-  const pageAccess = {
-    managers:adminUser.role==='owner',
-    audit:adminCan('audit.view'),
-    products:adminCan('products.view') || adminCan('products.create') || adminCan('products.update') || adminCan('products.archive'),
-    settings:adminCan('settings.view') || adminCan('settings.update'),
-    customers:adminCan('customers.view'),
-    orders:adminCan('orders.view') || adminCan('orders.update')
+  const sectionAccess = {
+    managerSection:adminUser.role==='owner',
+    auditSection:adminCan('audit.view'),
+    productFormSection:adminCan('products.create') || adminCan('products.update'),
+    productsSection:adminCan('products.view'),
+    archiveSection:adminCan('products.archive') || adminCan('products.view'),
+    settingsSection:adminCan('settings.view') || adminCan('settings.update'),
+    customersSection:adminCan('customers.view'),
+    ordersSection:adminCan('orders.view') || adminCan('orders.update')
   };
   for (const section of document.querySelectorAll('#adminWorkspace section[data-page]')) {
-    section.dataset.allowed = String(Boolean(pageAccess[section.dataset.page]));
+    section.dataset.allowed = String(Boolean(sectionAccess[section.id]));
   }
-  showAdminPage(pageAccess.products?'products':Object.keys(pageAccess).find(page=>pageAccess[page]));
+  const pageAccess = {};
+  for (const section of document.querySelectorAll('#adminWorkspace section[data-page]')) {
+    if (section.dataset.allowed==='true') pageAccess[section.dataset.page]=true;
+  }
+  showAdminPage(pageAccess.products?'products':Object.keys(pageAccess)[0]);
   for (const field of $('#settingsForm').elements) field.disabled = !adminCan('settings.update');
   Promise.all([
     adminCan('products.view') || adminCan('products.create') || adminCan('products.update') ? products() : Promise.resolve(),
