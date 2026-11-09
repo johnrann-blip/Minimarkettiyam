@@ -109,6 +109,10 @@ const paymentRateLimit = createRateLimiter({
 app.use('/api/admin', adminRateLimit);
 app.use('/api/payments/zarinpal', createZarinpalRouter({ pool, paymentRateLimit }));
 
+pool.on('error', error => {
+  console.error('Unexpected PostgreSQL pool error:', error && error.message ? error.message : error);
+});
+
 const toman = n => Number.isSafeInteger(Number(n)) && Number(n) >= 0;
 const orderCode = () => 'MM' + Date.now().toString().slice(-9) + crypto.randomBytes(2).toString('hex').toUpperCase();
 
@@ -856,6 +860,10 @@ app.delete('/api/admin/products/:id', adminOnly, async (req, res) => {
   }
 });
 
+// Unknown API and upload paths must return machine-readable 404s, never the storefront HTML.
+app.use('/api', (_req, res) => res.status(404).json({ error: 'مسیر API پیدا نشد.' }));
+app.use('/uploads', (_req, res) => res.status(404).json({ error: 'فایل موردنظر پیدا نشد.' }));
+
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
   if (error && error.type === 'entity.too.large') {
@@ -866,4 +874,23 @@ app.use((error, req, res, next) => {
 });
 
 app.get('*', (_req,res) => res.sendFile(path.join(__dirname,'../../frontend/index.html')));
-app.listen(port, '0.0.0.0', () => console.log(`AVELORA running on ${port}`));
+
+const server = app.listen(port, '0.0.0.0', () => console.log(`AVELORA running on ${port}`));
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`Received ${signal}; shutting down AVELORA gracefully...`);
+  server.close(async () => {
+    try {
+      await pool.end();
+      process.exit(0);
+    } catch (error) {
+      console.error('Database pool shutdown failed:', error && error.message ? error.message : error);
+      process.exit(1);
+    }
+  });
+  setTimeout(() => process.exit(1), 10000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
