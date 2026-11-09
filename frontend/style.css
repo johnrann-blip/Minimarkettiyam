@@ -85,3 +85,15 @@
   .detail-copy h2{font-size:23px}
   .detail-description{font-size:15px}
 }
+
+
+/* Main customer category entry cards */
+.category-entry-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:22px 0 18px}
+.category-entry{display:flex;align-items:center;gap:14px;text-align:right;padding:18px 20px;border:1px solid #e5d5c2;border-radius:16px;background:linear-gradient(135deg,#fff,#f4eadc);color:var(--brown);cursor:pointer;min-height:92px;transition:transform .18s,border-color .18s,box-shadow .18s}
+.category-entry>span{font-size:34px;line-height:1}
+.category-entry strong{display:block;font-size:17px}
+.category-entry small{display:block;color:#806b59;margin-top:4px;font-size:12px}
+.category-entry.active,.category-entry:focus-visible{border-color:var(--gold);box-shadow:0 0 0 2px #b68a4c22;outline:none}
+.category-entry:active{transform:scale(.99)}
+.category-error{color:#a33}
+@media(max-width:520px){.category-entry-grid{gap:9px}.category-entry{padding:14px 10px;gap:8px;min-height:84px}.category-entry>span{font-size:27px}.category-entry strong{font-size:14px}.category-entry small{font-size:10px}}
