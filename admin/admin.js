@@ -198,6 +198,7 @@ function setAdminSession(admin) {
   }
   showAdminPage(pageAccess.products?'products':Object.keys(pageAccess)[0]);
   for (const field of $('#settingsForm').elements) field.disabled = !adminCan('settings.update');
+  resetProductForm();
   Promise.all([
     adminCan('products.create') || adminCan('products.update') ? categories() : Promise.resolve(),
     adminCan('products.view') || adminCan('products.create') || adminCan('products.update') ? products() : Promise.resolve(),
