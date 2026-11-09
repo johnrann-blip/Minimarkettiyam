@@ -630,7 +630,7 @@ app.get('/api/admin/customers', adminOnly, async (_req,res) => {
 });
 
 app.get('/api/admin/accounting/expenses', adminOnly, async (req,res) => {
-  const validDate=value=>/^\\d{4}-\\d{2}-\\d{2}$/.test(String(value||''))&&!Number.isNaN(Date.parse(String(value)+'T00:00:00Z'));
+  const validDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))&&!Number.isNaN(Date.parse(String(value)+'T00:00:00Z'));
   const to=validDate(req.query.to)?String(req.query.to):new Date().toISOString().slice(0,10);
   const fromDefault=new Date(Date.now()-29*86400000).toISOString().slice(0,10);
   const from=validDate(req.query.from)?String(req.query.from):fromDefault;
@@ -646,7 +646,7 @@ app.post('/api/admin/accounting/expenses', adminOnly, async (req,res) => {
   const category=String(req.body?.category||'').trim();
   const description=String(req.body?.description||'').trim();
   const amount=Number(req.body?.amount_toman);
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(rawDate))||Number.isNaN(Date.parse(String(rawDate)+'T00:00:00Z'))||
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(rawDate))||Number.isNaN(Date.parse(String(rawDate)+'T00:00:00Z'))||
      !category||category.length>80||description.length>500||!Number.isSafeInteger(amount)||amount<=0){
     return res.status(400).json({error:'تاریخ، دسته‌بندی، توضیح و مبلغ هزینه معتبر الزامی است.'});
   }
