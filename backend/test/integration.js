@@ -142,6 +142,12 @@ async function run() {
   memberSessionCookie = r.cookie;
   r = await request('/api/auth/me', {headers:{cookie:memberSessionCookie}});
   assert(r.status === 200 && r.data.customer && r.data.customer.phone === memberPhone, 'بازیابی امن وضعیت ورود مشتری');
+  r = await request('/api/admin/customers');
+  assert(r.status===401, 'محافظت از فهرست مشتریان در برابر دسترسی غیرمجاز');
+  r = await request('/api/admin/customers',{admin:true});
+  assert(r.status===200 && Array.isArray(r.data) && r.data.some(x=>x.phone===memberPhone), 'نمایش مشتری ثبت‌نام‌شده در پنل مدیریت');
+  r = await request('/api/auth/register',{method:'POST',body:{name:'عضو تکراری',phone:memberPhone,password:'TestMemberPass123'}});
+  assert(r.status===409, 'جلوگیری از ثبت‌نام تکراری با یک شماره موبایل');
   r = await request('/api/auth/login', {method:'POST',body:{phone:memberPhone,password:'WrongPassword123'}});
   assert(r.status === 401, 'رد رمز عبور اشتباه مشتری');
 
