@@ -15,3 +15,7 @@ body{margin:0;background:#f7f1e9;color:#35261d;font-family:Tahoma,sans-serif}mai
 #adminIdentity{font-weight:bold}
 #logoutAdmin{max-width:260px;background:#6c5141}
 @media(max-width:600px){main{padding:10px;margin:10px auto}.permission-grid{grid-template-columns:1fr}}
+
+#adminNav{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:16px 0}
+#adminNav button{margin:0;padding:10px;font-size:14px}
+#adminNav button.active{background:#9a6c45;outline:2px solid #d7b995}
