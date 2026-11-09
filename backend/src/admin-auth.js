@@ -41,7 +41,7 @@ function requiredPermission(req) {
  if(p==='/orders') return 'orders.view';
  if(/^\/orders\/[^/]+\/status$/.test(p)) return 'orders.update';
  if(p==='/customers') return 'customers.view';
- if(/^\\/customers\\/[^/]+\\/status$/.test(p)) return 'customers.manage';
+ if(/^\/customers\/[^/]+\/status$/.test(p)) return 'customers.manage';
  if(p==='/store-settings') return m==='GET'?'payments.view':'payments.manage';
  if(p.startsWith('/reports')) return 'reports.view';
  if(p.startsWith('/audit')) return 'audit.view';
@@ -159,7 +159,7 @@ function createAdminAuth({pool,rateLimit}) {
   authenticate(req,res,()=>{
    const needed=requiredPermission(req);
    const permissions=req.admin.permissions||[];
-   const implied=(needed.endsWith('.view')&&[needed.replace('.view','.update'),needed.replace('.view','.create'),needed.replace('.view','.archive')].some(x=>permissions.includes(x)))||(needed==='payments.view'&&permissions.includes('payments.manage'));
+   const implied=(needed.endsWith('.view')&&[needed.replace('.view','.update'),needed.replace('.view','.create'),needed.replace('.view','.archive')].some(x=>permissions.includes(x)))||(needed==='payments.view'&&permissions.includes('payments.manage'))||(needed==='customers.view'&&permissions.includes('customers.manage'));
    const uploadAllowed=needed==='products.upload'&&(permissions.includes('products.create')||permissions.includes('products.update'));
    if(req.admin.role!=='owner'&&!permissions.includes(needed)&&!implied&&!uploadAllowed) return res.status(403).json({error:'برای این عملیات دسترسی لازم را نداری.'});
    res.on('finish',()=>{ if(req.method!=='GET') audit(pool,req.admin,req,'admin.'+(req.method==='POST'?'create':req.method==='DELETE'?'archive':'update'),needed.split('.')[0],res.statusCode,req.params?.id||null); });
