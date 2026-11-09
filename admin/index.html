@@ -42,6 +42,7 @@
       <button type="button" data-nav-page="customers">مشتریان</button>
       <button type="button" data-nav-page="settings">تنظیمات</button>
       <button type="button" data-nav-page="managers">مدیران</button>
+      <button type="button" data-nav-page="reports">حسابداری و گزارش‌ها</button>
       <button type="button" data-nav-page="audit">ورود و سوابق فعالیت</button>
     </nav>
     <section id="managerSection" data-page="managers" hidden>
@@ -70,6 +71,21 @@
         <button type="submit">ساخت مدیر با دسترسی انتخاب‌شده</button>
       </form>
       <div id="managerList"></div>
+    </section>
+    <section id="reportsSection" data-page="reports">
+      <h2>حسابداری و گزارش‌های فروش</h2>
+      <p class="muted">فقط سفارش‌های دارای پرداخت تأییدشده در درآمد وصول‌شده محاسبه می‌شوند. سود ناخالص فقط وقتی نمایش داده می‌شود که بهای تمام‌شده همه اقلام سفارش موجود باشد.</p>
+      <div class="report-filters">
+        <label>از تاریخ <input id="reportFrom" type="date"></label>
+        <label>تا تاریخ <input id="reportTo" type="date"></label>
+        <button id="refreshReports" type="button">به‌روزرسانی گزارش</button>
+      </div>
+      <div id="reportSummary" aria-live="polite">برای دریافت گزارش، به‌روزرسانی را بزن.</div>
+      <h3>فروش روزانه</h3>
+      <div id="reportDaily"></div>
+      <h3>مرکز خطاهای ثبت‌شده</h3>
+      <button id="refreshErrors" type="button">به‌روزرسانی خطاها</button>
+      <div id="adminErrors"></div>
     </section>
     <section id="auditSection" data-page="audit">
       <h2>گزارش ورودها و فعالیت مدیران</h2>
