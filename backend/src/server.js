@@ -704,8 +704,9 @@ app.post('/api/admin/uploads/product', adminOnly, async (req, res) => {
     await fs.mkdir(directory, {recursive:true});
     await fs.writeFile(path.join(directory, filename), buffer, {flag:'wx'});
     res.status(201).json({image_url:'/uploads/products/' + filename});
-  } catch {
-    res.status(500).json({error:'ذخیره عکس محصول انجام نشد.'});
+  } catch (error) {
+    console.error('Product image upload failed:', error && error.message ? error.message : error);
+    res.status(500).json({error:'ذخیره عکس محصول انجام نشد. گزارش خطا در ترمینال سرور ثبت شد.'});
   }
 });
 
