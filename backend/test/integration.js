@@ -647,7 +647,7 @@ async function run() {
   }
   assert(
     proxyStatuses.slice(0, 10).every(status => status === 400) && proxyStatuses[10] === 429,
-    'محدودیت ثبت سفارش بر اساس IP واقعی ارسال‌شده از پروکسی مورد اعتماد اعمال می‌شود'
+    'محدودیت ثبت سفارش بر اساس IP واقعی ارسال‌شده از پروکسی مورد اعتماد اعمال می‌شود: ' + JSON.stringify(proxyStatuses)
   );
 
   const separateProxyClient = await request('/api/orders', {
