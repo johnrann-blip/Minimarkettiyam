@@ -81,6 +81,17 @@
         <button id="refreshReports" type="button">به‌روزرسانی گزارش</button>
       </div>
       <div id="reportSummary" aria-live="polite">برای دریافت گزارش، به‌روزرسانی را بزن.</div>
+      <h3>دفتر هزینه‌های فروشگاه</h3>
+      <p class="muted">هزینه‌ها ثبت دائمی دارند؛ برای اصلاح، یک ردیف اصلاحی ثبت کن و ردیف قبلی را حذف نکن.</p>
+      <form id="expenseForm" hidden>
+        <label>تاریخ هزینه <input name="expense_date" type="date"></label>
+        <input name="category" maxlength="80" placeholder="دسته هزینه؛ مانند بسته‌بندی یا تبلیغات" required>
+        <input name="description" maxlength="500" placeholder="شرح هزینه">
+        <input name="amount_toman" type="number" min="1" step="1" placeholder="مبلغ به تومان" required>
+        <button type="submit">ثبت هزینه</button>
+      </form>
+      <button id="refreshExpenses" type="button">به‌روزرسانی دفتر هزینه‌ها</button>
+      <div id="accountingExpenses"></div>
       <h3>فروش روزانه</h3>
       <div id="reportDaily"></div>
       <h3>مرکز خطاهای ثبت‌شده</h3>
