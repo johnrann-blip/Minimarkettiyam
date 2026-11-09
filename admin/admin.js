@@ -256,6 +256,19 @@ $('#products').addEventListener('click', async event => {
 });
 
 
+async function loadGatewayStatus() {
+  const target = $('#gatewayStatus');
+  if (!target) return;
+  try {
+    const data = await fetch('/api/payments/zarinpal/status').then(r => r.json());
+    target.textContent = data.enabled
+      ? 'درگاه زرین‌پال آماده است (' + (data.sandbox ? 'آزمایشی' : 'واقعی') + ').'
+      : 'درگاه زرین‌پال فعلاً خاموش است. پس از انتشار سایت و تنظیمات محرمانه سرور فعال می‌شود.';
+  } catch {
+    target.textContent = 'وضعیت درگاه قابل دریافت نیست.';
+  }
+}
+
 async function loadStoreSettings() {
   const form = $('#settingsForm');
   if (!form) return;
@@ -270,6 +283,7 @@ async function loadStoreSettings() {
     form.elements.payment_enabled.checked = data.payment_enabled === true;
     form.elements.local_shipping_toman.value = data.local_shipping_toman ?? '';
     form.elements.nationwide_shipping_toman.value = data.nationwide_shipping_toman ?? '';
+    await loadGatewayStatus();
     $('#settingsMessage').textContent = 'تنظیمات فعلی بارگذاری شد.';
   } catch (error) {
     $('#settingsMessage').textContent = error.message;
@@ -319,7 +333,8 @@ async function orders() {
         <p>جمع کالاها: ${Number(o.subtotal_toman).toLocaleString('fa-IR')} تومان</p>
         <p>هزینه ارسال: ${Number(o.shipping_toman).toLocaleString('fa-IR')} تومان</p>
         <p><b>مبلغ نهایی: ${Number(o.total_toman).toLocaleString('fa-IR')} تومان</b></p>
-        <p>وضعیت: ${escapeHtml(o.status)}</p>
+        <p>وضعیت سفارش: ${escapeHtml(o.status)} | پرداخت: ${escapeHtml(o.payment_status || 'نامشخص')}</p>
+        <p>روش پرداخت: ${escapeHtml(o.payment_method || 'نامشخص')} | کد پیگیری: ${escapeHtml(o.payment_reference || 'ثبت نشده')}</p>
         <p class="muted">${(o.items || []).map(i =>
           `${escapeHtml(i.name)} × ${escapeHtml(i.quantity)}`
         ).join('، ')}</p>
