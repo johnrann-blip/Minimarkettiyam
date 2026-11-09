@@ -115,6 +115,25 @@ async function run() {
   assert(revoked.status===401,'ابطال فوری نشست‌های مدیر غیرفعال‌شده');
   adminCookie=ownerCookie;
 
+  const restrictedSettingsManager=await request('/api/admin/auth/managers',{
+    method:'POST',admin:true,
+    body:{username:'settings.legacy',display_name:'مدیر تنظیمات محدود',password:'Manager-Settings-Test-2026!',permissions:['settings.view','settings.update']}
+  });
+  assert(restrictedSettingsManager.status===201,'ساخت مدیر با مجوزهای تنظیمات غیرحساس');
+  const restrictedSettingsLogin=await request('/api/admin/auth/login',{
+    method:'POST',headers:{'x-admin-request':'1'},
+    body:{username:'settings.legacy',password:'Manager-Settings-Test-2026!'}
+  });
+  assert(restrictedSettingsLogin.status===200 && restrictedSettingsLogin.cookie,'ورود مدیر تنظیمات محدود');
+  adminCookie=restrictedSettingsLogin.cookie.split(';')[0];
+  const hiddenPaymentDetails=await request('/api/admin/store-settings',{admin:true});
+  assert(hiddenPaymentDetails.status===403,'جلوگیری از مشاهده اطلاعات بانکی بدون مجوز مستقل پرداخت');
+  const blockedPaymentChange=await request('/api/admin/store-settings',{
+    method:'PATCH',admin:true,body:{payment_enabled:true}
+  });
+  assert(blockedPaymentChange.status===403,'جلوگیری از تغییر تنظیمات پرداخت بدون مجوز مستقل');
+  adminCookie=ownerCookie;
+
   let staticResponse = await fetch(BASE + '/admin/');
   const adminHtml = await staticResponse.text();
   assert(staticResponse.status === 200 && adminHtml.includes('noindex,nofollow'), 'بارگذاری پنل مدیریت با جلوگیری از ایندکس موتورهای جست‌وجو');
