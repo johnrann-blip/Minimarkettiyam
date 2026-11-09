@@ -55,6 +55,12 @@ function resetProductForm() {
 }
 
 $('#cancelEdit').onclick = resetProductForm;
+
+// Show immediate feedback even if browser validation prevents form submission.
+$('#submitProduct').addEventListener('click', () => {
+  message('دکمه ذخیره انتخاب شد؛ در حال بررسی اطلاعات محصول...');
+});
+
 $('#imageFile').addEventListener('change', () => {
   const file = $('#imageFile').files[0];
   if (!file) return;
