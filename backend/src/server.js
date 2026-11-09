@@ -22,7 +22,7 @@ function parseTrustProxySetting(raw) {
   if (!raw) return false;
   if (/^true$/i.test(raw)) return 1;
   if (/^false$/i.test(raw)) return false;
-  if (/^\\d+$/.test(raw)) return Number(raw);
+  if (/^\d+$/.test(raw)) return Number(raw);
   return raw; // Express also accepts trusted IPs/CIDRs and named ranges.
 }
 app.set('trust proxy', parseTrustProxySetting(trustProxyRaw));
