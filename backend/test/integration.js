@@ -133,6 +133,22 @@ async function run() {
   });
   assert(blockedPaymentChange.status===403,'جلوگیری از تغییر تنظیمات پرداخت بدون مجوز مستقل');
   adminCookie=ownerCookie;
+  const paymentViewer=await request('/api/admin/auth/managers',{
+    method:'POST',admin:true,
+    body:{username:'payment.viewer',display_name:'مشاهده‌گر پرداخت',password:'Manager-Payment-Test-2026!',permissions:['payments.view']}
+  });
+  assert(paymentViewer.status===201,'ساخت مدیر با مجوز مستقل مشاهده پرداخت');
+  const paymentViewerLogin=await request('/api/admin/auth/login',{
+    method:'POST',headers:{'x-admin-request':'1'},
+    body:{username:'payment.viewer',password:'Manager-Payment-Test-2026!'}
+  });
+  assert(paymentViewerLogin.status===200 && paymentViewerLogin.cookie,'ورود مشاهده‌گر پرداخت');
+  adminCookie=paymentViewerLogin.cookie.split(';')[0];
+  const paymentRead=await request('/api/admin/store-settings',{admin:true});
+  assert(paymentRead.status===200,'اجازه مشاهده اطلاعات پرداخت با مجوز مستقل');
+  const paymentWriteDenied=await request('/api/admin/store-settings',{method:'PATCH',admin:true,body:{}});
+  assert(paymentWriteDenied.status===403,'جلوگیری از تغییر اطلاعات پرداخت برای مشاهده‌گر صرف');
+  adminCookie=ownerCookie;
 
   let staticResponse = await fetch(BASE + '/admin/');
   const adminHtml = await staticResponse.text();
