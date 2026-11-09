@@ -332,11 +332,13 @@ async function run() {
       price_toman: 18000,
       sale_price_toman: null,
       stock: 2,
-      image_url: '',
+      image_url: 'https://example.com/legacy-main.jpg',
       is_active: true
     }
   });
-  assert(r.status === 201 && r.data.id, 'ثبت نمونه آزمایشی لوازم آرایشی');
+  assert(r.status === 201 && r.data.id && r.data.images.length === 1 &&
+    r.data.images[0] === 'https://example.com/legacy-main.jpg',
+    'سازگاری ثبت محصول قدیمی با یک نشانی تصویر');
   secondProductId = r.data.id;
 
   r = await request('/api/admin/products', {method:'POST',admin:true,body:{
@@ -382,6 +384,8 @@ async function run() {
   });
   assert(r.status === 200 && r.data.images.length === 1 && r.data.image_url === uploadedImageUrl,
     'حذف تصویر از گالری بدون حذف فایل فیزیکی');
+  await fs.access(path.join(__dirname, '..', 'uploads', 'products', uploadedImageFile));
+  assert(true, 'باقی‌ماندن فایل فیزیکی تصویر پس از حذف آن از گالری');
 
   r = await request('/api/admin/products', {
     method:'POST', admin:true,
