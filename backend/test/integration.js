@@ -13,7 +13,10 @@ const env = {
   ...process.env,
   PORT: String(PORT),
   DATABASE_URL: 'postgresql://u0_a289@127.0.0.1:5432/minimarkettiyam_test',
-  ADMIN_API_KEY: KEY
+  ADMIN_API_KEY: KEY,
+  ZARINPAL_ENABLED: 'false',
+  ZARINPAL_MODE: 'sandbox',
+  PUBLIC_BASE_URL: ''
 };
 
 const server = spawn(process.execPath, ['src/server.js'], {
@@ -101,6 +104,12 @@ async function run() {
       local_shipping_toman=NULL, nationwide_shipping_toman=NULL
     WHERE id=1
   `);
+
+  r = await request('/api/payments/zarinpal/status');
+  assert(r.status === 200 && r.data.provider === 'zarinpal' && r.data.enabled === false, 'درگاه زرین‌پال به‌صورت پیش‌فرض خاموش است');
+
+  r = await request('/api/payments/zarinpal/request', {method:'POST',body:{order_code:'MM123456789ABCD',phone:'09120000000'}});
+  assert(r.status === 503, 'جلوگیری از ساخت پرداخت آنلاین تا زمان پیکربندی درگاه');
 
   r = await request('/api/health');
   assert(r.status === 200 && r.data.status === 'ok', 'سلامت API و اتصال دیتابیس');
