@@ -257,6 +257,7 @@ function setAdminSession(admin) {
   }
   showAdminPage(pageAccess.products?'products':Object.keys(pageAccess)[0]);
   for (const field of $('#settingsForm').elements) field.disabled = !adminCan('payments.manage');
+  $('#expenseForm').hidden = !adminCan('accounting.manage');
   resetProductForm();
   Promise.all([
     adminCan('products.create') || adminCan('products.update') ? categories() : Promise.resolve(),
