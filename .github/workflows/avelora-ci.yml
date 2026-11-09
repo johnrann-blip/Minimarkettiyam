@@ -1,5 +1,12 @@
 name: AVELORA CI
 
+permissions:
+  contents: read
+
+concurrency:
+  group: avelora-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited, ready_for_review]
@@ -10,6 +17,7 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16
@@ -27,8 +35,8 @@ jobs:
     env:
       TEST_DATABASE_URL: postgresql://u0_a289:test-password@127.0.0.1:5432/minimarkettiyam_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -36,6 +44,9 @@ jobs:
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
+      - name: Audit production dependencies
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high
       - name: Initialize isolated test database
         run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f database/schema.sql
       - name: Static checks
