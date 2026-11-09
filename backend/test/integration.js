@@ -108,6 +108,11 @@ async function run() {
   assert(forbiddenProducts.status===403,'جلوگیری از مشاهده محصولات توسط مدیر فاقد مجوز');
   const allowedOrders=await request('/api/admin/orders',{admin:true});
   assert(allowedOrders.status===200,'اجازه مشاهده سفارش‌ها برای مدیر دارای مجوز');
+  const selfCreateManager=await request('/api/admin/auth/managers',{method:'POST',admin:true,body:{username:'self.escalation',display_name:'تلاش ارتقای دسترسی',password:'Manager-Escalation-2026!',permissions:['products.view','orders.view']}});
+  assert(selfCreateManager.status===403,'جلوگیری از ساخت مدیر توسط مدیر فرعی');
+  const selfChangePermissions=await request('/api/admin/auth/managers/'+managerCreated.data.id,{method:'PATCH',admin:true,body:{permissions:['products.view','orders.view','payments.manage']}});
+  assert(selfChangePermissions.status===403,'جلوگیری از افزایش سطح دسترسی توسط خود مدیر');
+
   const managerSessionsDenied=await request('/api/admin/auth/sessions',{admin:true});
   assert(managerSessionsDenied.status===403,'جلوگیری از مشاهده نشست‌های مدیران توسط مدیر فرعی');
   const deniedAccounting=await request('/api/admin/accounting/expenses',{admin:true});
