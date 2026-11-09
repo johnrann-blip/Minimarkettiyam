@@ -619,7 +619,7 @@ app.get('/api/admin/customers', adminOnly, async (_req,res) => {
 });
 
 app.get('/api/admin/reports/summary', adminOnly, async (req,res) => {
-  const validDate = value => /^\\d{4}-\\d{2}-\\d{2}$/.test(String(value||'')) && !Number.isNaN(Date.parse(String(value)+'T00:00:00Z'));
+  const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value||'')) && !Number.isNaN(Date.parse(String(value)+'T00:00:00Z'));
   const to = validDate(req.query.to) ? String(req.query.to) : new Date().toISOString().slice(0,10);
   const fromDefault = new Date(Date.now()-29*86400000).toISOString().slice(0,10);
   const from = validDate(req.query.from) ? String(req.query.from) : fromDefault;
