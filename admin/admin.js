@@ -9,13 +9,13 @@ function escapeHtml(value) {
 let adminUser = null;
 const ALL_ADMIN_PERMISSIONS = [
   'products.view','products.create','products.update','products.archive',
-  'orders.view','orders.update','customers.view','settings.view','settings.update',
+  'orders.view','orders.update','customers.view','settings.view','settings.update','payments.view','payments.manage',
   'reports.view','audit.view'
 ];
 const PERMISSION_LABELS = {
   'products.view':'مشاهده محصولات','products.create':'ثبت محصول','products.update':'ویرایش محصول',
   'products.archive':'بایگانی محصول','orders.view':'مشاهده سفارش‌ها','orders.update':'تغییر وضعیت سفارش',
-  'customers.view':'مشاهده مشتریان','settings.view':'مشاهده تنظیمات','settings.update':'تغییر تنظیمات',
+  'customers.view':'مشاهده مشتریان','settings.view':'مشاهده تنظیمات','settings.update':'تغییر تنظیمات','payments.view':'مشاهده اطلاعات بانکی و پرداخت','payments.manage':'مدیریت اطلاعات بانکی و پرداخت',
   'reports.view':'گزارش‌ها','audit.view':'سوابق فعالیت'
 };
 function adminCan(permission) {
@@ -185,7 +185,7 @@ function setAdminSession(admin) {
     productFormSection:adminCan('products.create') || adminCan('products.update'),
     productsSection:adminCan('products.view'),
     archiveSection:adminCan('products.archive') || adminCan('products.view'),
-    settingsSection:adminCan('settings.view') || adminCan('settings.update'),
+    settingsSection:adminCan('payments.view') || adminCan('payments.manage'),
     customersSection:adminCan('customers.view'),
     ordersSection:adminCan('orders.view') || adminCan('orders.update')
   };
@@ -197,14 +197,14 @@ function setAdminSession(admin) {
     if (section.dataset.allowed==='true') pageAccess[section.dataset.page]=true;
   }
   showAdminPage(pageAccess.products?'products':Object.keys(pageAccess)[0]);
-  for (const field of $('#settingsForm').elements) field.disabled = !adminCan('settings.update');
+  for (const field of $('#settingsForm').elements) field.disabled = !adminCan('payments.manage');
   resetProductForm();
   Promise.all([
     adminCan('products.create') || adminCan('products.update') ? categories() : Promise.resolve(),
     adminCan('products.view') || adminCan('products.create') || adminCan('products.update') ? products() : Promise.resolve(),
     adminCan('orders.view') ? orders() : Promise.resolve(),
     adminCan('customers.view') ? customers() : Promise.resolve(),
-    adminCan('settings.view') || adminCan('settings.update') ? loadStoreSettings() : Promise.resolve(),
+    adminCan('payments.view') || adminCan('payments.manage') ? loadStoreSettings() : Promise.resolve(),
     adminUser.role === 'owner' ? loadManagers() : Promise.resolve(),
     adminCan('audit.view') ? loadAudit() : Promise.resolve()
   ]);
