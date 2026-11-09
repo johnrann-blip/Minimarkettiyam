@@ -68,6 +68,8 @@ async function run() {
 
   let staticResponse = await fetch(BASE + '/admin/');
   assert(staticResponse.status === 200, 'بارگذاری صفحه پنل مدیریت');
+  staticResponse = await fetch(BASE + '/assistant.js');
+  assert(staticResponse.status === 200 && (await staticResponse.text()).includes('راهنمای خرید AVELORA'), 'بارگذاری دستیار رایگان راهنمای خرید');
   staticResponse = await fetch(BASE + '/admin/admin.js');
   assert(staticResponse.status === 200, 'بارگذاری JavaScript پنل مدیریت');
   staticResponse = await fetch(BASE + '/admin/admin.css');
