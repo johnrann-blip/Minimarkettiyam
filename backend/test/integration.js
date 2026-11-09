@@ -227,9 +227,6 @@ async function run() {
   assert(r.status===401, 'محافظت از فهرست مشتریان در برابر دسترسی غیرمجاز');
   r = await request('/api/admin/customers',{admin:true});
   assert(r.status===200 && Array.isArray(r.data) && r.data.some(x=>x.phone===memberPhone), 'نمایش مشتری ثبت‌نام‌شده در پنل مدیریت');
-  const memberCustomer=(await db.query('SELECT id FROM customers WHERE phone=$1',[memberPhone])).rows[0];
-  const refuseCustomerDeactivate=await request('/api/admin/customers/'+memberCustomer.id+'/status',{method:'PATCH',admin:true,body:{is_active:false}});
-  assert(refuseCustomerDeactivate.status===409,'جلوگیری از غیرفعال‌سازی مشتری دارای سابقه سفارش');
   const noOrderPhone='09'+crypto.randomInt(100000000,999999999).toString();
   const noOrderCustomer=(await db.query("INSERT INTO customers(full_name,phone,password_hash,password_salt) VALUES('مشتری بدون سفارش',$1,$2,$3) RETURNING id",[noOrderPhone,'0'.repeat(128),'0'.repeat(32)])).rows[0];
   const deactivateNoOrder=await request('/api/admin/customers/'+noOrderCustomer.id+'/status',{method:'PATCH',admin:true,body:{is_active:false}});
@@ -431,6 +428,9 @@ async function run() {
 
   const memberCostSnapshot=await db.query('SELECT cost_price_toman FROM order_items i JOIN orders o ON o.id=i.order_id WHERE o.order_code=$1',[memberOrderCode]);
   assert(memberCostSnapshot.rowCount===1 && Number(memberCostSnapshot.rows[0].cost_price_toman)===7000,'ثبت بهای تمام‌شده در لحظه سفارش برای حسابداری');
+  const memberCustomer=(await db.query('SELECT id FROM customers WHERE phone=$1',[memberPhone])).rows[0];
+  const refuseCustomerDeactivate=await request('/api/admin/customers/'+memberCustomer.id+'/status',{method:'PATCH',admin:true,body:{is_active:false}});
+  assert(refuseCustomerDeactivate.status===409,'جلوگیری از غیرفعال‌سازی مشتری دارای سابقه سفارش');
 
 
   const orderKey = crypto.randomUUID();
