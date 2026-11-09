@@ -845,4 +845,4 @@ app.delete('/api/admin/products/:id', adminOnly, async (req, res) => {
 });
 
 app.get('*', (_req,res) => res.sendFile(path.join(__dirname,'../../frontend/index.html')));
-app.listen(port, '0.0.0.0', () => console.log(`Minimarkettiyam running on ${port}`));
+app.listen(port, '0.0.0.0', () => console.log(`AVELORA running on ${port}`));
