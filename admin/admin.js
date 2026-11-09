@@ -25,7 +25,7 @@ function adminCan(permission) {
   if (permissions.includes(permission)) return true;
   if (permission.endsWith('.view')) {
     const prefix=permission.slice(0,-5);
-    return [prefix+'.create',prefix+'.update',prefix+'.archive'].some(x=>permissions.includes(x)) || (permission==='payments.view' && permissions.includes('payments.manage')) || (permission==='customers.view' && permissions.includes('customers.manage'));
+    return [prefix+'.create',prefix+'.update',prefix+'.archive'].some(x=>permissions.includes(x)) || (permission==='payments.view' && permissions.includes('payments.manage')) || (permission==='customers.view' && permissions.includes('customers.manage')) || (permission==='accounting.view' && permissions.includes('accounting.manage'));
   }
   return false;
 }
@@ -107,17 +107,44 @@ async function loadReports() {
     const x=data.summary||{};
     const money=value=>Number(value||0).toLocaleString('fa-IR')+' تومان';
     const profit=x.gross_profit_toman===null?'قابل محاسبه نیست؛ بهای تمام‌شده '+Number(x.items_without_cost||0).toLocaleString('fa-IR')+' قلم ثبت نشده است.':money(x.gross_profit_toman);
+    const net=x.net_profit_toman===null?'قابل محاسبه نیست':money(x.net_profit_toman);
     $('#reportSummary').innerHTML=`
       <div class="order"><b>بازه گزارش: ${escapeHtml(data.from)} تا ${escapeHtml(data.to)}</b>
       <p>تعداد سفارش‌های پرداخت‌شده: ${Number(x.paid_order_count||0).toLocaleString('fa-IR')}</p>
       <p>فروش کالا پس از تخفیف: ${money(x.product_revenue_toman)}</p>
       <p>هزینه ارسال دریافت‌شده: ${money(x.shipping_collected_toman)}</p>
       <p><b>کل مبلغ وصول‌شده: ${money(x.total_collected_toman)}</b></p>
-      <p>سود ناخالص: ${escapeHtml(profit)}</p></div>`;
+      <p>سود ناخالص کالا: ${escapeHtml(profit)}</p><p>هزینه‌های ثبت‌شده: ${money(x.expenses_toman)}</p><p><b>مانده پس از هزینه‌های ثبت‌شده: ${escapeHtml(net)}</b></p></div>`;
     $('#reportDaily').innerHTML=(data.daily||[]).map(day=>`<div class="order"><b>${escapeHtml(day.day)}</b><p>تعداد سفارش: ${Number(day.paid_orders).toLocaleString('fa-IR')} | وصولی: ${money(day.collected_toman)}</p></div>`).join('')||'در این بازه پرداخت تأییدشده‌ای ثبت نشده است.';
   }catch(error){$('#reportSummary').textContent=error.message;}
   await loadAdminErrors();
 }
+async function loadExpenses(){
+  const query=new URLSearchParams();
+  if($('#reportFrom').value)query.set('from',$('#reportFrom').value);
+  if($('#reportTo').value)query.set('to',$('#reportTo').value);
+  const qs=query.toString();
+  try{
+    const data=await request('/api/admin/accounting/expenses'+(qs?'?'+qs:''));
+    const money=value=>Number(value||0).toLocaleString('fa-IR')+' تومان';
+    $('#accountingExpenses').innerHTML=(data.expenses||[]).map(expense=>`<div class="order"><b>${escapeHtml(expense.category)}</b><p>${escapeHtml(expense.expense_date)} — ${money(expense.amount_toman)}</p><p>${escapeHtml(expense.description)}</p></div>`).join('')||'هزینه‌ای در این بازه ثبت نشده است.';
+  }catch(error){$('#accountingExpenses').textContent=error.message;}
+}
+$('#expenseForm').onsubmit=async event=>{
+  event.preventDefault();
+  const form=event.currentTarget;
+  const data=Object.fromEntries(new FormData(form).entries());
+  data.amount_toman=Number(data.amount_toman);
+  try{
+    await request('/api/admin/accounting/expenses',{method:'POST',body:JSON.stringify(data)});
+    form.reset();
+    message('هزینه ثبت شد؛ ردیف‌های حسابداری حذف نمی‌شوند و اصلاح با ثبت ردیف اصلاحی انجام می‌شود.');
+    await loadExpenses();
+    if(adminCan('reports.view'))await loadReports();
+  }catch(error){message(error.message);}
+};
+$('#refreshExpenses').onclick=loadExpenses;
+
 async function loadAdminErrors(){
   try{
     const rows=await request('/api/admin/reports/errors');
@@ -239,7 +266,8 @@ function setAdminSession(admin) {
     adminCan('payments.view') || adminCan('payments.manage') ? loadStoreSettings() : Promise.resolve(),
     adminUser.role === 'owner' ? loadManagers() : Promise.resolve(),
     adminCan('audit.view') ? loadAudit() : Promise.resolve(),
-    adminCan('reports.view') ? loadReports() : Promise.resolve()
+    adminCan('reports.view') ? loadReports() : Promise.resolve(),
+    adminCan('accounting.view') || adminCan('accounting.manage') ? loadExpenses() : Promise.resolve()
   ]);
 }
 async function initializeAdminAuth() {
