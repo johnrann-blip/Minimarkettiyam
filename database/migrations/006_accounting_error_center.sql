@@ -17,3 +17,15 @@ CREATE TABLE IF NOT EXISTS admin_error_logs (
 );
 CREATE INDEX IF NOT EXISTS idx_admin_error_logs_created
   ON admin_error_logs(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS accounting_expenses (
+  id BIGSERIAL PRIMARY KEY,
+  expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  category VARCHAR(80) NOT NULL,
+  description VARCHAR(500) NOT NULL DEFAULT '',
+  amount_toman BIGINT NOT NULL CHECK (amount_toman > 0),
+  created_by BIGINT REFERENCES admin_users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_accounting_expenses_date
+  ON accounting_expenses(expense_date DESC);
