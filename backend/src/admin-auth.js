@@ -136,17 +136,20 @@ function createAdminAuth({pool,rateLimit}) {
   } catch(error) { if(error.code==='23505') return res.status(409).json({error:'این نام کاربری قبلاً ثبت شده است.'}); res.status(503).json({error:'ساخت حساب مدیر انجام نشد.'}); }
  });
  router.patch('/managers/:id',ownerOnly,async(req,res)=>{
-  const id=String(req.params.id||''),permissions=req.body?.permissions,active=req.body?.is_active;
+  const id=String(req.params.id||''),permissions=req.body?.permissions,active=req.body?.is_active,password=req.body?.password;
   if(!/^[1-9][0-9]*$/.test(id)) return res.status(400).json({error:'شناسه مدیر معتبر نیست.'});
   if(permissions!==undefined&&!validPermissions(permissions)) return res.status(400).json({error:'فهرست مجوزها معتبر نیست.'});
   if(active!==undefined&&typeof active!=='boolean') return res.status(400).json({error:'وضعیت مدیر معتبر نیست.'});
-  if(permissions===undefined&&active===undefined) return res.status(400).json({error:'تغییری برای ذخیره ارسال نشده است.'});
+  if(password!==undefined&&(String(password).length<12||String(password).length>200)) return res.status(400).json({error:'رمز جدید باید حداقل ۱۲ نویسه داشته باشد.'});
+  if(permissions===undefined&&active===undefined&&password===undefined) return res.status(400).json({error:'تغییری برای ذخیره ارسال نشده است.'});
   try {
    const found=await pool.query("SELECT id,role FROM admin_users WHERE id=$1",[id]);
    if(!found.rowCount||found.rows[0].role!=='manager') return res.status(404).json({error:'مدیر پیدا نشد.'});
-   const r=await pool.query('UPDATE admin_users SET permissions=COALESCE($1::jsonb,permissions),is_active=COALESCE($2,is_active),updated_at=NOW() WHERE id=$3 RETURNING id,username,display_name,permissions,is_active,last_login_at,created_at',
-    [permissions===undefined?null:JSON.stringify(permissions),active===undefined?null:active,id]);
-   if(active===false) await pool.query('DELETE FROM admin_sessions WHERE admin_id=$1',[id]);
+   let passwordHash=null,passwordSalt=null;
+   if(password!==undefined) { const salt=crypto.randomBytes(16),hash=await scrypt(String(password),salt,64); passwordHash=hash.toString('hex'); passwordSalt=salt.toString('hex'); }
+   const r=await pool.query('UPDATE admin_users SET permissions=COALESCE($1::jsonb,permissions),is_active=COALESCE($2,is_active),password_hash=COALESCE($3,password_hash),password_salt=COALESCE($4,password_salt),updated_at=NOW() WHERE id=$5 RETURNING id,username,display_name,permissions,is_active,last_login_at,created_at',
+    [permissions===undefined?null:JSON.stringify(permissions),active===undefined?null:active,passwordHash,passwordSalt,id]);
+   if(active===false||password!==undefined) await pool.query('DELETE FROM admin_sessions WHERE admin_id=$1',[id]);
    await audit(pool,req.admin,req,'manager.update','administrators',200,id); res.json(r.rows[0]);
   } catch { res.status(503).json({error:'به‌روزرسانی مدیر انجام نشد.'}); }
  });
