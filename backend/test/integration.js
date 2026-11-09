@@ -105,6 +105,8 @@ async function run() {
   assert(forbiddenProducts.status===403,'جلوگیری از مشاهده محصولات توسط مدیر فاقد مجوز');
   const allowedOrders=await request('/api/admin/orders',{admin:true});
   assert(allowedOrders.status===200,'اجازه مشاهده سفارش‌ها برای مدیر دارای مجوز');
+  const deniedAccounting=await request('/api/admin/accounting/expenses',{admin:true});
+  assert(deniedAccounting.status===403,'جلوگیری از مشاهده دفتر هزینه‌ها بدون مجوز حسابداری');
   adminCookie=ownerCookie;
   const auditRows=await request('/api/admin/auth/audit',{admin:true});
   assert(auditRows.status===200 && auditRows.data.some(x=>x.action==='admin.login'),'ثبت و نمایش رویدادهای ورود و فعالیت مدیران');
@@ -483,8 +485,13 @@ async function run() {
 
   const order = r.data.find(x => x.order_code === orderCode);
   assert(!!order, 'یافتن سفارش آزمایشی');
+  const expenseDate=new Date().toISOString().slice(0,10);
+  const expenseCreated=await request('/api/admin/accounting/expenses',{method:'POST',admin:true,body:{expense_date:expenseDate,category:'آزمون',description:'هزینه آزمایشی',amount_toman:12345}});
+  assert(expenseCreated.status===201 && Number(expenseCreated.data.amount_toman)===12345,'ثبت هزینه عملیاتی در دفتر حسابداری');
+  const expenseList=await request('/api/admin/accounting/expenses',{admin:true});
+  assert(expenseList.status===200 && expenseList.data.expenses.some(x=>Number(x.amount_toman)===12345),'نمایش ردیف هزینه در دفتر حسابداری');
   const accountingReport=await request('/api/admin/reports/summary',{admin:true});
-  assert(accountingReport.status===200 && accountingReport.data.summary && Array.isArray(accountingReport.data.daily),'دریافت گزارش مالی با ساختار معتبر');
+  assert(accountingReport.status===200 && accountingReport.data.summary && Array.isArray(accountingReport.data.daily) && Number(accountingReport.data.summary.expenses_toman)>=12345,'گزارش مالی همراه با کسر هزینه‌های ثبت‌شده');
   const errorReport=await request('/api/admin/reports/errors',{admin:true});
   assert(errorReport.status===200 && Array.isArray(errorReport.data),'دریافت مرکز خطاها');
 
