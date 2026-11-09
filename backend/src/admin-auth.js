@@ -34,7 +34,7 @@ async function audit(pool,admin,req,action,resource,status=200,id=null) {
  } catch(error) { console.error('Admin audit write failed:',error.message); }
 }
 function requiredPermission(req) {
- const p=req.path,m=req.method;
+ const p=req.path.replace(/^\\/api\\/admin/,'')||'/',m=req.method;
  if(p==='/products') return m==='GET'?'products.view':m==='POST'?'products.create':'products.update';
  if(/^\/products\/[^/]+$/.test(p)) return m==='DELETE'?'products.archive':m==='GET'?'products.view':'products.update';
  if(p==='/uploads/product') return 'products.update';
@@ -64,7 +64,7 @@ function createAdminAuth({pool,rateLimit}) {
    next();
   } catch(error) { next(error); }
  }
- const ownerOnly=(req,res,next)=>authenticate(req,res,()=>req.admin.role==='owner'?next():res.status(403).json({error:'این بخش فقط در اختیار مالک فروشگاه است.'}));
+ const ownerOnly=(req,res,next)=>{ if(req.method!=='GET'&&req.get('x-admin-request')!=='1') return res.status(403).json({error:'درخواست تغییر اطلاعات معتبر نیست.'}); authenticate(req,res,()=>req.admin.role==='owner'?next():res.status(403).json({error:'این بخش فقط در اختیار مالک فروشگاه است.'})); };
  router.get('/status',async(_req,res)=>{
   try { const r=await pool.query("SELECT COUNT(*)::int AS count FROM admin_users WHERE role='owner'"); res.json({setup_required:r.rows[0].count===0}); }
   catch { res.status(503).json({error:'وضعیت راه‌اندازی مدیریت قابل دریافت نیست.'}); }
@@ -106,6 +106,19 @@ function createAdminAuth({pool,rateLimit}) {
   const token=cookieValue(req.headers.cookie,COOKIE);
   if(token) await pool.query('DELETE FROM admin_sessions WHERE token_hash=$1',[hashToken(token)]).catch(()=>{});
   await audit(pool,req.admin,req,'admin.logout','authentication',200); clearCookie(res); res.json({success:true});
+ });
+ router.get('/audit',authenticate,async(req,res)=>{
+  if(req.admin.role!=='owner'&&!req.admin.permissions.includes('audit.view')) return res.status(403).json({error:'برای مشاهده گزارش فعالیت‌ها دسترسی نداری.'});
+  try {
+   const r=await pool.query('SELECT id,admin_id,username,action,resource,resource_id,request_method,request_path,response_status,ip_address,created_at FROM admin_audit_logs ORDER BY created_at DESC LIMIT 300');
+   res.json(r.rows);
+  } catch { res.status(500).json({error:'گزارش فعالیت مدیران دریافت نشد.'}); }
+ });
+ router.get('/sessions',ownerOnly,async(_req,res)=>{
+  try {
+   const r=await pool.query("SELECT s.id,s.admin_id,a.username,a.display_name,s.ip_address,s.user_agent,s.created_at,s.last_seen_at,s.expires_at FROM admin_sessions s JOIN admin_users a ON a.id=s.admin_id WHERE s.expires_at>NOW() ORDER BY s.last_seen_at DESC LIMIT 300");
+   res.json(r.rows);
+  } catch { res.status(500).json({error:'نشست‌های فعال دریافت نشد.'}); }
  });
  router.get('/managers',ownerOnly,async(_req,res)=>{
   try { const r=await pool.query("SELECT id,username,display_name,permissions,is_active,last_login_at,created_at FROM admin_users WHERE role='manager' ORDER BY created_at DESC"); res.json(r.rows); }
