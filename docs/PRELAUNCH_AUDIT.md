@@ -4,7 +4,7 @@
 
 ## نتیجه فعلی
 
-<badge>آماده انتشار عمومی نیست</badge>
+**وضعیت: آماده انتشار عمومی نیست**
 
 شاخه مورد بازبینی: `feature/admin-rbac-foundation`  
 Pull Request: [#6](https://github.com/johnrann-blip/Minimarkettiyam/pull/6)  
