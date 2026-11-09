@@ -7,7 +7,6 @@ function escapeHtml(value) {
 }
 
 let key = sessionStorage.getItem('mm_admin_key') || '';
-let showArchivedProducts = false;
 $('#key').value = key;
 
 function headers() {
@@ -149,44 +148,49 @@ $('#productForm').onsubmit = async event => {
   }
 };
 
+function isProductActive(product) {
+  return product.is_active === true || product.is_active === 'true' || product.is_active === 1;
+}
+
+function renderProductCard(p, archived = false) {
+  const active = isProductActive(p);
+  return `
+    <div class="order">
+      <b>${escapeHtml(p.name)}</b>
+      <p>شناسه: ${escapeHtml(p.id)} | کد کالا: ${escapeHtml(p.sku || 'ندارد')}</p>
+      <p>قیمت: ${Number(p.price_toman).toLocaleString('fa-IR')} تومان</p>
+      <p>تخفیف: ${p.sale_price_toman === null ? 'ندارد' : Number(p.sale_price_toman).toLocaleString('fa-IR') + ' تومان'}</p>
+      <p>موجودی: ${Number(p.stock).toLocaleString('fa-IR')}</p>
+      <p>دسته: ${escapeHtml(p.category_name || 'بدون دسته')}</p>
+      <p>وضعیت: ${active ? 'فعال' : 'بایگانی‌شده'}</p>
+      <div class="product-actions">
+        ${archived
+          ? `<button type="button" data-restore="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">فعال‌سازی مجدد</button>`
+          : `
+            <button type="button" data-edit="${escapeHtml(p.id)}">ویرایش محصول</button>
+            <button type="button" data-toggle="${escapeHtml(p.id)}" data-active="1">غیرفعال‌کردن</button>
+            <button type="button" data-remove="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">انتقال به بایگانی</button>
+          `}
+      </div>
+    </div>
+  `;
+}
+
 async function products() {
   try {
     const data = await request('/api/admin/products');
     if (!Array.isArray(data)) throw new Error('پاسخ فهرست محصولات معتبر نیست.');
+    const activeProducts = data.filter(isProductActive);
+    const archivedProducts = data.filter(p => !isProductActive(p));
 
-    const visibleProducts = data.filter(p => {
-      // PostgreSQL returns booleans, but normalize defensively in case an API layer
-      // serializes the value as a string or number.
-      const isActive = p.is_active === true || p.is_active === 'true' || p.is_active === 1;
-      // Archive mode must show ONLY inactive products, not the complete catalogue.
-      return showArchivedProducts ? !isActive : isActive;
-    });
-    $('#products').innerHTML = visibleProducts.map(p => `
-      <div class="order">
-        <b>${escapeHtml(p.name)}</b>
-        <p>شناسه: ${escapeHtml(p.id)} | کد کالا: ${escapeHtml(p.sku || 'ندارد')}</p>
-        <p>قیمت: ${Number(p.price_toman).toLocaleString('fa-IR')} تومان</p>
-        <p>تخفیف: ${
-          p.sale_price_toman === null
-            ? 'ندارد'
-            : Number(p.sale_price_toman).toLocaleString('fa-IR') + ' تومان'
-        }</p>
-        <p>موجودی: ${Number(p.stock).toLocaleString('fa-IR')}</p>
-        <p>دسته: ${escapeHtml(p.category_name || 'بدون دسته')}</p>
-        <p>وضعیت: ${p.is_active ? 'فعال' : 'غیرفعال'}</p>
-        <div class="product-actions">
-          <button type="button" data-edit="${escapeHtml(p.id)}">ویرایش محصول</button>
-          <button type="button" data-toggle="${escapeHtml(p.id)}" data-active="${p.is_active ? '1' : '0'}">
-            ${p.is_active ? 'غیرفعال‌کردن' : 'فعال‌کردن'}
-          </button>
-          <button type="button" data-remove="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">حذف از ویترین فروشگاه</button>
-        </div>
-      </div>
-    `).join('') || (showArchivedProducts
-      ? 'محصولی در این فهرست وجود ندارد.'
-      : 'محصول فعالی ثبت نشده است. برای دیدن محصولات حذف‌شده از ویترین، دکمه «نمایش محصولات حذف‌شده» را بزن.');
+    $('#products').innerHTML = activeProducts.map(p => renderProductCard(p)).join('')
+      || 'محصول فعالی ثبت نشده است.';
+    $('#archivedProducts').innerHTML = archivedProducts.map(p => renderProductCard(p, true)).join('')
+      || 'بایگانی خالی است.';
+    $('#archivedProductsCount').textContent = `(${archivedProducts.length.toLocaleString('fa-IR')})`;
   } catch (error) {
     $('#products').textContent = error.message;
+    $('#archivedProducts').textContent = error.message;
   }
 }
 
@@ -198,10 +202,10 @@ $('#products').addEventListener('click', async event => {
   if (removeButton) {
     const id = removeButton.dataset.remove;
     const name = removeButton.dataset.name || 'این محصول';
-    if (!confirm(`«${name}» از ویترین فروشگاه حذف شود؟ محصول برای حفظ سوابق سفارش‌ها در پایگاه داده باقی می‌ماند و غیرفعال می‌شود.`)) return;
+    if (!confirm(`«${name}» به بایگانی محصولات منتقل شود؟ اطلاعات و سوابق سفارش‌ها حفظ می‌شوند.`)) return;
     try {
       await request(`/api/admin/products/${encodeURIComponent(id)}`, {method:'DELETE'});
-      message('محصول از ویترین حذف و غیرفعال شد؛ سوابق آن حفظ شده است.');
+      message('محصول به بایگانی منتقل شد؛ سوابق آن حفظ شده است.');
       await products();
     } catch (error) {
       message(error.message);
@@ -386,12 +390,22 @@ $('#orders').addEventListener('click', async event => {
 
 $('#refresh').onclick = orders;
 $('#refreshProducts').onclick = products;
-$('#toggleArchivedProducts').onclick = async () => {
-  showArchivedProducts = !showArchivedProducts;
-  $('#toggleArchivedProducts').textContent = showArchivedProducts
-    ? 'بازگشت به محصولات فعال'
-    : 'نمایش محصولات حذف‌شده';
-  await products();
-};
+$('#archivedProducts').addEventListener('click', async event => {
+  const button = event.target.closest('[data-restore]');
+  if (!button) return;
+  const id = button.dataset.restore;
+  const name = button.dataset.name || 'این محصول';
+  if (!confirm(`«${name}» دوباره در فهرست محصولات فعال قرار بگیرد؟`)) return;
+  try {
+    await request(`/api/admin/products/${encodeURIComponent(id)}`, {
+      method:'PATCH',
+      body:JSON.stringify({is_active:true})
+    });
+    message('محصول از بایگانی خارج و به فهرست فعال‌ها اضافه شد.');
+    await products();
+  } catch (error) {
+    message(error.message);
+  }
+});
 
 categories();
