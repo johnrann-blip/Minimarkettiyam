@@ -82,7 +82,7 @@ $('#saveKey').onclick = async () => {
   }
   sessionStorage.setItem('mm_admin_key', key);
   message('کلید ذخیره شد؛ در حال دریافت اطلاعات...');
-  await Promise.all([products(), orders(), loadStoreSettings()]);
+  await Promise.all([products(), orders(), customers(), loadStoreSettings()]);
 };
 
 $('#productForm').onsubmit = async event => {
@@ -336,6 +336,22 @@ $('#settingsForm').onsubmit = async event => {
   }
 };
 
+async function customers() {
+  try {
+    const data=await request('/api/admin/customers');
+    if(!Array.isArray(data)) throw new Error('پاسخ فهرست مشتریان معتبر نیست.');
+    $('#customers').innerHTML=data.map(customer=>`
+      <div class="order">
+        <b>${escapeHtml(customer.full_name)}</b>
+        <p>شماره موبایل: ${escapeHtml(customer.phone)}</p>
+        <p>تعداد سفارش: ${Number(customer.order_count).toLocaleString('fa-IR')}</p>
+        <p>مجموع خریدهای غیرلغوشده: ${Number(customer.total_spent_toman).toLocaleString('fa-IR')} تومان</p>
+        <p class="muted">عضویت از: ${new Date(customer.created_at).toLocaleDateString('fa-IR')}</p>
+      </div>
+    `).join('') || 'هنوز مشتری عضوی ثبت‌نام نکرده است.';
+  } catch(error) { $('#customers').textContent=error.message; }
+}
+
 async function orders() {
   try {
     const data = await request('/api/admin/orders');
@@ -393,6 +409,7 @@ $('#orders').addEventListener('click', async event => {
 });
 
 $('#refresh').onclick = orders;
+$('#refreshCustomers').onclick = customers;
 $('#refreshProducts').onclick = products;
 $('#archivedProducts').addEventListener('click', async event => {
   const button = event.target.closest('[data-restore]');
@@ -413,3 +430,4 @@ $('#archivedProducts').addEventListener('click', async event => {
 });
 
 categories();
+customers();
