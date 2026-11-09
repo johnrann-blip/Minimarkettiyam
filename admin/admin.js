@@ -105,7 +105,7 @@ async function loadReports() {
     const queryString=query.toString();
     const data=await request('/api/admin/reports/summary'+(queryString?'?'+queryString:''));
     const x=data.summary||{};
-    const money=value=>Number(value||0).toLocaleString('fa-IR')+' تومان';
+    const money=value=>BigInt(String(value||0)).toLocaleString('fa-IR')+' تومان';
     const profit=x.gross_profit_toman===null?'قابل محاسبه نیست؛ بهای تمام‌شده '+Number(x.items_without_cost||0).toLocaleString('fa-IR')+' قلم ثبت نشده است.':money(x.gross_profit_toman);
     const net=x.net_profit_toman===null?'قابل محاسبه نیست':money(x.net_profit_toman);
     $('#reportSummary').innerHTML=`
@@ -151,7 +151,7 @@ async function loadAdminErrors(){
     $('#adminErrors').innerHTML=rows.map(row=>`<div class="order"><b>${escapeHtml(row.level)} — HTTP ${escapeHtml(row.response_status)}</b><p>${escapeHtml(row.message)}</p><p>${escapeHtml(row.request_method)} ${escapeHtml(row.request_path)}</p><p class="muted">${new Date(row.created_at).toLocaleString('fa-IR')}</p></div>`).join('')||'خطای ثبت‌شده‌ای وجود ندارد.';
   }catch(error){$('#adminErrors').textContent=error.message;}
 }
-$('#refreshReports').onclick=loadReports;
+$('#refreshReports').onclick=()=>{if(adminCan('reports.view'))loadReports();if(adminCan('accounting.view')||adminCan('accounting.manage'))loadExpenses();};
 $('#refreshErrors').onclick=loadAdminErrors;
 
 async function loadAudit() {
