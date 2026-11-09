@@ -4,7 +4,7 @@ const { promisify } = require('util');
 const scrypt = promisify(crypto.scrypt);
 const router = express.Router();
 const COOKIE = 'avelora_admin_session';
-const PERMISSIONS = ['products.view','products.create','products.update','products.archive','orders.view','orders.update','customers.view','settings.view','settings.update','reports.view','audit.view'];
+const PERMISSIONS = ['products.view','products.create','products.update','products.archive','orders.view','orders.update','customers.view','settings.view','settings.update','payments.view','payments.manage','reports.view','audit.view'];
 
 function cookieValue(header,name) {
  const entry=String(header||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='));
@@ -41,7 +41,7 @@ function requiredPermission(req) {
  if(p==='/orders') return 'orders.view';
  if(/^\/orders\/[^/]+\/status$/.test(p)) return 'orders.update';
  if(p==='/customers') return 'customers.view';
- if(p==='/store-settings') return m==='GET'?'settings.view':'settings.update';
+ if(p==='/store-settings') return m==='GET'?'payments.view':'payments.manage';
  if(p.startsWith('/reports')) return 'reports.view';
  if(p.startsWith('/audit')) return 'audit.view';
  return 'admin.access';
