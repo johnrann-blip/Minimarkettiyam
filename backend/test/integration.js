@@ -68,7 +68,7 @@ async function run() {
   staticResponse = await fetch(BASE + '/admin/admin.css');
   assert(staticResponse.status === 200, 'بارگذاری CSS پنل مدیریت');
 
-  r = await request('/api/admin/uploads/product', {
+  let r = await request('/api/admin/uploads/product', {
     method: 'POST',
     body: { mime_type: 'image/png', image_base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=' }
   });
@@ -99,7 +99,7 @@ async function run() {
     WHERE id=1
   `);
 
-  let r = await request('/api/health');
+  r = await request('/api/health');
   assert(r.status === 200 && r.data.status === 'ok', 'سلامت API و اتصال دیتابیس');
 
   r = await request('/api/categories');
