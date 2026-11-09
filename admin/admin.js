@@ -7,6 +7,7 @@ function escapeHtml(value) {
 }
 
 let key = sessionStorage.getItem('mm_admin_key') || '';
+let showArchivedProducts = false;
 $('#key').value = key;
 
 function headers() {
@@ -153,7 +154,8 @@ async function products() {
     const data = await request('/api/admin/products');
     if (!Array.isArray(data)) throw new Error('پاسخ فهرست محصولات معتبر نیست.');
 
-    $('#products').innerHTML = data.map(p => `
+    const visibleProducts = data.filter(p => showArchivedProducts || p.is_active);
+    $('#products').innerHTML = visibleProducts.map(p => `
       <div class="order">
         <b>${escapeHtml(p.name)}</b>
         <p>شناسه: ${escapeHtml(p.id)} | کد کالا: ${escapeHtml(p.sku || 'ندارد')}</p>
@@ -174,7 +176,9 @@ async function products() {
           <button type="button" data-remove="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">حذف از ویترین فروشگاه</button>
         </div>
       </div>
-    `).join('') || 'هنوز محصولی ثبت نشده است.';
+    `).join('') || (showArchivedProducts
+      ? 'محصولی در این فهرست وجود ندارد.'
+      : 'محصول فعالی ثبت نشده است. برای دیدن محصولات حذف‌شده از ویترین، دکمه «نمایش محصولات حذف‌شده» را بزن.');
   } catch (error) {
     $('#products').textContent = error.message;
   }
@@ -376,5 +380,12 @@ $('#orders').addEventListener('click', async event => {
 
 $('#refresh').onclick = orders;
 $('#refreshProducts').onclick = products;
+$('#toggleArchivedProducts').onclick = async () => {
+  showArchivedProducts = !showArchivedProducts;
+  $('#toggleArchivedProducts').textContent = showArchivedProducts
+    ? 'بازگشت به محصولات فعال'
+    : 'نمایش محصولات حذف‌شده';
+  await products();
+};
 
 categories();
