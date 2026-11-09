@@ -151,10 +151,13 @@ async function products() {
         <p>موجودی: ${Number(p.stock).toLocaleString('fa-IR')}</p>
         <p>دسته: ${escapeHtml(p.category_name || 'بدون دسته')}</p>
         <p>وضعیت: ${p.is_active ? 'فعال' : 'غیرفعال'}</p>
-        <button type="button" data-edit="${escapeHtml(p.id)}">ویرایش</button>
-        <button type="button" data-toggle="${escapeHtml(p.id)}" data-active="${p.is_active ? '1' : '0'}">
-          ${p.is_active ? 'غیرفعال‌کردن' : 'فعال‌کردن'}
-        </button>
+        <div class="product-actions">
+          <button type="button" data-edit="${escapeHtml(p.id)}">ویرایش محصول</button>
+          <button type="button" data-toggle="${escapeHtml(p.id)}" data-active="${p.is_active ? '1' : '0'}">
+            ${p.is_active ? 'غیرفعال‌کردن' : 'فعال‌کردن'}
+          </button>
+          <button type="button" data-remove="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">حذف از ویترین فروشگاه</button>
+        </div>
       </div>
     `).join('') || 'هنوز محصولی ثبت نشده است.';
   } catch (error) {
@@ -165,6 +168,21 @@ async function products() {
 $('#products').addEventListener('click', async event => {
   const editButton = event.target.closest('[data-edit]');
   const toggleButton = event.target.closest('[data-toggle]');
+  const removeButton = event.target.closest('[data-remove]');
+
+  if (removeButton) {
+    const id = removeButton.dataset.remove;
+    const name = removeButton.dataset.name || 'این محصول';
+    if (!confirm(`«${name}» از ویترین فروشگاه حذف شود؟ محصول برای حفظ سوابق سفارش‌ها در پایگاه داده باقی می‌ماند و غیرفعال می‌شود.`)) return;
+    try {
+      await request(`/api/admin/products/${encodeURIComponent(id)}`, {method:'DELETE'});
+      message('محصول از ویترین حذف و غیرفعال شد؛ سوابق آن حفظ شده است.');
+      await products();
+    } catch (error) {
+      message(error.message);
+    }
+    return;
+  }
 
   if (editButton) {
     try {
