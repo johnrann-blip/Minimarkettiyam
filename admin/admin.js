@@ -165,8 +165,16 @@ async function loadAudit() {
         <p class="muted">${new Date(row.created_at).toLocaleString('fa-IR')}</p>
       </div>
     `).join('') || 'هنوز فعالیتی ثبت نشده است.';
+    if(adminUser?.role==='owner')await loadActiveSessions();
   } catch(error) { $('#auditLogs').textContent=error.message; }
 }
+async function loadActiveSessions(){
+  try{
+    const rows=await request('/api/admin/auth/sessions');
+    $('#activeSessions').innerHTML=rows.map(row=>`<div class="order"><b>${escapeHtml(row.display_name)} — @${escapeHtml(row.username)}</b><p>IP: ${escapeHtml(row.ip_address||'نامشخص')}</p><p>آخرین فعالیت: ${new Date(row.last_seen_at).toLocaleString('fa-IR')}</p><p>انقضا: ${new Date(row.expires_at).toLocaleString('fa-IR')}</p></div>`).join('')||'نشست فعال دیگری وجود ندارد.';
+  }catch(error){$('#activeSessions').textContent=error.message;}
+}
+$('#refreshSessions').onclick=loadActiveSessions;
 $('#refreshAudit').onclick=loadAudit;
 
 async function categories() {
@@ -258,6 +266,7 @@ function setAdminSession(admin) {
   showAdminPage(pageAccess.products?'products':Object.keys(pageAccess)[0]);
   for (const field of $('#settingsForm').elements) field.disabled = !adminCan('payments.manage');
   $('#expenseForm').hidden = !adminCan('accounting.manage');
+  $('#activeSessionsSection').hidden = adminUser.role!=='owner';
   $('#financialReportsSection').hidden = !adminCan('reports.view');
   $('#expenseLedgerSection').hidden = !(adminCan('accounting.view') || adminCan('accounting.manage'));
   resetProductForm();
