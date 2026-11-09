@@ -154,7 +154,13 @@ async function products() {
     const data = await request('/api/admin/products');
     if (!Array.isArray(data)) throw new Error('پاسخ فهرست محصولات معتبر نیست.');
 
-    const visibleProducts = data.filter(p => showArchivedProducts || p.is_active);
+    const visibleProducts = data.filter(p => {
+      // PostgreSQL returns booleans, but normalize defensively in case an API layer
+      // serializes the value as a string or number.
+      const isActive = p.is_active === true || p.is_active === 'true' || p.is_active === 1;
+      // Archive mode must show ONLY inactive products, not the complete catalogue.
+      return showArchivedProducts ? !isActive : isActive;
+    });
     $('#products').innerHTML = visibleProducts.map(p => `
       <div class="order">
         <b>${escapeHtml(p.name)}</b>
