@@ -13,6 +13,10 @@
 <nav id="categories" class="chips"><button class="active" data-category="">همه</button></nav>
 <div id="productGrid" class="grid"><p>در حال دریافت محصولات...</p></div>
 </main>
+<dialog id="productDialog" class="product-dialog" aria-labelledby="productDialogTitle">
+  <div class="dialog-head"><span id="productDialogTitle">مشخصات محصول</span><button id="productDialogClose" type="button" aria-label="بستن">✕</button></div>
+  <div id="productDialogContent" class="product-detail"></div>
+</dialog>
 <aside id="cartPanel" class="cart-panel hidden"><div class="cart-head"><h2>سبد خرید</h2><button id="cartClose">✕</button></div><div id="cartItems"></div><div class="cart-total">جمع کالاها: <b id="cartTotal">۰ تومان</b></div>
 <form id="orderForm">
 <h3>اطلاعات سفارش</h3><input name="name" placeholder="نام و نام خانوادگی" required>
