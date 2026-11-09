@@ -598,6 +598,21 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
   }
 });
 
+app.get('/api/admin/customers', adminOnly, async (_req,res) => {
+  try {
+    const result=await pool.query(`
+      SELECT c.id,c.full_name,c.phone,c.created_at,
+             COUNT(o.id)::int AS order_count,
+             COALESCE(SUM(o.total_toman) FILTER (WHERE o.status<>'cancelled'),0)::bigint AS total_spent_toman
+      FROM customers c LEFT JOIN orders o ON o.customer_id=c.id
+      GROUP BY c.id ORDER BY c.created_at DESC LIMIT 500
+    `);
+    res.json(result.rows);
+  } catch {
+    res.status(500).json({error:'دریافت فهرست مشتریان انجام نشد.'});
+  }
+});
+
 app.get('/api/admin/orders', adminOnly, async (_req,res) => {
   try {
     const r = await pool.query(`SELECT o.*, COALESCE(json_agg(json_build_object('name',i.product_name,'quantity',i.quantity,'unit_price_toman',i.unit_price_toman)) FILTER (WHERE i.id IS NOT NULL),'[]') items
