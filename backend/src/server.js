@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs/promises');
 const crypto = require('crypto');
 const { Pool } = require('pg');
+const { createZarinpalRouter } = require('./zarinpal');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -100,6 +101,7 @@ const orderRateLimit = createRateLimiter({
 });
 
 app.use('/api/admin', adminRateLimit);
+app.use('/api/payments/zarinpal', createZarinpalRouter({ pool }));
 
 const toman = n => Number.isSafeInteger(Number(n)) && Number(n) >= 0;
 const orderCode = () => 'MM' + Date.now().toString().slice(-9) + crypto.randomBytes(2).toString('hex').toUpperCase();
