@@ -29,7 +29,7 @@ app.use(helmet({
   }
 }));
 app.use(cors({ origin: false }));
-app.use(express.json({ limit: '7mb' }));
+app.use(express.json({ limit: '9mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { maxAge: '7d', immutable: true }));
 app.use(express.static(path.join(__dirname, '../../frontend')));
 app.use('/admin', express.static(path.join(__dirname, '../../admin')));
@@ -842,6 +842,15 @@ app.delete('/api/admin/products/:id', adminOnly, async (req, res) => {
   } catch {
     res.status(500).json({error:'غیرفعال‌سازی محصول انجام نشد.'});
   }
+});
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  if (error && error.type === 'entity.too.large') {
+    return res.status(413).json({error:'حجم درخواست یا عکس بیش از حد مجاز است. حجم عکس را به حداکثر ۵ مگابایت کاهش دهید.'});
+  }
+  console.error('Unhandled request error:', error && error.message ? error.message : error);
+  return res.status(400).json({error:'در پردازش درخواست خطایی رخ داد. دوباره تلاش کنید.'});
 });
 
 app.get('*', (_req,res) => res.sendFile(path.join(__dirname,'../../frontend/index.html')));
