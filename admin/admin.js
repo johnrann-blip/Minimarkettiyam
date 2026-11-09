@@ -22,7 +22,7 @@ async function request(url, options = {}) {
     headers: {...headers(), ...(options.headers || {})}
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || 'درخواست انجام نشد.');
+  if (!response.ok) throw new Error((data.error || 'درخواست انجام نشد.') + ' (کد ' + response.status + ')');
   return data;
 }
 
