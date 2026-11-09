@@ -12,7 +12,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const env = {
   ...process.env,
   PORT: String(PORT),
-  DATABASE_URL: 'postgresql://u0_a289@127.0.0.1:5432/minimarkettiyam_test',
+  DATABASE_URL: process.env.TEST_DATABASE_URL || 'postgresql://u0_a289@127.0.0.1:5432/minimarkettiyam_test',
   ADMIN_API_KEY: KEY,
   ZARINPAL_ENABLED: 'false',
   ZARINPAL_MODE: 'sandbox',
