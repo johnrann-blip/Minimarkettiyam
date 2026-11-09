@@ -34,7 +34,10 @@ let secondProductId = null;
 let memberProductId = null;
 let memberSessionCookie = null;
 let memberOrderCode = null;
+let guestOrderCode = null;
 let memberPhone = null;
+let noOrderPhone = null;
+let noOrderCustomerId = null;
 let adminCookie = '';
 
 function assert(condition, message) {
@@ -233,8 +236,9 @@ async function run() {
   assert(r.status===401, 'محافظت از فهرست مشتریان در برابر دسترسی غیرمجاز');
   r = await request('/api/admin/customers',{admin:true});
   assert(r.status===200 && Array.isArray(r.data) && r.data.some(x=>x.phone===memberPhone), 'نمایش مشتری ثبت‌نام‌شده در پنل مدیریت');
-  const noOrderPhone='09'+crypto.randomInt(100000000,999999999).toString();
+  noOrderPhone='09'+crypto.randomInt(100000000,999999999).toString();
   const noOrderCustomer=(await db.query("INSERT INTO customers(full_name,phone,password_hash,password_salt) VALUES('مشتری بدون سفارش',$1,$2,$3) RETURNING id",[noOrderPhone,'0'.repeat(128),'0'.repeat(32)])).rows[0];
+  noOrderCustomerId=noOrderCustomer.id;
   const deactivateNoOrder=await request('/api/admin/customers/'+noOrderCustomer.id+'/status',{method:'PATCH',admin:true,body:{is_active:false}});
   assert(deactivateNoOrder.status===200 && deactivateNoOrder.data.customer.is_active===false,'غیرفعال‌سازی برگشت‌پذیر مشتری بدون سفارش');
   const reactivateNoOrder=await request('/api/admin/customers/'+noOrderCustomer.id+'/status',{method:'PATCH',admin:true,body:{is_active:true}});
@@ -431,6 +435,17 @@ async function run() {
   assert(r.status===201 && Number(r.data.subtotal_toman)===11400 && Number(r.data.membership_discount_toman)===600 && Number(r.data.total_toman)===16400,
     'محاسبه قطعی تخفیف ۵ درصدی در سمت سرور هنگام ثبت سفارش عضو');
   memberOrderCode=r.data.order_code;
+  const guestSamePhoneKey=crypto.randomUUID();
+  const guestSamePhoneOrder=await request('/api/orders',{method:'POST',headers:{'Idempotency-Key':guestSamePhoneKey},body:{
+    customer:{name:'خریدار مهمان',phone:noOrderPhone,city:'اصفهان',province:'اصفهان',address:'نشانی مهمان',postal_code:''},
+    items:[{product_id:memberProductId,quantity:1}],delivery_method:'local',note:'آزمون خرید مهمان با شماره عضو'
+  }});
+  assert(guestSamePhoneOrder.status===201,'ثبت سفارش مهمان با شماره موبایل حساب مشتری');
+  guestOrderCode=guestSamePhoneOrder.data.order_code;
+  const guestOrderLink=await db.query('SELECT customer_id FROM orders WHERE order_code=$1',[guestOrderCode]);
+  assert(guestOrderLink.rowCount===1 && guestOrderLink.rows[0].customer_id===null,'ثبت خرید مهمان بدون اتصال حساب کاربری');
+  const blockGuestHistoryDeactivate=await request('/api/admin/customers/'+noOrderCustomerId+'/status',{method:'PATCH',admin:true,body:{is_active:false}});
+  assert(blockGuestHistoryDeactivate.status===409,'جلوگیری از غیرفعال‌سازی حساب دارای خرید مهمان با همان شماره موبایل');
 
   const memberCostSnapshot=await db.query('SELECT cost_price_toman FROM order_items i JOIN orders o ON o.id=i.order_id WHERE o.order_code=$1',[memberOrderCode]);
   assert(memberCostSnapshot.rowCount===1 && Number(memberCostSnapshot.rows[0].cost_price_toman)===7000,'ثبت بهای تمام‌شده در لحظه سفارش برای حسابداری');
@@ -555,6 +570,7 @@ async function run() {
       }
       if (orderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [orderCode]);
       if (memberOrderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [memberOrderCode]);
+      if (guestOrderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [guestOrderCode]);
       if (productId) await db.query('DELETE FROM products WHERE id=$1', [productId]);
       if (secondProductId) await db.query('DELETE FROM products WHERE id=$1', [secondProductId]);
       if (memberProductId) await db.query('DELETE FROM products WHERE id=$1', [memberProductId]);
