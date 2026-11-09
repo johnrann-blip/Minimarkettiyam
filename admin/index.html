@@ -80,7 +80,15 @@
         <label>تا تاریخ <input id="reportTo" type="date"></label>
         <button id="refreshReports" type="button">به‌روزرسانی گزارش</button>
       </div>
-      <div id="reportSummary" aria-live="polite">برای دریافت گزارش، به‌روزرسانی را بزن.</div>
+      <div id="financialReportsSection">
+        <div id="reportSummary" aria-live="polite">برای دریافت گزارش، به‌روزرسانی را بزن.</div>
+        <h3>فروش روزانه</h3>
+        <div id="reportDaily"></div>
+        <h3>مرکز خطاهای ثبت‌شده</h3>
+        <button id="refreshErrors" type="button">به‌روزرسانی خطاها</button>
+        <div id="adminErrors"></div>
+      </div>
+      <div id="expenseLedgerSection">
       <h3>دفتر هزینه‌های فروشگاه</h3>
       <p class="muted">هزینه‌ها ثبت دائمی دارند؛ برای اصلاح، یک ردیف اصلاحی ثبت کن و ردیف قبلی را حذف نکن.</p>
       <form id="expenseForm" hidden>
@@ -92,11 +100,7 @@
       </form>
       <button id="refreshExpenses" type="button">به‌روزرسانی دفتر هزینه‌ها</button>
       <div id="accountingExpenses"></div>
-      <h3>فروش روزانه</h3>
-      <div id="reportDaily"></div>
-      <h3>مرکز خطاهای ثبت‌شده</h3>
-      <button id="refreshErrors" type="button">به‌روزرسانی خطاها</button>
-      <div id="adminErrors"></div>
+      </div>
     </section>
     <section id="auditSection" data-page="audit">
       <h2>گزارش ورودها و فعالیت مدیران</h2>
