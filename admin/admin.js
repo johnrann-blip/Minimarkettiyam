@@ -102,7 +102,8 @@ async function loadReports() {
   if(from)query.set('from',from);
   if(to)query.set('to',to);
   try{
-    const data=await request('/api/admin/reports/summary'+(query.size?'?'+query.toString():''));
+    const queryString=query.toString();
+    const data=await request('/api/admin/reports/summary'+(queryString?'?'+queryString:''));
     const x=data.summary||{};
     const money=value=>Number(value||0).toLocaleString('fa-IR')+' تومان';
     const profit=x.gross_profit_toman===null?'قابل محاسبه نیست؛ بهای تمام‌شده '+Number(x.items_without_cost||0).toLocaleString('fa-IR')+' قلم ثبت نشده است.':money(x.gross_profit_toman);
