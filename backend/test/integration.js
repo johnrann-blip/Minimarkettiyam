@@ -486,15 +486,17 @@ async function run() {
   const order = r.data.find(x => x.order_code === orderCode);
   assert(!!order, 'یافتن سفارش آزمایشی');
   const expenseDate=new Date().toISOString().slice(0,10);
-  const expenseCreated=await request('/api/admin/accounting/expenses',{method:'POST',admin:true,body:{expense_date:expenseDate,category:'آزمون',description:'هزینه آزمایشی',amount_toman:12345}});
+  const previousExpenseTotal=Number((await db.query('SELECT COALESCE(SUM(amount_toman),0) AS total FROM accounting_expenses WHERE expense_date=$1',[expenseDate])).rows[0].total);
+  const expenseDescription='هزینه آزمایشی '+SKU;
+  const expenseCreated=await request('/api/admin/accounting/expenses',{method:'POST',admin:true,body:{expense_date:expenseDate,category:'آزمون',description:expenseDescription,amount_toman:12345}});
   assert(expenseCreated.status===201 && Number(expenseCreated.data.amount_toman)===12345,'ثبت هزینه عملیاتی در دفتر حسابداری');
-  const expenseCorrection=await request('/api/admin/accounting/expenses',{method:'POST',admin:true,body:{expense_date:expenseDate,category:'اصلاحی',description:'برگشت بخشی از هزینه آزمایشی',amount_toman:-2345}});
+  const expenseCorrection=await request('/api/admin/accounting/expenses',{method:'POST',admin:true,body:{expense_date:expenseDate,category:'اصلاحی',description:'اصلاح '+SKU,amount_toman:-2345}});
   assert(expenseCorrection.status===201 && Number(expenseCorrection.data.amount_toman)===-2345,'ثبت ردیف اصلاحی منفی بدون حذف سابقه هزینه');
 
   const expenseList=await request('/api/admin/accounting/expenses',{admin:true});
-  assert(expenseList.status===200 && expenseList.data.expenses.some(x=>Number(x.amount_toman)===12345),'نمایش ردیف هزینه در دفتر حسابداری');
+  assert(expenseList.status===200 && expenseList.data.expenses.some(x=>x.description===expenseDescription),'نمایش ردیف هزینه در دفتر حسابداری');
   const accountingReport=await request('/api/admin/reports/summary',{admin:true});
-  assert(accountingReport.status===200 && accountingReport.data.summary && Array.isArray(accountingReport.data.daily) && Number(accountingReport.data.summary.expenses_toman)===10000,'گزارش مالی همراه با کسر هزینه‌های ثبت‌شده');
+  assert(accountingReport.status===200 && accountingReport.data.summary && Array.isArray(accountingReport.data.daily) && Number(accountingReport.data.summary.expenses_toman)===previousExpenseTotal+10000,'گزارش مالی همراه با کسر هزینه‌های ثبت‌شده');
   const errorReport=await request('/api/admin/reports/errors',{admin:true});
   assert(errorReport.status===200 && Array.isArray(errorReport.data),'دریافت مرکز خطاها');
 
