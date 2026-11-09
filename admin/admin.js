@@ -96,6 +96,36 @@ $('#managerList').addEventListener('click',async event=>{
     await loadManagers();
   } catch(error) { message(error.message); }
 });
+async function loadReports() {
+  const from=$('#reportFrom').value,to=$('#reportTo').value;
+  const query=new URLSearchParams();
+  if(from)query.set('from',from);
+  if(to)query.set('to',to);
+  try{
+    const data=await request('/api/admin/reports/summary'+(query.size?'?'+query.toString():''));
+    const x=data.summary||{};
+    const money=value=>Number(value||0).toLocaleString('fa-IR')+' تومان';
+    const profit=x.gross_profit_toman===null?'قابل محاسبه نیست؛ بهای تمام‌شده '+Number(x.items_without_cost||0).toLocaleString('fa-IR')+' قلم ثبت نشده است.':money(x.gross_profit_toman);
+    $('#reportSummary').innerHTML=`
+      <div class="order"><b>بازه گزارش: ${escapeHtml(data.from)} تا ${escapeHtml(data.to)}</b>
+      <p>تعداد سفارش‌های پرداخت‌شده: ${Number(x.paid_order_count||0).toLocaleString('fa-IR')}</p>
+      <p>فروش کالا پس از تخفیف: ${money(x.product_revenue_toman)}</p>
+      <p>هزینه ارسال دریافت‌شده: ${money(x.shipping_collected_toman)}</p>
+      <p><b>کل مبلغ وصول‌شده: ${money(x.total_collected_toman)}</b></p>
+      <p>سود ناخالص: ${escapeHtml(profit)}</p></div>`;
+    $('#reportDaily').innerHTML=(data.daily||[]).map(day=>`<div class="order"><b>${escapeHtml(day.day)}</b><p>تعداد سفارش: ${Number(day.paid_orders).toLocaleString('fa-IR')} | وصولی: ${money(day.collected_toman)}</p></div>`).join('')||'در این بازه پرداخت تأییدشده‌ای ثبت نشده است.';
+  }catch(error){$('#reportSummary').textContent=error.message;}
+  await loadAdminErrors();
+}
+async function loadAdminErrors(){
+  try{
+    const rows=await request('/api/admin/reports/errors');
+    $('#adminErrors').innerHTML=rows.map(row=>`<div class="order"><b>${escapeHtml(row.level)} — HTTP ${escapeHtml(row.response_status)}</b><p>${escapeHtml(row.message)}</p><p>${escapeHtml(row.request_method)} ${escapeHtml(row.request_path)}</p><p class="muted">${new Date(row.created_at).toLocaleString('fa-IR')}</p></div>`).join('')||'خطای ثبت‌شده‌ای وجود ندارد.';
+  }catch(error){$('#adminErrors').textContent=error.message;}
+}
+$('#refreshReports').onclick=loadReports;
+$('#refreshErrors').onclick=loadAdminErrors;
+
 async function loadAudit() {
   try {
     const rows=await request('/api/admin/auth/audit');
@@ -182,6 +212,7 @@ function setAdminSession(admin) {
   const sectionAccess = {
     managerSection:adminUser.role==='owner',
     auditSection:adminCan('audit.view'),
+    reportsSection:adminCan('reports.view'),
     productFormSection:adminCan('products.create') || adminCan('products.update'),
     productsSection:adminCan('products.view'),
     archiveSection:adminCan('products.archive') || adminCan('products.view'),
@@ -206,7 +237,8 @@ function setAdminSession(admin) {
     adminCan('customers.view') || adminCan('customers.manage') ? customers() : Promise.resolve(),
     adminCan('payments.view') || adminCan('payments.manage') ? loadStoreSettings() : Promise.resolve(),
     adminUser.role === 'owner' ? loadManagers() : Promise.resolve(),
-    adminCan('audit.view') ? loadAudit() : Promise.resolve()
+    adminCan('audit.view') ? loadAudit() : Promise.resolve(),
+    adminCan('reports.view') ? loadReports() : Promise.resolve()
   ]);
 }
 async function initializeAdminAuth() {
