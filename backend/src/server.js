@@ -9,17 +9,38 @@ const crypto = require('crypto');
 const { Pool } = require('pg');
 const { createZarinpalRouter, getConfig } = require('./zarinpal');
 const { createCustomerAuth } = require('./customer-auth');
+const { createAdminAuth } = require('./admin-auth');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
+// Trust only the reverse-proxy hop(s) explicitly configured by the deployment.
+// Never default to trusting every forwarded header.
+const trustProxyRaw = String(process.env.TRUST_PROXY || '').trim();
+function parseTrustProxySetting(raw) {
+  if (!raw) return false;
+  if (/^true$/i.test(raw)) return 1;
+  if (/^false$/i.test(raw)) return false;
+  if (/^\d+$/.test(raw)) return Number(raw);
+  return raw; // Express also accepts trusted IPs/CIDRs and named ranges.
+}
+app.set('trust proxy', parseTrustProxySetting(trustProxyRaw));
+
 function validateRuntimeConfig() {
   const errors = [];
   if (!process.env.DATABASE_URL) errors.push('DATABASE_URL is required.');
   if (!Number.isInteger(port) || port < 1 || port > 65535) errors.push('PORT must be an integer from 1 to 65535.');
+  if (process.env.NODE_ENV === 'production' && !trustProxyRaw) {
+    errors.push('TRUST_PROXY must be explicitly configured for the hosting proxy in production.');
+  }
 
   if (process.env.NODE_ENV === 'production') {
+    let publicUrl;
+    try { publicUrl = new URL(process.env.PUBLIC_BASE_URL || ''); } catch {}
+    if (!publicUrl || publicUrl.protocol !== 'https:') {
+      errors.push('PUBLIC_BASE_URL must be a valid HTTPS URL in production.');
+    }
     if (!process.env.ADMIN_API_KEY || Buffer.byteLength(process.env.ADMIN_API_KEY) < 32 ||
         process.env.ADMIN_API_KEY.startsWith('REPLACE_WITH_')) {
       errors.push('ADMIN_API_KEY must contain at least 32 bytes in production.');
@@ -66,12 +87,7 @@ app.use(express.static(path.join(__dirname, '../../frontend')));
 app.use('/admin', express.static(path.join(__dirname, '../../admin')));
 
 function adminOnly(req, res, next) {
-  const expected = process.env.ADMIN_API_KEY;
-  const supplied = req.get('x-admin-key') || '';
-  if (!expected || Buffer.byteLength(expected) < 32) return res.status(503).json({ error: 'کلید مدیریت در سرور تنظیم نشده است یا طول کافی ندارد.' });
-  const a = Buffer.from(expected), b = Buffer.from(supplied);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: 'دسترسی غیرمجاز' });
-  next();
+  return adminAuth.requireAdmin(req, res, next);
 }
 
 function createRateLimiter({ windowMs, max, message }) {
@@ -124,6 +140,14 @@ const adminRateLimit = createRateLimiter({
   message: 'تعداد درخواست‌های مدیریتی بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
 });
 
+const adminAuthRateLimit = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'تعداد تلاش‌های ورود مدیریت زیاد است. ۱۵ دقیقه بعد دوباره تلاش کن.'
+});
+const adminAuth = createAdminAuth({pool,rateLimit:adminAuthRateLimit});
+app.use('/api/admin/auth', adminAuth.router);
+
 const orderRateLimit = createRateLimiter({
   windowMs: 10 * 60 * 1000,
   max: 10,
@@ -141,6 +165,17 @@ const customerAuth = createCustomerAuth({pool,rateLimit:customerAuthRateLimit});
 app.use('/api',customerAuth.optionalCustomer);
 app.use('/api/auth',customerAuth.router);
 app.use('/api/admin', adminRateLimit);
+app.use('/api', (req,res,next) => {
+  res.on('finish', () => {
+    if (res.statusCode >= 500) {
+      pool.query(
+        'INSERT INTO admin_error_logs(level,message,request_method,request_path,response_status,stack,user_agent) VALUES($1,$2,$3,$4,$5,$6,$7)',
+        ['error','API returned a server error',req.method,String(req.originalUrl||req.path).slice(0,300),res.statusCode,'',String(req.get('user-agent')||'').slice(0,300)]
+      ).catch(error=>console.error('API error log write failed:',error.message));
+    }
+  });
+  next();
+});
 app.use('/api/payments/zarinpal', createZarinpalRouter({ pool, paymentRateLimit }));
 
 pool.on('error', error => {
@@ -165,7 +200,10 @@ app.get('/api/products', async (req, res) => {
     if (req.query.category) { values.push(String(req.query.category)); where += ` AND c.slug=$${values.length}`; }
     if (req.query.q) { values.push('%' + String(req.query.q).slice(0,80) + '%'); where += ` AND (p.name ILIKE $${values.length} OR p.description ILIKE $${values.length})`; }
     const r = await pool.query(
-      `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,c.name AS category_name,c.slug AS category_slug
+      `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,
+              COALESCE((SELECT json_agg(pi.image_url ORDER BY pi.position,pi.id) FROM product_images pi WHERE pi.product_id=p.id),
+                       CASE WHEN COALESCE(p.image_url,'')<>'' THEN json_build_array(p.image_url) ELSE '[]'::json END) AS images,
+              c.name AS category_name,c.slug AS category_slug
        FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE ${where} ORDER BY p.created_at DESC LIMIT 100`, values);
     res.json(r.rows.map(p => {
       const {cost_price_toman,...publicProduct}=p;
@@ -543,9 +581,10 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
     for (const x of normalized) {
       await client.query(
         `INSERT INTO order_items
-         (order_id,product_id,product_name,unit_price_toman,quantity,line_total_toman)
-         VALUES($1,$2,$3,$4,$5,$6)`,
-        [order.id,x.product.id,x.product.name,x.price,x.qty,x.line]
+         (order_id,product_id,product_name,unit_price_toman,quantity,line_total_toman,cost_price_toman)
+         VALUES($1,$2,$3,$4,$5,$6,$7)`,
+        [order.id,x.product.id,x.product.name,x.price,x.qty,x.line,
+         x.product.cost_price_toman===null ? null : Number(x.product.cost_price_toman)]
       );
 
       await client.query(
@@ -601,16 +640,124 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
 app.get('/api/admin/customers', adminOnly, async (_req,res) => {
   try {
     const result=await pool.query(`
-      SELECT c.id,c.full_name,c.phone,c.created_at,
+      SELECT c.id,c.full_name,c.phone,c.is_active,c.created_at,
              COUNT(o.id)::int AS order_count,
-             COALESCE(SUM(o.total_toman) FILTER (WHERE o.status<>'cancelled'),0)::bigint AS total_spent_toman
-      FROM customers c LEFT JOIN orders o ON o.customer_id=c.id
+             COALESCE(SUM(o.total_toman) FILTER (WHERE o.payment_status='verified' AND o.status<>'cancelled'),0)::bigint AS total_spent_toman
+      FROM customers c LEFT JOIN orders o ON (o.customer_id=c.id OR o.phone=c.phone)
       GROUP BY c.id ORDER BY c.created_at DESC LIMIT 500
     `);
     res.json(result.rows);
   } catch {
     res.status(500).json({error:'دریافت فهرست مشتریان انجام نشد.'});
   }
+});
+
+app.get('/api/admin/accounting/expenses', adminOnly, async (req,res) => {
+  const validDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))&&!Number.isNaN(Date.parse(String(value)+'T00:00:00Z'));
+  const to=validDate(req.query.to)?String(req.query.to):new Date().toISOString().slice(0,10);
+  const fromDefault=new Date(Date.now()-29*86400000).toISOString().slice(0,10);
+  const from=validDate(req.query.from)?String(req.query.from):fromDefault;
+  if(from>to)return res.status(400).json({error:'بازه تاریخ هزینه‌ها معتبر نیست.'});
+  try{
+    const result=await pool.query('SELECT id,expense_date::text,category,description,amount_toman,created_at FROM accounting_expenses WHERE expense_date BETWEEN $1::date AND $2::date ORDER BY expense_date DESC,id DESC LIMIT 500',[from,to]);
+    res.json({from,to,expenses:result.rows});
+  }catch(error){res.status(500).json({error:'دفتر هزینه‌ها دریافت نشد.'});}
+});
+
+app.post('/api/admin/accounting/expenses', adminOnly, async (req,res) => {
+  const rawDate=req.body?.expense_date||new Date().toISOString().slice(0,10);
+  const category=String(req.body?.category||'').trim();
+  const description=String(req.body?.description||'').trim();
+  const amount=Number(req.body?.amount_toman);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(rawDate))||Number.isNaN(Date.parse(String(rawDate)+'T00:00:00Z'))||
+     !category||category.length>80||description.length>500||!Number.isSafeInteger(amount)||amount===0){
+    return res.status(400).json({error:'تاریخ، دسته‌بندی، توضیح و مبلغ هزینه معتبر الزامی است.'});
+  }
+  try{
+    const result=await pool.query('INSERT INTO accounting_expenses(expense_date,category,description,amount_toman,created_by) VALUES($1::date,$2,$3,$4,$5) RETURNING id,expense_date::text,category,description,amount_toman,created_at',[rawDate,category,description,amount,req.admin.id]);
+    res.status(201).json(result.rows[0]);
+  }catch(error){res.status(500).json({error:'ثبت هزینه انجام نشد.'});}
+});
+
+app.get('/api/admin/reports/summary', adminOnly, async (req,res) => {
+  const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value||'')) && !Number.isNaN(Date.parse(String(value)+'T00:00:00Z'));
+  const to = validDate(req.query.to) ? String(req.query.to) : new Date().toISOString().slice(0,10);
+  const fromDefault = new Date(Date.now()-29*86400000).toISOString().slice(0,10);
+  const from = validDate(req.query.from) ? String(req.query.from) : fromDefault;
+  if (from > to) return res.status(400).json({error:'بازه تاریخ گزارش معتبر نیست.'});
+  try {
+    const summary = await pool.query(`
+      WITH paid AS (
+        SELECT id,created_at,subtotal_toman,shipping_toman,total_toman
+        FROM orders
+        WHERE payment_status='verified' AND status<>'cancelled'
+          AND created_at >= $1::date AND created_at < ($2::date + INTERVAL '1 day')
+      ), item_costs AS (
+        SELECT i.order_id,
+          SUM(i.line_total_toman)::bigint AS item_revenue,
+          SUM(i.cost_price_toman * i.quantity) FILTER (WHERE i.cost_price_toman IS NOT NULL)::bigint AS known_cost,
+          COUNT(*) FILTER (WHERE i.cost_price_toman IS NULL)::int AS unknown_cost_items
+        FROM order_items i JOIN paid p ON p.id=i.order_id GROUP BY i.order_id
+      )
+      SELECT COUNT(*)::int AS paid_order_count,
+        COALESCE(SUM(p.subtotal_toman),0)::bigint AS product_revenue_toman,
+        COALESCE(SUM(p.shipping_toman),0)::bigint AS shipping_collected_toman,
+        COALESCE(SUM(p.total_toman),0)::bigint AS total_collected_toman,
+        COALESCE(SUM(COALESCE(c.unknown_cost_items,0)),0)::int AS items_without_cost,
+        CASE WHEN COALESCE(SUM(COALESCE(c.unknown_cost_items,0)),0)=0
+          THEN (COALESCE(SUM(c.item_revenue),0)-COALESCE(SUM(c.known_cost),0))::bigint
+          ELSE NULL END AS gross_profit_toman
+      FROM paid p LEFT JOIN item_costs c ON c.order_id=p.id
+    `,[from,to]);
+    const daily = await pool.query(`
+      SELECT created_at::date::text AS day,COUNT(*)::int AS paid_orders,
+        SUM(total_toman)::bigint AS collected_toman
+      FROM orders
+      WHERE payment_status='verified' AND status<>'cancelled'
+        AND created_at >= $1::date AND created_at < ($2::date + INTERVAL '1 day')
+      GROUP BY created_at::date ORDER BY created_at::date
+    `,[from,to]);
+    const expenses=await pool.query('SELECT COALESCE(SUM(amount_toman),0)::bigint AS expenses_toman FROM accounting_expenses WHERE expense_date BETWEEN $1::date AND $2::date',[from,to]);
+    const summaryData=summary.rows[0];
+    const expensesToman=expenses.rows[0].expenses_toman;
+    const netProfit=summaryData.gross_profit_toman===null?null:(BigInt(summaryData.gross_profit_toman)-BigInt(expensesToman)).toString();
+    res.json({from,to,summary:{...summaryData,expenses_toman:expensesToman,net_profit_toman:netProfit},daily:daily.rows});
+  } catch(error) {
+    console.error('Accounting report failed:',error.message);
+    res.status(500).json({error:'گزارش مالی دریافت نشد.'});
+  }
+});
+
+app.get('/api/admin/reports/errors', adminOnly, async (_req,res) => {
+  try {
+    const result=await pool.query('SELECT id,level,message,request_method,request_path,response_status,created_at FROM admin_error_logs ORDER BY created_at DESC LIMIT 200');
+    res.json(result.rows);
+  } catch(error) {
+    res.status(500).json({error:'گزارش خطاها دریافت نشد.'});
+  }
+});
+
+app.patch('/api/admin/customers/:id/status', adminOnly, async (req,res) => {
+  const id=String(req.params.id||'');
+  const active=req.body?.is_active;
+  if(!/^[1-9][0-9]*$/.test(id)||typeof active!=='boolean') return res.status(400).json({error:'شناسه یا وضعیت مشتری معتبر نیست.'});
+  const client=await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const found=await client.query('SELECT id,is_active,phone FROM customers WHERE id=$1 FOR UPDATE',[id]);
+    if(!found.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'مشتری پیدا نشد.'});}
+    if(!active){
+      const orders=await client.query('SELECT 1 FROM orders WHERE customer_id=$1 OR phone=$2 LIMIT 1',[id,found.rows[0].phone]);
+      if(orders.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'این مشتری سابقه سفارش دارد و قابل غیرفعال‌سازی از این بخش نیست.'});}
+      await client.query('DELETE FROM customer_sessions WHERE customer_id=$1',[id]);
+    }
+    const updated=await client.query('UPDATE customers SET is_active=$1,updated_at=NOW() WHERE id=$2 RETURNING id,is_active',[active,id]);
+    await client.query('COMMIT');
+    res.json({success:true,customer:updated.rows[0]});
+  } catch(error) {
+    try{await client.query('ROLLBACK');}catch{}
+    res.status(500).json({error:'تغییر وضعیت مشتری انجام نشد.'});
+  } finally {client.release();}
 });
 
 app.get('/api/admin/orders', adminOnly, async (_req,res) => {
@@ -719,6 +866,37 @@ app.patch('/api/admin/orders/:id/status', adminOnly, async (req,res) => {
 });
 
 
+function validateProductImageUrl(value) {
+  const image = String(value ?? '').trim();
+  if (!image) return '';
+  if (image.length > 2048) throw new Error('نشانی تصویر بیش از حد طولانی است.');
+  if (/^\/uploads\/products\/[a-f0-9]{32}\.(jpg|png|webp)$/.test(image)) return image;
+  let url;
+  try { url = new URL(image); } catch { throw new Error('نشانی تصویر معتبر نیست.'); }
+  if (url.protocol !== 'https:' || !url.hostname) throw new Error('نشانی تصویر باید با HTTPS شروع شود.');
+  return image;
+}
+
+function validateProductImages(value) {
+  if (!Array.isArray(value)) throw new Error('فهرست تصاویر محصول معتبر نیست.');
+  if (value.length > 10) throw new Error('هر محصول حداکثر می‌تواند ۱۰ تصویر داشته باشد.');
+  const images = value.map(validateProductImageUrl);
+  if (images.some(image => !image)) throw new Error('نشانی همه تصاویر گالری باید تکمیل باشد.');
+  if (new Set(images).size !== images.length) throw new Error('تصویر تکراری در گالری مجاز نیست.');
+  return images;
+}
+
+async function replaceProductImages(client, productId, images) {
+  await client.query('DELETE FROM product_images WHERE product_id=$1', [productId]);
+  if (!images.length) return;
+  await client.query(
+    `INSERT INTO product_images(product_id,image_url,position,is_primary)
+     SELECT $1,image_url,(ordinality-1)::smallint,(ordinality=1)
+     FROM unnest($2::text[]) WITH ORDINALITY AS items(image_url,ordinality)`,
+    [productId, images]
+  );
+}
+
 function validateProduct(p) {
   const name = String(p.name ?? '').trim();
   const sku = String(p.sku ?? '').trim();
@@ -741,18 +919,7 @@ function validateProduct(p) {
     throw new Error('قیمت تخفیفی باید از قیمت اصلی کمتر باشد.');
   }
 
-  if (image) {
-    if (image.length > 2048) throw new Error('نشانی تصویر بیش از حد طولانی است.');
-    if (/^\/uploads\/products\/[a-f0-9]{32}\.(jpg|png|webp)$/.test(image)) {
-      // تصویر بارگذاری‌شده در فضای فایل سرور
-    } else {
-      let url;
-      try { url = new URL(image); } catch { throw new Error('نشانی تصویر معتبر نیست.'); }
-      if (url.protocol !== 'https:' || !url.hostname) {
-        throw new Error('نشانی تصویر باید با HTTPS شروع شود.');
-      }
-    }
-  }
+  validateProductImageUrl(image);
 
   if (p.is_active !== undefined && typeof p.is_active !== 'boolean') {
     throw new Error('وضعیت فعال‌بودن محصول معتبر نیست.');
@@ -819,6 +986,8 @@ app.get('/api/admin/products', adminOnly, async (_req, res) => {
     const result = await pool.query(
       `SELECT p.id,p.sku,p.name,p.category_id,p.description,
               p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,
+              COALESCE((SELECT json_agg(pi.image_url ORDER BY pi.position,pi.id) FROM product_images pi WHERE pi.product_id=p.id),
+                       CASE WHEN COALESCE(p.image_url,'')<>'' THEN json_build_array(p.image_url) ELSE '[]'::json END) AS images,
               p.is_active,p.created_at,p.updated_at,
               c.name AS category_name
        FROM products p
@@ -835,8 +1004,14 @@ app.get('/api/admin/products', adminOnly, async (_req, res) => {
 app.post('/api/admin/products', adminOnly, async (req, res) => {
   let client;
   try {
-    const p = validateProduct(req.body || {});
+    const body = req.body || {};
+    const p = validateProduct(body);
+    const images = Object.prototype.hasOwnProperty.call(body, 'images')
+      ? validateProductImages(body.images)
+      : (p.image_url ? [p.image_url] : []);
+    p.image_url = images[0] || '';
     client = await pool.connect();
+    await client.query('BEGIN');
     await validateCategory(client, p.category_id);
 
     const result = await client.query(
@@ -846,17 +1021,17 @@ app.post('/api/admin/products', adminOnly, async (req, res) => {
       [p.sku,p.name,p.category_id,p.description,p.price_toman,
        p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,p.is_active]
     );
-    res.status(201).json(result.rows[0]);
+    await replaceProductImages(client, result.rows[0].id, images);
+    await client.query('COMMIT');
+    res.status(201).json({...result.rows[0],images});
   } catch (e) {
+    if (client) { try { await client.query('ROLLBACK'); } catch {} }
     const known = e.message && (
-      e.message.includes('محصول') ||
-      e.message.includes('قیمت') ||
-      e.message.includes('موجودی') ||
-      e.message.includes('کد کالا') ||
-      e.message.includes('دسته‌بندی') ||
-      e.message.includes('توضیحات') ||
-      e.message.includes('نشانی') ||
-      e.message.includes('وضعیت')
+      e.message.includes('محصول') || e.message.includes('تصویر') ||
+      e.message.includes('گالری') || e.message.includes('قیمت') ||
+      e.message.includes('موجودی') || e.message.includes('کد کالا') ||
+      e.message.includes('دسته‌بندی') || e.message.includes('توضیحات') ||
+      e.message.includes('نشانی') || e.message.includes('وضعیت')
     );
     res.status(known ? 400 : 409).json({
       error: known ? e.message : 'محصول ثبت نشد؛ احتمالاً کد کالا تکراری است یا خطای پایگاه داده رخ داده است.'
@@ -884,6 +1059,25 @@ app.patch('/api/admin/products/:id', adminOnly, async (req, res) => {
     if (!found.rowCount) throw new Error('محصول پیدا نشد.');
 
     const current = found.rows[0];
+    const currentImagesResult = await client.query(
+      'SELECT image_url FROM product_images WHERE product_id=$1 ORDER BY position,id',
+      [id]
+    );
+    const currentImages = currentImagesResult.rows.length
+      ? currentImagesResult.rows.map(row => row.image_url)
+      : (current.image_url ? [current.image_url] : []);
+    const body = req.body || {};
+    const imagesProvided = Object.prototype.hasOwnProperty.call(body, 'images');
+    const imageUrlProvided = Object.prototype.hasOwnProperty.call(body, 'image_url');
+    let images = currentImages;
+    if (imagesProvided) {
+      images = validateProductImages(body.images);
+    } else if (imageUrlProvided) {
+      const nextPrimary = validateProductImageUrl(body.image_url);
+      images = nextPrimary
+        ? [nextPrimary, ...currentImages.filter(image => image !== nextPrimary && image !== current.image_url)].slice(0, 10)
+        : currentImages.filter(image => image !== current.image_url);
+    }
     const allowed = [
       'sku','name','category_id','description','price_toman',
       'sale_price_toman','cost_price_toman','stock','image_url','is_active'
@@ -895,6 +1089,7 @@ app.patch('/api/admin/products/:id', adminOnly, async (req, res) => {
         ? req.body[field] : current[field];
     }
 
+    if (imagesProvided || imageUrlProvided) merged.image_url = images[0] || '';
     const p = validateProduct(merged);
     await validateCategory(client, p.category_id);
 
@@ -908,21 +1103,19 @@ app.patch('/api/admin/products/:id', adminOnly, async (req, res) => {
        p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,p.is_active,id]
     );
 
+    if (imagesProvided || imageUrlProvided) await replaceProductImages(client, id, images);
     await client.query('COMMIT');
-    res.json(result.rows[0]);
+    res.json({...result.rows[0],images});
   } catch (e) {
     if (client) {
       try { await client.query('ROLLBACK'); } catch {}
     }
     const known = e.message && (
-      e.message.includes('محصول') ||
-      e.message.includes('قیمت') ||
-      e.message.includes('موجودی') ||
-      e.message.includes('کد کالا') ||
-      e.message.includes('دسته‌بندی') ||
-      e.message.includes('توضیحات') ||
-      e.message.includes('نشانی') ||
-      e.message.includes('وضعیت')
+      e.message.includes('محصول') || e.message.includes('تصویر') ||
+      e.message.includes('گالری') || e.message.includes('قیمت') ||
+      e.message.includes('موجودی') || e.message.includes('کد کالا') ||
+      e.message.includes('دسته‌بندی') || e.message.includes('توضیحات') ||
+      e.message.includes('نشانی') || e.message.includes('وضعیت')
     );
     res.status(e.message === 'محصول پیدا نشد.' ? 404 : known ? 400 : 409)
       .json({error:known || e.message === 'محصول پیدا نشد.'
@@ -959,7 +1152,8 @@ app.use((error, req, res, next) => {
     return res.status(413).json({error:'حجم درخواست یا عکس بیش از حد مجاز است. حجم عکس را به حداکثر ۵ مگابایت کاهش دهید.'});
   }
   console.error('Unhandled request error:', error && error.message ? error.message : error);
-  return res.status(400).json({error:'در پردازش درخواست خطایی رخ داد. دوباره تلاش کنید.'});
+  const status = Number(error?.status) >= 400 && Number(error?.status) <= 599 ? Number(error.status) : 500;
+  return res.status(status >= 500 ? 500 : 400).json({error:'در پردازش درخواست خطایی رخ داد. دوباره تلاش کنید.'});
 });
 
 app.get('*', (_req,res) => res.sendFile(path.join(__dirname,'../../frontend/index.html')));

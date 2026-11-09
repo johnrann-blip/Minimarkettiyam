@@ -22,3 +22,7 @@ backups/
 # Local code backups
 *.backup-*
 *.bak
+
+# Uploaded product images are runtime data; back them up separately, never commit them.
+backend/uploads/*
+!backend/uploads/.gitkeep

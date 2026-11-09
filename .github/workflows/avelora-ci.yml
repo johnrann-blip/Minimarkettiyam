@@ -1,0 +1,75 @@
+name: AVELORA CI
+
+permissions:
+  contents: read
+
+concurrency:
+  group: avelora-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+    branches: [main]
+  push:
+    branches: [main, feature/admin-rbac-foundation]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: u0_a289
+          POSTGRES_PASSWORD: test-password
+          POSTGRES_DB: minimarkettiyam_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U u0_a289 -d minimarkettiyam_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgresql://u0_a289:test-password@127.0.0.1:5432/minimarkettiyam_test
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Audit production dependencies
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high
+      - name: Initialize isolated test database
+        run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f database/schema.sql
+      - name: Static checks
+        working-directory: backend
+        run: npm run check
+      - name: Validate backup scripts
+        run: bash -n backend/scripts/backup.sh backend/scripts/verify-backup.sh
+      - name: ZarinPal unit tests
+        working-directory: backend
+        run: npm run test:zarinpal
+      - name: Full integration tests
+        working-directory: backend
+        run: npm run test:integration
+      - name: Validate privacy-safe product catalog export
+        run: psql "$TEST_DATABASE_URL" -XAt -v ON_ERROR_STOP=1 -f database/reports/product_catalog_review.sql | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const rows=JSON.parse(s);if(!Array.isArray(rows))process.exit(1);for(const p of rows){if(!('name' in p)||!('price_toman' in p)||!Array.isArray(p.images)||('cost_price_toman' in p))process.exit(1)}console.log('PASS - product export is valid and excludes private cost data')})"
+      - name: Create isolated restore-test database
+        run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE avelora_restore_test"
+      - name: Backup PostgreSQL and uploads
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          BACKUP_DIR: ${{ runner.temp }}/avelora-backups
+        run: bash backend/scripts/backup.sh
+      - name: Restore backup into isolated empty database
+        env:
+          RESTORE_TEST_DATABASE_URL: postgresql://u0_a289:test-password@127.0.0.1:5432/avelora_restore_test
+        run: bash backend/scripts/verify-backup.sh "${{ runner.temp }}/avelora-backups/"*.tar.gz

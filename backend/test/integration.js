@@ -12,7 +12,9 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const env = {
   ...process.env,
   PORT: String(PORT),
-  DATABASE_URL: 'postgresql://u0_a289@127.0.0.1:5432/minimarkettiyam_test',
+  NODE_ENV: 'test',
+  TRUST_PROXY: '1',
+  DATABASE_URL: process.env.TEST_DATABASE_URL || 'postgresql://u0_a289@127.0.0.1:5432/minimarkettiyam_test',
   ADMIN_API_KEY: KEY,
   ZARINPAL_ENABLED: 'false',
   ZARINPAL_MODE: 'sandbox',
@@ -34,7 +36,11 @@ let secondProductId = null;
 let memberProductId = null;
 let memberSessionCookie = null;
 let memberOrderCode = null;
+let guestOrderCode = null;
 let memberPhone = null;
+let noOrderPhone = null;
+let noOrderCustomerId = null;
+let adminCookie = '';
 
 function assert(condition, message) {
   if (!condition) throw new Error('FAIL: ' + message);
@@ -43,7 +49,7 @@ function assert(condition, message) {
 
 async function request(path, options = {}) {
   const headers = { 'content-type': 'application/json', ...(options.headers || {}) };
-  if (options.admin) headers['x-admin-key'] = KEY;
+  if (options.admin) { headers['x-admin-request'] = '1'; if (adminCookie) headers.cookie = adminCookie; }
 
   const response = await fetch(BASE + path, {
     ...options,
@@ -69,8 +75,100 @@ async function waitForServer() {
 
 async function run() {
   const membershipMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/004_customer_membership.sql'), 'utf8');
+  const adminMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/005_admin_rbac.sql'), 'utf8');
+  const accountingMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/006_accounting_error_center.sql'), 'utf8');
+  const galleryMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/007_product_image_gallery.sql'), 'utf8');
   await db.query(membershipMigration);
+  await db.query(adminMigration);
+  await db.query(accountingMigration);
+  await db.query(galleryMigration);
+  await db.query('DELETE FROM admin_users');
   await waitForServer();
+
+  const bootstrap = await request('/api/admin/auth/bootstrap', {
+    method:'POST', headers:{'x-admin-request':'1'},
+    body:{admin_api_key:KEY,username:'owner',display_name:'مالک آزمون',password:'Owner-Test-Password-2026!'}
+  });
+  assert(bootstrap.status===201 && bootstrap.data.admin.role==='owner' && bootstrap.cookie,
+    'ساخت یک‌باره حساب مالک و ایجاد نشست امن');
+  adminCookie = bootstrap.cookie.split(';')[0];
+
+  const denied = await request('/api/admin/products');
+  assert(denied.status===401,'جلوگیری از دسترسی مدیریتی بدون نشست معتبر');
+
+  const managerCreated = await request('/api/admin/auth/managers',{
+    method:'POST',admin:true,
+    body:{username:'orders.manager',display_name:'مدیر سفارش‌ها',password:'Manager-Test-Password-2026!',permissions:['orders.view']}
+  });
+  assert(managerCreated.status===201,'ساخت مدیر فرعی با مجوز محدود توسط مالک');
+  const ownerCookie=adminCookie;
+  const managerLogin=await request('/api/admin/auth/login',{
+    method:'POST',headers:{'x-admin-request':'1'},
+    body:{username:'orders.manager',password:'Manager-Test-Password-2026!'}
+  });
+  assert(managerLogin.status===200 && managerLogin.cookie,'ورود مستقل مدیر فرعی');
+  adminCookie=managerLogin.cookie.split(';')[0];
+  const forbiddenProducts=await request('/api/admin/products',{admin:true});
+  assert(forbiddenProducts.status===403,'جلوگیری از مشاهده محصولات توسط مدیر فاقد مجوز');
+  const allowedOrders=await request('/api/admin/orders',{admin:true});
+  assert(allowedOrders.status===200,'اجازه مشاهده سفارش‌ها برای مدیر دارای مجوز');
+  const selfCreateManager=await request('/api/admin/auth/managers',{method:'POST',admin:true,body:{username:'self.escalation',display_name:'تلاش ارتقای دسترسی',password:'Manager-Escalation-2026!',permissions:['products.view','orders.view']}});
+  assert(selfCreateManager.status===403,'جلوگیری از ساخت مدیر توسط مدیر فرعی');
+  const selfChangePermissions=await request('/api/admin/auth/managers/'+managerCreated.data.id,{method:'PATCH',admin:true,body:{permissions:['products.view','orders.view','payments.manage']}});
+  assert(selfChangePermissions.status===403,'جلوگیری از افزایش سطح دسترسی توسط خود مدیر');
+
+  const managerSessionsDenied=await request('/api/admin/auth/sessions',{admin:true});
+  assert(managerSessionsDenied.status===403,'جلوگیری از مشاهده نشست‌های مدیران توسط مدیر فرعی');
+  const deniedAccounting=await request('/api/admin/accounting/expenses',{admin:true});
+  assert(deniedAccounting.status===403,'جلوگیری از مشاهده دفتر هزینه‌ها بدون مجوز حسابداری');
+  adminCookie=ownerCookie;
+  const auditRows=await request('/api/admin/auth/audit',{admin:true});
+  assert(auditRows.status===200 && auditRows.data.some(x=>x.action==='admin.login'),'ثبت و نمایش رویدادهای ورود و فعالیت مدیران');
+  const ownerSessions=await request('/api/admin/auth/sessions',{admin:true});
+  assert(ownerSessions.status===200 && ownerSessions.data.some(x=>x.username==='owner'),'نمایش نشست‌های فعال فقط برای مالک');
+  const managerDisabled=await request('/api/admin/auth/managers/'+managerCreated.data.id,{
+    method:'PATCH',admin:true,body:{is_active:false}
+  });
+  assert(managerDisabled.status===200,'غیرفعال‌سازی مدیر فرعی توسط مالک');
+  adminCookie=managerLogin.cookie.split(';')[0];
+  const revoked=await request('/api/admin/orders',{admin:true});
+  assert(revoked.status===401,'ابطال فوری نشست‌های مدیر غیرفعال‌شده');
+  adminCookie=ownerCookie;
+
+  const restrictedSettingsManager=await request('/api/admin/auth/managers',{
+    method:'POST',admin:true,
+    body:{username:'settings.legacy',display_name:'مدیر تنظیمات محدود',password:'Manager-Settings-Test-2026!',permissions:['settings.view','settings.update']}
+  });
+  assert(restrictedSettingsManager.status===201,'ساخت مدیر با مجوزهای تنظیمات غیرحساس');
+  const restrictedSettingsLogin=await request('/api/admin/auth/login',{
+    method:'POST',headers:{'x-admin-request':'1'},
+    body:{username:'settings.legacy',password:'Manager-Settings-Test-2026!'}
+  });
+  assert(restrictedSettingsLogin.status===200 && restrictedSettingsLogin.cookie,'ورود مدیر تنظیمات محدود');
+  adminCookie=restrictedSettingsLogin.cookie.split(';')[0];
+  const hiddenPaymentDetails=await request('/api/admin/store-settings',{admin:true});
+  assert(hiddenPaymentDetails.status===403,'جلوگیری از مشاهده اطلاعات بانکی بدون مجوز مستقل پرداخت');
+  const blockedPaymentChange=await request('/api/admin/store-settings',{
+    method:'PATCH',admin:true,body:{payment_enabled:true}
+  });
+  assert(blockedPaymentChange.status===403,'جلوگیری از تغییر تنظیمات پرداخت بدون مجوز مستقل');
+  adminCookie=ownerCookie;
+  const paymentViewer=await request('/api/admin/auth/managers',{
+    method:'POST',admin:true,
+    body:{username:'payment.viewer',display_name:'مشاهده‌گر پرداخت',password:'Manager-Payment-Test-2026!',permissions:['payments.view']}
+  });
+  assert(paymentViewer.status===201,'ساخت مدیر با مجوز مستقل مشاهده پرداخت');
+  const paymentViewerLogin=await request('/api/admin/auth/login',{
+    method:'POST',headers:{'x-admin-request':'1'},
+    body:{username:'payment.viewer',password:'Manager-Payment-Test-2026!'}
+  });
+  assert(paymentViewerLogin.status===200 && paymentViewerLogin.cookie,'ورود مشاهده‌گر پرداخت');
+  adminCookie=paymentViewerLogin.cookie.split(';')[0];
+  const paymentRead=await request('/api/admin/store-settings',{admin:true});
+  assert(paymentRead.status===200,'اجازه مشاهده اطلاعات پرداخت با مجوز مستقل');
+  const paymentWriteDenied=await request('/api/admin/store-settings',{method:'PATCH',admin:true,body:{}});
+  assert(paymentWriteDenied.status===403,'جلوگیری از تغییر اطلاعات پرداخت برای مشاهده‌گر صرف');
+  adminCookie=ownerCookie;
 
   let staticResponse = await fetch(BASE + '/admin/');
   const adminHtml = await staticResponse.text();
@@ -89,6 +187,7 @@ async function run() {
 
   let r = await request('/api/admin/uploads/product', {
     method: 'POST',
+    headers: { 'x-admin-request': '1' },
     body: { mime_type: 'image/png', image_base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=' }
   });
   assert(r.status === 401, 'جلوگیری از آپلود عکس بدون کلید مدیر');
@@ -146,6 +245,14 @@ async function run() {
   assert(r.status===401, 'محافظت از فهرست مشتریان در برابر دسترسی غیرمجاز');
   r = await request('/api/admin/customers',{admin:true});
   assert(r.status===200 && Array.isArray(r.data) && r.data.some(x=>x.phone===memberPhone), 'نمایش مشتری ثبت‌نام‌شده در پنل مدیریت');
+  noOrderPhone='09'+crypto.randomInt(100000000,999999999).toString();
+  const noOrderCustomer=(await db.query("INSERT INTO customers(full_name,phone,password_hash,password_salt) VALUES('مشتری بدون سفارش',$1,$2,$3) RETURNING id",[noOrderPhone,'0'.repeat(128),'0'.repeat(32)])).rows[0];
+  noOrderCustomerId=noOrderCustomer.id;
+  const deactivateNoOrder=await request('/api/admin/customers/'+noOrderCustomer.id+'/status',{method:'PATCH',admin:true,body:{is_active:false}});
+  assert(deactivateNoOrder.status===200 && deactivateNoOrder.data.customer.is_active===false,'غیرفعال‌سازی برگشت‌پذیر مشتری بدون سفارش');
+  const reactivateNoOrder=await request('/api/admin/customers/'+noOrderCustomer.id+'/status',{method:'PATCH',admin:true,body:{is_active:true}});
+  assert(reactivateNoOrder.status===200 && reactivateNoOrder.data.customer.is_active===true,'فعال‌سازی دوباره مشتری بدون سفارش');
+
   r = await request('/api/auth/register',{method:'POST',body:{name:'عضو تکراری',phone:memberPhone,password:'TestMemberPass123'}});
   assert(r.status===409, 'جلوگیری از ثبت‌نام تکراری با یک شماره موبایل');
   r = await request('/api/auth/login', {method:'POST',body:{phone:memberPhone,password:'WrongPassword123'}});
@@ -185,11 +292,35 @@ async function run() {
       sale_price_toman: 10000,
       stock: 5,
       image_url: uploadedImageUrl,
+      images: [uploadedImageUrl, 'https://example.com/test-angle.jpg'],
       is_active: true
     }
   });
-  assert(r.status === 201 && r.data.id && r.data.image_url === uploadedImageUrl, 'ثبت محصول همراه با تصویر آپلودشده');
+  assert(r.status === 201 && r.data.id && r.data.image_url === uploadedImageUrl &&
+    Array.isArray(r.data.images) && r.data.images.length === 2 &&
+    r.data.images[0] === uploadedImageUrl,
+    'ثبت محصول با دو تصویر و تعیین تصویر اول به‌عنوان اصلی');
   productId = r.data.id;
+
+  const galleryRows = await db.query(
+    'SELECT image_url,position,is_primary FROM product_images WHERE product_id=$1 ORDER BY position',
+    [productId]
+  );
+  assert(galleryRows.rowCount === 2 &&
+    Number(galleryRows.rows[0].position) === 0 && galleryRows.rows[0].is_primary === true &&
+    Number(galleryRows.rows[1].position) === 1 && galleryRows.rows[1].is_primary === false,
+    'ذخیره ترتیب تصاویر و یکتایی تصویر اصلی در پایگاه داده');
+
+  r = await request('/api/admin/products', {admin:true});
+  const adminGallery = r.data.find(p => String(p.id) === String(productId));
+  assert(r.status === 200 && adminGallery && adminGallery.images.length === 2,
+    'نمایش کامل گالری در فهرست مدیریت');
+
+  r = await request('/api/products');
+  const publicGallery = r.data.find(p => String(p.id) === String(productId));
+  assert(r.status === 200 && publicGallery && publicGallery.images.length === 2 &&
+    !Object.prototype.hasOwnProperty.call(publicGallery, 'cost_price_toman'),
+    'نمایش گالری برای مشتری بدون افشای قیمت خرید');
 
   r = await request('/api/admin/products', {
     method: 'POST',
@@ -202,11 +333,13 @@ async function run() {
       price_toman: 18000,
       sale_price_toman: null,
       stock: 2,
-      image_url: '',
+      image_url: 'https://example.com/legacy-main.jpg',
       is_active: true
     }
   });
-  assert(r.status === 201 && r.data.id, 'ثبت نمونه آزمایشی لوازم آرایشی');
+  assert(r.status === 201 && r.data.id && r.data.images.length === 1 &&
+    r.data.images[0] === 'https://example.com/legacy-main.jpg',
+    'سازگاری ثبت محصول قدیمی با یک نشانی تصویر');
   secondProductId = r.data.id;
 
   r = await request('/api/admin/products', {method:'POST',admin:true,body:{
@@ -233,9 +366,54 @@ async function run() {
   r = await request(`/api/admin/products/${productId}`, {
     method: 'PATCH',
     admin: true,
+    body: { images: ['https://example.com/test-angle.jpg', uploadedImageUrl] }
+  });
+  assert(r.status === 200 && r.data.image_url === 'https://example.com/test-angle.jpg' &&
+    r.data.images[0] === 'https://example.com/test-angle.jpg',
+    'تغییر ترتیب تصاویر و انتقال تصویر اصلی به ابتدای گالری');
+  const reorderedPrimary = await db.query(
+    'SELECT COUNT(*) FILTER (WHERE is_primary) AS primary_count FROM product_images WHERE product_id=$1',
+    [productId]
+  );
+  assert(Number(reorderedPrimary.rows[0].primary_count) === 1,
+    'حفظ دقیقاً یک تصویر اصلی پس از جابه‌جایی');
+
+  r = await request(`/api/admin/products/${productId}`, {
+    method: 'PATCH',
+    admin: true,
+    body: { images: [uploadedImageUrl] }
+  });
+  assert(r.status === 200 && r.data.images.length === 1 && r.data.image_url === uploadedImageUrl,
+    'حذف تصویر از گالری بدون حذف فایل فیزیکی');
+  await fs.access(path.join(__dirname, '..', 'uploads', 'products', uploadedImageFile));
+  assert(true, 'باقی‌ماندن فایل فیزیکی تصویر پس از حذف آن از گالری');
+
+  r = await request('/api/admin/products', {
+    method:'POST', admin:true,
+    body:{
+      sku:SKU+'-TOO-MANY',name:'گالری بیش از حد',category_id:categoryId,
+      price_toman:12000,stock:1,images:Array.from({length:11},(_,i)=>'https://example.com/image-'+i+'.jpg')
+    }
+  });
+  assert(r.status === 400, 'رد گالری دارای بیش از ۱۰ تصویر');
+
+  r = await request('/api/admin/products', {
+    method:'POST', admin:true,
+    body:{
+      sku:SKU+'-BAD-URL',name:'نشانی تصویر نامعتبر',category_id:categoryId,
+      price_toman:12000,stock:1,images:['http://example.com/not-secure.jpg']
+    }
+  });
+  assert(r.status === 400, 'رد نشانی تصویر ناامن در گالری');
+
+  r = await request(`/api/admin/products/${productId}`, {
+    method: 'PATCH',
+    admin: true,
     body: { name: 'محصول ویرایش‌شده', price_toman: 15000 }
   });
-  assert(r.status === 200 && r.data.name === 'محصول ویرایش‌شده', 'ویرایش محصول');
+  assert(r.status === 200 && r.data.name === 'محصول ویرایش‌شده' &&
+    r.data.images.length === 1 && r.data.images[0] === uploadedImageUrl,
+    'ویرایش اطلاعات محصول بدون تغییر ناخواسته گالری');
 
   r = await request(`/api/admin/products/${productId}`, {
     method: 'PATCH',
@@ -337,6 +515,25 @@ async function run() {
   assert(r.status===201 && Number(r.data.subtotal_toman)===11400 && Number(r.data.membership_discount_toman)===600 && Number(r.data.total_toman)===16400,
     'محاسبه قطعی تخفیف ۵ درصدی در سمت سرور هنگام ثبت سفارش عضو');
   memberOrderCode=r.data.order_code;
+  const guestSamePhoneKey=crypto.randomUUID();
+  const guestSamePhoneOrder=await request('/api/orders',{method:'POST',headers:{'Idempotency-Key':guestSamePhoneKey},body:{
+    customer:{name:'خریدار مهمان',phone:noOrderPhone,city:'اصفهان',province:'اصفهان',address:'نشانی مهمان',postal_code:''},
+    items:[{product_id:memberProductId,quantity:1}],delivery_method:'local',note:'آزمون خرید مهمان با شماره عضو'
+  }});
+  assert(guestSamePhoneOrder.status===201,'ثبت سفارش مهمان با شماره موبایل حساب مشتری');
+  guestOrderCode=guestSamePhoneOrder.data.order_code;
+  const guestOrderLink=await db.query('SELECT customer_id FROM orders WHERE order_code=$1',[guestOrderCode]);
+  assert(guestOrderLink.rowCount===1 && guestOrderLink.rows[0].customer_id===null,'ثبت خرید مهمان بدون اتصال حساب کاربری');
+  const blockGuestHistoryDeactivate=await request('/api/admin/customers/'+noOrderCustomerId+'/status',{method:'PATCH',admin:true,body:{is_active:false}});
+  assert(blockGuestHistoryDeactivate.status===409,'جلوگیری از غیرفعال‌سازی حساب دارای خرید مهمان با همان شماره موبایل');
+
+  const memberCostSnapshot=await db.query('SELECT cost_price_toman FROM order_items i JOIN orders o ON o.id=i.order_id WHERE o.order_code=$1',[memberOrderCode]);
+  assert(memberCostSnapshot.rowCount===1 && Number(memberCostSnapshot.rows[0].cost_price_toman)===7000,'ثبت بهای تمام‌شده در لحظه سفارش برای حسابداری');
+  const memberCustomer=(await db.query('SELECT id FROM customers WHERE phone=$1',[memberPhone])).rows[0];
+  const linkedMemberOrder=await db.query('SELECT customer_id FROM orders WHERE order_code=$1',[memberOrderCode]);
+  assert(linkedMemberOrder.rowCount===1 && Number(linkedMemberOrder.rows[0].customer_id)===Number(memberCustomer.id),'اتصال سفارش عضویت به حساب مشتری');
+  const refuseCustomerDeactivate=await request('/api/admin/customers/'+memberCustomer.id+'/status',{method:'PATCH',admin:true,body:{is_active:false}});
+  assert(refuseCustomerDeactivate.status===409,'جلوگیری از غیرفعال‌سازی مشتری دارای سابقه سفارش؛ پاسخ '+refuseCustomerDeactivate.status+' '+(refuseCustomerDeactivate.data.error||''));
 
 
   const orderKey = crypto.randomUUID();
@@ -387,6 +584,21 @@ async function run() {
 
   const order = r.data.find(x => x.order_code === orderCode);
   assert(!!order, 'یافتن سفارش آزمایشی');
+  const expenseDate=new Date().toISOString().slice(0,10);
+  const previousExpenseTotal=Number((await db.query('SELECT COALESCE(SUM(amount_toman),0) AS total FROM accounting_expenses WHERE expense_date=$1',[expenseDate])).rows[0].total);
+  const expenseDescription='هزینه آزمایشی '+SKU;
+  const expenseCreated=await request('/api/admin/accounting/expenses',{method:'POST',admin:true,body:{expense_date:expenseDate,category:'آزمون',description:expenseDescription,amount_toman:12345}});
+  assert(expenseCreated.status===201 && Number(expenseCreated.data.amount_toman)===12345,'ثبت هزینه عملیاتی در دفتر حسابداری');
+  const expenseCorrection=await request('/api/admin/accounting/expenses',{method:'POST',admin:true,body:{expense_date:expenseDate,category:'اصلاحی',description:'اصلاح '+SKU,amount_toman:-2345}});
+  assert(expenseCorrection.status===201 && Number(expenseCorrection.data.amount_toman)===-2345,'ثبت ردیف اصلاحی منفی بدون حذف سابقه هزینه');
+
+  const expenseList=await request('/api/admin/accounting/expenses',{admin:true});
+  assert(expenseList.status===200 && expenseList.data.expenses.some(x=>x.description===expenseDescription),'نمایش ردیف هزینه در دفتر حسابداری');
+  const accountingReport=await request('/api/admin/reports/summary',{admin:true});
+  assert(accountingReport.status===200 && accountingReport.data.summary && Array.isArray(accountingReport.data.daily) && Number(accountingReport.data.summary.expenses_toman)===previousExpenseTotal+10000,'گزارش مالی همراه با کسر هزینه‌های ثبت‌شده');
+  const errorReport=await request('/api/admin/reports/errors',{admin:true});
+  assert(errorReport.status===200 && Array.isArray(errorReport.data),'دریافت مرکز خطاها');
+
 
   // Simulate an order with a pending ZarinPal authority: admin UI must not bypass gateway verification.
   await db.query("UPDATE orders SET payment_method='zarinpal',payment_provider='zarinpal',payment_status='pending',payment_authority='TESTAUTHORITY1234567890' WHERE id=$1", [order.id]);
@@ -422,6 +634,32 @@ async function run() {
   });
   assert(r.status === 409, 'جلوگیری از تغییر سفارش لغوشده به پرداخت‌شده');
 
+  // A trusted proxy must preserve per-client rate-limit buckets.
+  const proxyIpA = '198.51.100.41';
+  const proxyStatuses = [];
+  for (let i = 0; i < 11; i++) {
+    const limited = await request('/api/orders', {
+      method: 'POST',
+      headers: { 'X-Forwarded-For': proxyIpA },
+      body: {}
+    });
+    proxyStatuses.push(limited.status);
+  }
+  assert(
+    proxyStatuses.slice(0, 10).every(status => status === 400) && proxyStatuses[10] === 429,
+    'محدودیت ثبت سفارش بر اساس IP واقعی ارسال‌شده از پروکسی مورد اعتماد اعمال می‌شود: ' + JSON.stringify(proxyStatuses)
+  );
+
+  const separateProxyClient = await request('/api/orders', {
+    method: 'POST',
+    headers: { 'X-Forwarded-For': '198.51.100.42' },
+    body: {}
+  });
+  assert(
+    separateProxyClient.status === 400,
+    'محدودیت یک مشتری باعث مسدودشدن مشتری دیگر پشت همان پروکسی نمی‌شود'
+  );
+
   console.log('\nALL INTEGRATION TESTS PASSED');
 }
 
@@ -438,6 +676,7 @@ async function run() {
       }
       if (orderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [orderCode]);
       if (memberOrderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [memberOrderCode]);
+      if (guestOrderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [guestOrderCode]);
       if (productId) await db.query('DELETE FROM products WHERE id=$1', [productId]);
       if (secondProductId) await db.query('DELETE FROM products WHERE id=$1', [secondProductId]);
       if (memberProductId) await db.query('DELETE FROM products WHERE id=$1', [memberProductId]);
