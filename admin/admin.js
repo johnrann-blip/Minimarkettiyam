@@ -10,13 +10,13 @@ let adminUser = null;
 const ALL_ADMIN_PERMISSIONS = [
   'products.view','products.create','products.update','products.archive',
   'orders.view','orders.update','customers.view','customers.manage','payments.view','payments.manage',
-  'reports.view','audit.view'
+  'accounting.view','accounting.manage','reports.view','audit.view'
 ];
 const PERMISSION_LABELS = {
   'products.view':'مشاهده محصولات','products.create':'ثبت محصول','products.update':'ویرایش محصول',
   'products.archive':'بایگانی محصول','orders.view':'مشاهده سفارش‌ها','orders.update':'تغییر وضعیت سفارش',
   'customers.view':'مشاهده مشتریان','customers.manage':'غیرفعال‌سازی مشتری بدون سفارش','payments.view':'مشاهده اطلاعات بانکی و پرداخت','payments.manage':'مدیریت اطلاعات بانکی و پرداخت',
-  'reports.view':'گزارش‌ها','audit.view':'سوابق فعالیت'
+  'accounting.view':'مشاهده دفتر هزینه‌ها','accounting.manage':'ثبت هزینه‌های فروشگاه','reports.view':'گزارش‌ها','audit.view':'سوابق فعالیت'
 };
 function adminCan(permission) {
   if (!adminUser) return false;
@@ -213,7 +213,7 @@ function setAdminSession(admin) {
   const sectionAccess = {
     managerSection:adminUser.role==='owner',
     auditSection:adminCan('audit.view'),
-    reportsSection:adminCan('reports.view'),
+    reportsSection:adminCan('reports.view') || adminCan('accounting.view') || adminCan('accounting.manage'),
     productFormSection:adminCan('products.create') || adminCan('products.update'),
     productsSection:adminCan('products.view'),
     archiveSection:adminCan('products.archive') || adminCan('products.view'),
