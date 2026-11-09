@@ -103,6 +103,7 @@ function createAdminAuth({pool,rateLimit}) {
  });
  router.get('/me',authenticate,(req,res)=>res.json({admin:req.admin,permissions:req.admin.role==='owner'?PERMISSIONS:req.admin.permissions}));
  router.post('/logout',authenticate,async(req,res)=>{
+  if(req.get('x-admin-request')!=='1') return res.status(403).json({error:'درخواست معتبر نیست.'});
   const token=cookieValue(req.headers.cookie,COOKIE);
   if(token) await pool.query('DELETE FROM admin_sessions WHERE token_hash=$1',[hashToken(token)]).catch(()=>{});
   await audit(pool,req.admin,req,'admin.logout','authentication',200); clearCookie(res); res.json({success:true});
