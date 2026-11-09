@@ -629,6 +629,33 @@ app.get('/api/admin/customers', adminOnly, async (_req,res) => {
   }
 });
 
+app.get('/api/admin/accounting/expenses', adminOnly, async (req,res) => {
+  const validDate=value=>/^\\d{4}-\\d{2}-\\d{2}$/.test(String(value||''))&&!Number.isNaN(Date.parse(String(value)+'T00:00:00Z'));
+  const to=validDate(req.query.to)?String(req.query.to):new Date().toISOString().slice(0,10);
+  const fromDefault=new Date(Date.now()-29*86400000).toISOString().slice(0,10);
+  const from=validDate(req.query.from)?String(req.query.from):fromDefault;
+  if(from>to)return res.status(400).json({error:'بازه تاریخ هزینه‌ها معتبر نیست.'});
+  try{
+    const result=await pool.query('SELECT id,expense_date::text,category,description,amount_toman,created_at FROM accounting_expenses WHERE expense_date BETWEEN $1::date AND $2::date ORDER BY expense_date DESC,id DESC LIMIT 500',[from,to]);
+    res.json({from,to,expenses:result.rows});
+  }catch(error){res.status(500).json({error:'دفتر هزینه‌ها دریافت نشد.'});}
+});
+
+app.post('/api/admin/accounting/expenses', adminOnly, async (req,res) => {
+  const rawDate=req.body?.expense_date||new Date().toISOString().slice(0,10);
+  const category=String(req.body?.category||'').trim();
+  const description=String(req.body?.description||'').trim();
+  const amount=Number(req.body?.amount_toman);
+  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(rawDate))||Number.isNaN(Date.parse(String(rawDate)+'T00:00:00Z'))||
+     !category||category.length>80||description.length>500||!Number.isSafeInteger(amount)||amount<=0){
+    return res.status(400).json({error:'تاریخ، دسته‌بندی، توضیح و مبلغ هزینه معتبر الزامی است.'});
+  }
+  try{
+    const result=await pool.query('INSERT INTO accounting_expenses(expense_date,category,description,amount_toman,created_by) VALUES($1::date,$2,$3,$4,$5) RETURNING id,expense_date::text,category,description,amount_toman,created_at',[rawDate,category,description,amount,req.admin.id]);
+    res.status(201).json(result.rows[0]);
+  }catch(error){res.status(500).json({error:'ثبت هزینه انجام نشد.'});}
+});
+
 app.get('/api/admin/reports/summary', adminOnly, async (req,res) => {
   const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value||'')) && !Number.isNaN(Date.parse(String(value)+'T00:00:00Z'));
   const to = validDate(req.query.to) ? String(req.query.to) : new Date().toISOString().slice(0,10);
@@ -667,7 +694,11 @@ app.get('/api/admin/reports/summary', adminOnly, async (req,res) => {
         AND created_at >= $1::date AND created_at < ($2::date + INTERVAL '1 day')
       GROUP BY created_at::date ORDER BY created_at::date
     `,[from,to]);
-    res.json({from,to,summary:summary.rows[0],daily:daily.rows});
+    const expenses=await pool.query('SELECT COALESCE(SUM(amount_toman),0)::bigint AS expenses_toman FROM accounting_expenses WHERE expense_date BETWEEN $1::date AND $2::date',[from,to]);
+    const summaryData=summary.rows[0];
+    const expensesToman=expenses.rows[0].expenses_toman;
+    const netProfit=summaryData.gross_profit_toman===null?null:(BigInt(summaryData.gross_profit_toman)-BigInt(expensesToman)).toString();
+    res.json({from,to,summary:{...summaryData,expenses_toman:expensesToman,net_profit_toman:netProfit},daily:daily.rows});
   } catch(error) {
     console.error('Accounting report failed:',error.message);
     res.status(500).json({error:'گزارش مالی دریافت نشد.'});
