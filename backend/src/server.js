@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const { Pool } = require('pg');
 const { createZarinpalRouter, getConfig } = require('./zarinpal');
 const { createCustomerAuth } = require('./customer-auth');
+const { createAdminAuth } = require('./admin-auth');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -66,12 +67,7 @@ app.use(express.static(path.join(__dirname, '../../frontend')));
 app.use('/admin', express.static(path.join(__dirname, '../../admin')));
 
 function adminOnly(req, res, next) {
-  const expected = process.env.ADMIN_API_KEY;
-  const supplied = req.get('x-admin-key') || '';
-  if (!expected || Buffer.byteLength(expected) < 32) return res.status(503).json({ error: 'کلید مدیریت در سرور تنظیم نشده است یا طول کافی ندارد.' });
-  const a = Buffer.from(expected), b = Buffer.from(supplied);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: 'دسترسی غیرمجاز' });
-  next();
+  return adminAuth.requireAdmin(req, res, next);
 }
 
 function createRateLimiter({ windowMs, max, message }) {
@@ -123,6 +119,9 @@ const adminRateLimit = createRateLimiter({
   max: 120,
   message: 'تعداد درخواست‌های مدیریتی بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
 });
+
+const adminAuth = createAdminAuth({pool,rateLimit:adminRateLimit});
+app.use('/api/admin/auth', adminRateLimit, adminAuth.router);
 
 const orderRateLimit = createRateLimiter({
   windowMs: 10 * 60 * 1000,
