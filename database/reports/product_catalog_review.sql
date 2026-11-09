@@ -27,4 +27,6 @@ SELECT COALESCE(
     )
   ),
   '[]'
-);
+)
+FROM products p
+LEFT JOIN categories c ON c.id = p.category_id;
