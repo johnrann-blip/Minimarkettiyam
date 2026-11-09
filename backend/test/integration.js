@@ -33,6 +33,7 @@ let uploadedImageUrl = null;
 let secondProductId = null;
 let memberProductId = null;
 let memberSessionCookie = null;
+let memberOrderCode = null;
 
 function assert(condition, message) {
   if (!condition) throw new Error('FAIL: ' + message);
@@ -318,6 +319,19 @@ async function run() {
     Number(r.data.nationwide_shipping_toman) === 10000,
     'دریافت تعرفه‌های ارسال در پنل مدیریت');
 
+  const memberOrderKey=crypto.randomUUID();
+  const memberOrderPayload={
+    customer:{name:'عضو آزمایشی',phone:memberPhone,city:'اصفهان',province:'اصفهان',address:'نشانی عضو آزمایشی',postal_code:''},
+    items:[{product_id:memberProductId,quantity:1}],
+    delivery_method:'local',
+    note:'آزمون تخفیف عضویت'
+  };
+  r=await request('/api/orders',{method:'POST',headers:{'Idempotency-Key':memberOrderKey,cookie:memberSessionCookie},body:memberOrderPayload});
+  assert(r.status===201 && Number(r.data.subtotal_toman)===11400 && Number(r.data.membership_discount_toman)===600 && Number(r.data.total_toman)===16400,
+    'محاسبه قطعی تخفیف ۵ درصدی در سمت سرور هنگام ثبت سفارش عضو');
+  memberOrderCode=r.data.order_code;
+
+
   const orderKey = crypto.randomUUID();
   const concurrentOrders = await Promise.all([
     request('/api/orders', {
@@ -416,6 +430,7 @@ async function run() {
         await fs.unlink(path.join(__dirname, '..', 'uploads', 'products', uploadedImageFile)).catch(() => {});
       }
       if (orderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [orderCode]);
+      if (memberOrderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [memberOrderCode]);
       if (productId) await db.query('DELETE FROM products WHERE id=$1', [productId]);
       if (secondProductId) await db.query('DELETE FROM products WHERE id=$1', [secondProductId]);
       if (memberProductId) await db.query('DELETE FROM products WHERE id=$1', [memberProductId]);
