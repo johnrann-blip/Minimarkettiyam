@@ -25,7 +25,7 @@ function adminCan(permission) {
   if (permissions.includes(permission)) return true;
   if (permission.endsWith('.view')) {
     const prefix=permission.slice(0,-5);
-    return [prefix+'.create',prefix+'.update',prefix+'.archive'].some(x=>permissions.includes(x));
+    return [prefix+'.create',prefix+'.update',prefix+'.archive'].some(x=>permissions.includes(x)) || (permission==='payments.view' && permissions.includes('payments.manage'));
   }
   return false;
 }
