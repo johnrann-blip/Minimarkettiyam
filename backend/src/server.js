@@ -185,7 +185,10 @@ app.get('/api/products', async (req, res) => {
     if (req.query.category) { values.push(String(req.query.category)); where += ` AND c.slug=$${values.length}`; }
     if (req.query.q) { values.push('%' + String(req.query.q).slice(0,80) + '%'); where += ` AND (p.name ILIKE $${values.length} OR p.description ILIKE $${values.length})`; }
     const r = await pool.query(
-      `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,c.name AS category_name,c.slug AS category_slug
+      `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,
+              COALESCE((SELECT json_agg(pi.image_url ORDER BY pi.position,pi.id) FROM product_images pi WHERE pi.product_id=p.id),
+                       CASE WHEN COALESCE(p.image_url,'')<>'' THEN json_build_array(p.image_url) ELSE '[]'::json END) AS images,
+              c.name AS category_name,c.slug AS category_slug
        FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE ${where} ORDER BY p.created_at DESC LIMIT 100`, values);
     res.json(r.rows.map(p => {
       const {cost_price_toman,...publicProduct}=p;
@@ -848,6 +851,37 @@ app.patch('/api/admin/orders/:id/status', adminOnly, async (req,res) => {
 });
 
 
+function validateProductImageUrl(value) {
+  const image = String(value ?? '').trim();
+  if (!image) return '';
+  if (image.length > 2048) throw new Error('نشانی تصویر بیش از حد طولانی است.');
+  if (/^\/uploads\/products\/[a-f0-9]{32}\.(jpg|png|webp)$/.test(image)) return image;
+  let url;
+  try { url = new URL(image); } catch { throw new Error('نشانی تصویر معتبر نیست.'); }
+  if (url.protocol !== 'https:' || !url.hostname) throw new Error('نشانی تصویر باید با HTTPS شروع شود.');
+  return image;
+}
+
+function validateProductImages(value) {
+  if (!Array.isArray(value)) throw new Error('فهرست تصاویر محصول معتبر نیست.');
+  if (value.length > 10) throw new Error('هر محصول حداکثر می‌تواند ۱۰ تصویر داشته باشد.');
+  const images = value.map(validateProductImageUrl);
+  if (images.some(image => !image)) throw new Error('نشانی همه تصاویر گالری باید تکمیل باشد.');
+  if (new Set(images).size !== images.length) throw new Error('تصویر تکراری در گالری مجاز نیست.');
+  return images;
+}
+
+async function replaceProductImages(client, productId, images) {
+  await client.query('DELETE FROM product_images WHERE product_id=$1', [productId]);
+  if (!images.length) return;
+  await client.query(
+    `INSERT INTO product_images(product_id,image_url,position,is_primary)
+     SELECT $1,image_url,(ordinality-1)::smallint,(ordinality=1)
+     FROM unnest($2::text[]) WITH ORDINALITY AS items(image_url,ordinality)`,
+    [productId, images]
+  );
+}
+
 function validateProduct(p) {
   const name = String(p.name ?? '').trim();
   const sku = String(p.sku ?? '').trim();
@@ -870,18 +904,7 @@ function validateProduct(p) {
     throw new Error('قیمت تخفیفی باید از قیمت اصلی کمتر باشد.');
   }
 
-  if (image) {
-    if (image.length > 2048) throw new Error('نشانی تصویر بیش از حد طولانی است.');
-    if (/^\/uploads\/products\/[a-f0-9]{32}\.(jpg|png|webp)$/.test(image)) {
-      // تصویر بارگذاری‌شده در فضای فایل سرور
-    } else {
-      let url;
-      try { url = new URL(image); } catch { throw new Error('نشانی تصویر معتبر نیست.'); }
-      if (url.protocol !== 'https:' || !url.hostname) {
-        throw new Error('نشانی تصویر باید با HTTPS شروع شود.');
-      }
-    }
-  }
+  validateProductImageUrl(image);
 
   if (p.is_active !== undefined && typeof p.is_active !== 'boolean') {
     throw new Error('وضعیت فعال‌بودن محصول معتبر نیست.');
@@ -948,6 +971,8 @@ app.get('/api/admin/products', adminOnly, async (_req, res) => {
     const result = await pool.query(
       `SELECT p.id,p.sku,p.name,p.category_id,p.description,
               p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,
+              COALESCE((SELECT json_agg(pi.image_url ORDER BY pi.position,pi.id) FROM product_images pi WHERE pi.product_id=p.id),
+                       CASE WHEN COALESCE(p.image_url,'')<>'' THEN json_build_array(p.image_url) ELSE '[]'::json END) AS images,
               p.is_active,p.created_at,p.updated_at,
               c.name AS category_name
        FROM products p
@@ -964,8 +989,14 @@ app.get('/api/admin/products', adminOnly, async (_req, res) => {
 app.post('/api/admin/products', adminOnly, async (req, res) => {
   let client;
   try {
-    const p = validateProduct(req.body || {});
+    const body = req.body || {};
+    const p = validateProduct(body);
+    const images = Object.prototype.hasOwnProperty.call(body, 'images')
+      ? validateProductImages(body.images)
+      : (p.image_url ? [p.image_url] : []);
+    p.image_url = images[0] || '';
     client = await pool.connect();
+    await client.query('BEGIN');
     await validateCategory(client, p.category_id);
 
     const result = await client.query(
@@ -975,17 +1006,17 @@ app.post('/api/admin/products', adminOnly, async (req, res) => {
       [p.sku,p.name,p.category_id,p.description,p.price_toman,
        p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,p.is_active]
     );
-    res.status(201).json(result.rows[0]);
+    await replaceProductImages(client, result.rows[0].id, images);
+    await client.query('COMMIT');
+    res.status(201).json({...result.rows[0],images});
   } catch (e) {
+    if (client) { try { await client.query('ROLLBACK'); } catch {} }
     const known = e.message && (
-      e.message.includes('محصول') ||
-      e.message.includes('قیمت') ||
-      e.message.includes('موجودی') ||
-      e.message.includes('کد کالا') ||
-      e.message.includes('دسته‌بندی') ||
-      e.message.includes('توضیحات') ||
-      e.message.includes('نشانی') ||
-      e.message.includes('وضعیت')
+      e.message.includes('محصول') || e.message.includes('تصویر') ||
+      e.message.includes('گالری') || e.message.includes('قیمت') ||
+      e.message.includes('موجودی') || e.message.includes('کد کالا') ||
+      e.message.includes('دسته‌بندی') || e.message.includes('توضیحات') ||
+      e.message.includes('نشانی') || e.message.includes('وضعیت')
     );
     res.status(known ? 400 : 409).json({
       error: known ? e.message : 'محصول ثبت نشد؛ احتمالاً کد کالا تکراری است یا خطای پایگاه داده رخ داده است.'
@@ -1013,6 +1044,25 @@ app.patch('/api/admin/products/:id', adminOnly, async (req, res) => {
     if (!found.rowCount) throw new Error('محصول پیدا نشد.');
 
     const current = found.rows[0];
+    const currentImagesResult = await client.query(
+      'SELECT image_url FROM product_images WHERE product_id=$1 ORDER BY position,id',
+      [id]
+    );
+    const currentImages = currentImagesResult.rows.length
+      ? currentImagesResult.rows.map(row => row.image_url)
+      : (current.image_url ? [current.image_url] : []);
+    const body = req.body || {};
+    const imagesProvided = Object.prototype.hasOwnProperty.call(body, 'images');
+    const imageUrlProvided = Object.prototype.hasOwnProperty.call(body, 'image_url');
+    let images = currentImages;
+    if (imagesProvided) {
+      images = validateProductImages(body.images);
+    } else if (imageUrlProvided) {
+      const nextPrimary = validateProductImageUrl(body.image_url);
+      images = nextPrimary
+        ? [nextPrimary, ...currentImages.filter(image => image !== nextPrimary && image !== current.image_url)].slice(0, 10)
+        : currentImages.filter(image => image !== current.image_url);
+    }
     const allowed = [
       'sku','name','category_id','description','price_toman',
       'sale_price_toman','cost_price_toman','stock','image_url','is_active'
@@ -1024,6 +1074,7 @@ app.patch('/api/admin/products/:id', adminOnly, async (req, res) => {
         ? req.body[field] : current[field];
     }
 
+    if (imagesProvided || imageUrlProvided) merged.image_url = images[0] || '';
     const p = validateProduct(merged);
     await validateCategory(client, p.category_id);
 
@@ -1037,21 +1088,19 @@ app.patch('/api/admin/products/:id', adminOnly, async (req, res) => {
        p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,p.is_active,id]
     );
 
+    if (imagesProvided || imageUrlProvided) await replaceProductImages(client, id, images);
     await client.query('COMMIT');
-    res.json(result.rows[0]);
+    res.json({...result.rows[0],images});
   } catch (e) {
     if (client) {
       try { await client.query('ROLLBACK'); } catch {}
     }
     const known = e.message && (
-      e.message.includes('محصول') ||
-      e.message.includes('قیمت') ||
-      e.message.includes('موجودی') ||
-      e.message.includes('کد کالا') ||
-      e.message.includes('دسته‌بندی') ||
-      e.message.includes('توضیحات') ||
-      e.message.includes('نشانی') ||
-      e.message.includes('وضعیت')
+      e.message.includes('محصول') || e.message.includes('تصویر') ||
+      e.message.includes('گالری') || e.message.includes('قیمت') ||
+      e.message.includes('موجودی') || e.message.includes('کد کالا') ||
+      e.message.includes('دسته‌بندی') || e.message.includes('توضیحات') ||
+      e.message.includes('نشانی') || e.message.includes('وضعیت')
     );
     res.status(e.message === 'محصول پیدا نشد.' ? 404 : known ? 400 : 409)
       .json({error:known || e.message === 'محصول پیدا نشد.'
