@@ -1,6 +1,8 @@
 const { spawn } = require('child_process');
 const { Pool } = require('pg');
 const crypto = require('crypto');
+const fs = require('fs/promises');
+const path = require('path');
 
 const PORT = 3197;
 const KEY = crypto.randomBytes(32).toString('hex');
@@ -23,6 +25,7 @@ const server = spawn(process.execPath, ['src/server.js'], {
 const db = new Pool({ connectionString: env.DATABASE_URL });
 let productId = null;
 let orderCode = null;
+let uploadedImageFile = null;
 
 function assert(condition, message) {
   if (!condition) throw new Error('FAIL: ' + message);
@@ -64,6 +67,28 @@ async function run() {
   assert(staticResponse.status === 200, 'بارگذاری JavaScript پنل مدیریت');
   staticResponse = await fetch(BASE + '/admin/admin.css');
   assert(staticResponse.status === 200, 'بارگذاری CSS پنل مدیریت');
+
+  r = await request('/api/admin/uploads/product', {
+    method: 'POST',
+    body: { mime_type: 'image/png', image_base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=' }
+  });
+  assert(r.status === 401, 'جلوگیری از آپلود عکس بدون کلید مدیر');
+
+  r = await request('/api/admin/uploads/product', {
+    method: 'POST',
+    admin: true,
+    body: { mime_type: 'image/png', image_base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=' }
+  });
+  assert(r.status === 201 && typeof r.data.image_url === 'string' &&
+    r.data.image_url.startsWith('/uploads/products/') && r.data.image_url.endsWith('.png'),
+    'آپلود امن عکس محصول با کلید مدیر');
+  uploadedImageFile = path.basename(r.data.image_url);
+
+  const uploadedImage = await fetch(BASE + r.data.image_url);
+  const uploadedBytes = Buffer.from(await uploadedImage.arrayBuffer());
+  assert(uploadedImage.status === 200 && uploadedBytes.length > 8 &&
+    uploadedBytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])),
+    'نمایش عکس آپلودشده از مسیر عمومی محصولات');
 
   // فقط دیتابیس آزمایشی؛ هر اجرا از تنظیمات پاک شروع می‌شود.
   await db.query(`
@@ -296,6 +321,9 @@ async function run() {
     process.exitCode = 1;
   } finally {
     try {
+      if (uploadedImageFile) {
+        await fs.unlink(path.join(__dirname, '..', 'uploads', 'products', uploadedImageFile)).catch(() => {});
+      }
       if (orderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [orderCode]);
       if (productId) await db.query('DELETE FROM products WHERE id=$1', [productId]);
     } catch (error) {
