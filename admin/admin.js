@@ -96,6 +96,7 @@ $('#productForm').onsubmit = async event => {
   delete data.id;
 
   data.price_toman = Number(data.price_toman);
+  data.cost_price_toman = data.cost_price_toman === '' ? null : Number(data.cost_price_toman);
   data.stock = Number(data.stock);
   data.category_id = data.category_id ? Number(data.category_id) : null;
   data.sale_price_toman =
@@ -158,7 +159,8 @@ function renderProductCard(p, archived = false) {
     <div class="order">
       <b>${escapeHtml(p.name)}</b>
       <p>شناسه: ${escapeHtml(p.id)} | کد کالا: ${escapeHtml(p.sku || 'ندارد')}</p>
-      <p>قیمت: ${Number(p.price_toman).toLocaleString('fa-IR')} تومان</p>
+      <p>قیمت فروش: ${Number(p.price_toman).toLocaleString('fa-IR')} تومان</p>
+      <p>قیمت خرید: ${p.cost_price_toman === null || p.cost_price_toman === undefined ? 'ثبت نشده' : Number(p.cost_price_toman).toLocaleString('fa-IR') + ' تومان'}</p>
       <p>تخفیف: ${p.sale_price_toman === null ? 'ندارد' : Number(p.sale_price_toman).toLocaleString('fa-IR') + ' تومان'}</p>
       <p>موجودی: ${Number(p.stock).toLocaleString('fa-IR')}</p>
       <p>دسته: ${escapeHtml(p.category_name || 'بدون دسته')}</p>
@@ -225,6 +227,7 @@ $('#products').addEventListener('click', async event => {
       form.elements.category_id.value = p.category_id ?? '';
       form.elements.sku.value = p.sku || '';
       form.elements.price_toman.value = p.price_toman;
+      form.elements.cost_price_toman.value = p.cost_price_toman ?? '';
       form.elements.sale_price_toman.value = p.sale_price_toman ?? '';
       form.elements.stock.value = p.stock;
       form.elements.image_url.value = p.image_url || '';
