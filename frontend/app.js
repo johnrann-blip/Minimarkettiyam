@@ -1,7 +1,43 @@
 
 const $=s=>document.querySelector(s);let products=[],cart=JSON.parse(localStorage.getItem('mm_cart')||'[]'),category='',storeSettings=null;
 const toman=n=>new Intl.NumberFormat('fa-IR').format(Number(n))+' تومان';
-async function loadCategories(){try{const r=await fetch('/api/categories');if(!r.ok)throw new Error();const cats=await r.json();$('#categories').innerHTML='<button class="active" data-category="">همه</button>'+cats.map(c=>`<button data-category="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</button>`).join('');$('#categories').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{category=b.dataset.category;$('#categories').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));loadProducts()}))}catch{}}
+function selectCategory(value){
+  category=value;
+  $('#categories').querySelectorAll('button').forEach(button=>
+    button.classList.toggle('active',button.dataset.category===value)
+  );
+  document.querySelectorAll('.category-entry').forEach(button=>
+    button.classList.toggle('active',button.dataset.category===value)
+  );
+  loadProducts();
+}
+async function loadCategories(){
+  try{
+    const response=await fetch('/api/categories');
+    if(!response.ok)throw new Error('دریافت دسته‌بندی‌ها ناموفق بود.');
+    const cats=await response.json();
+    const preferred=[
+      {slug:'bags-accessories',name:'کیف و اکسسوری'},
+      {slug:'beauty',name:'لوازم آرایشی'}
+    ];
+    const available=new Map(cats.map(item=>[item.slug,item]));
+    const ordered=[...preferred.filter(item=>available.has(item.slug)).map(item=>available.get(item.slug)),
+      ...cats.filter(item=>!preferred.some(p=>p.slug===item.slug))];
+    $('#categories').innerHTML='<button class="active" data-category="">همه محصولات</button>'+
+      ordered.map(item=>`<button type="button" data-category="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</button>`).join('');
+    $('#categories').querySelectorAll('button').forEach(button=>
+      button.addEventListener('click',()=>selectCategory(button.dataset.category))
+    );
+  }catch(error){
+    $('#categories').innerHTML='<span class="category-error">دسته‌بندی‌ها بارگذاری نشدند.</span>';
+  }
+}
+document.querySelectorAll('.category-entry').forEach(button=>
+  button.addEventListener('click',()=>{
+    selectCategory(button.dataset.category);
+    $('#products').scrollIntoView({behavior:'smooth',block:'start'});
+  })
+);
 async function loadProducts(){const q=$('#search').value.trim();const p=new URLSearchParams();if(category)p.set('category',category);if(q)p.set('q',q);try{products=await fetch('/api/products?'+p).then(r=>r.json());renderProducts()}catch{$('#productGrid').innerHTML='<p>ارتباط با فروشگاه برقرار نشد.</p>'}}
 function renderProducts(){
   $('#productGrid').innerHTML=products.length?products.map(p=>`<article class="product">
