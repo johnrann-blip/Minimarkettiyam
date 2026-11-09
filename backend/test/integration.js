@@ -71,8 +71,10 @@ async function waitForServer() {
 async function run() {
   const membershipMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/004_customer_membership.sql'), 'utf8');
   const adminMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/005_admin_rbac.sql'), 'utf8');
+  const accountingMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/006_accounting_error_center.sql'), 'utf8');
   await db.query(membershipMigration);
   await db.query(adminMigration);
+  await db.query(accountingMigration);
   await db.query('DELETE FROM admin_users');
   await waitForServer();
 
