@@ -81,6 +81,14 @@ async function run() {
   });
   assert(r.status === 401, 'جلوگیری از آپلود عکس بدون کلید مدیر');
 
+  r = await request('/api/unknown-endpoint');
+  assert(r.status === 404 && typeof r.data.error === 'string', 'پاسخ JSON استاندارد برای مسیر API ناشناخته');
+
+  const missingUpload = await fetch(BASE + '/uploads/does-not-exist.png');
+  const missingUploadBody = await missingUpload.json();
+  assert(missingUpload.status === 404 && typeof missingUploadBody.error === 'string',
+    'پاسخ ۴۰۴ استاندارد برای فایل آپلودی ناموجود');
+
   r = await request('/api/admin/uploads/product', {
     method: 'POST',
     admin: true,
