@@ -25,7 +25,7 @@ function adminCan(permission) {
   if (permissions.includes(permission)) return true;
   if (permission.endsWith('.view')) {
     const prefix=permission.slice(0,-5);
-    return [prefix+'.create',prefix+'.update',prefix+'.archive'].some(x=>permissions.includes(x)) || (permission==='payments.view' && permissions.includes('payments.manage'));
+    return [prefix+'.create',prefix+'.update',prefix+'.archive'].some(x=>permissions.includes(x)) || (permission==='payments.view' && permissions.includes('payments.manage')) || (permission==='customers.view' && permissions.includes('customers.manage'));
   }
   return false;
 }
@@ -203,7 +203,7 @@ function setAdminSession(admin) {
     adminCan('products.create') || adminCan('products.update') ? categories() : Promise.resolve(),
     adminCan('products.view') || adminCan('products.create') || adminCan('products.update') ? products() : Promise.resolve(),
     adminCan('orders.view') ? orders() : Promise.resolve(),
-    adminCan('customers.view') ? customers() : Promise.resolve(),
+    adminCan('customers.view') || adminCan('customers.manage') ? customers() : Promise.resolve(),
     adminCan('payments.view') || adminCan('payments.manage') ? loadStoreSettings() : Promise.resolve(),
     adminUser.role === 'owner' ? loadManagers() : Promise.resolve(),
     adminCan('audit.view') ? loadAudit() : Promise.resolve()
