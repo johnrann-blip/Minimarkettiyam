@@ -19,7 +19,15 @@ const PERMISSION_LABELS = {
   'reports.view':'گزارش‌ها','audit.view':'سوابق فعالیت'
 };
 function adminCan(permission) {
-  return Boolean(adminUser && (adminUser.role === 'owner' || (adminUser.permissions || []).includes(permission)));
+  if (!adminUser) return false;
+  if (adminUser.role === 'owner') return true;
+  const permissions=adminUser.permissions || [];
+  if (permissions.includes(permission)) return true;
+  if (permission.endsWith('.view')) {
+    const prefix=permission.slice(0,-5);
+    return [prefix+'.create',prefix+'.update',prefix+'.archive'].some(x=>permissions.includes(x));
+  }
+  return false;
 }
 function headers() {
   return {'Content-Type':'application/json','x-admin-request':'1'};
@@ -120,6 +128,7 @@ function resetProductForm() {
   $('#productForm [name="id"]').value = '';
   $('#formTitle').textContent = 'افزودن محصول';
   $('#submitProduct').textContent = 'ثبت محصول';
+  $('#submitProduct').hidden = !adminCan('products.create');
   $('#cancelEdit').hidden = true;
 }
 
@@ -371,6 +380,7 @@ $('#products').addEventListener('click', async event => {
       $('#formTitle').textContent = 'ویرایش محصول';
       $('#submitProduct').textContent = 'ذخیره تغییرات';
       $('#cancelEdit').hidden = false;
+      $('#submitProduct').hidden = !adminCan('products.update');
       form.scrollIntoView({behavior:'smooth', block:'start'});
       message('اطلاعات محصول برای ویرایش بارگذاری شد.');
     } catch (error) {
