@@ -36,7 +36,15 @@
   <div id="adminWorkspace" hidden>
     <p id="adminIdentity" class="muted"></p>
     <button id="logoutAdmin" type="button">خروج از حساب مدیریت</button>
-    <section id="managerSection" hidden>
+    <nav id="adminNav" aria-label="بخش‌های پنل مدیریت">
+      <button type="button" data-nav-page="products">محصولات</button>
+      <button type="button" data-nav-page="orders">سفارش‌ها</button>
+      <button type="button" data-nav-page="customers">مشتریان</button>
+      <button type="button" data-nav-page="settings">تنظیمات</button>
+      <button type="button" data-nav-page="managers">مدیران</button>
+      <button type="button" data-nav-page="audit">ورود و سوابق فعالیت</button>
+    </nav>
+    <section id="managerSection" data-page="managers" hidden>
       <h2>مدیریت مدیران و سطح دسترسی</h2>
       <p class="muted">فقط مالک می‌تواند حساب مدیر بسازد، دسترسی‌ها را تغییر دهد یا حسابی را غیرفعال کند.</p>
       <form id="managerForm">
@@ -60,13 +68,13 @@
       </form>
       <div id="managerList"></div>
     </section>
-    <section id="auditSection">
+    <section id="auditSection" data-page="audit">
       <h2>گزارش ورودها و فعالیت مدیران</h2>
       <button id="refreshAudit" type="button">به‌روزرسانی گزارش فعالیت</button>
       <div id="auditLogs"></div>
     </section>
 
-    <section id="productFormSection">
+    <section id="productFormSection" data-page="products">
       <h2 id="formTitle">افزودن محصول</h2>
     <form id="productForm">
       <input type="hidden" name="id">
@@ -89,14 +97,14 @@
     </form>
   </section>
 
-  <section id="productsSection">
+  <section id="productsSection" data-page="products">
     <h2>محصولات فروشگاه</h2>
     <button id="refreshProducts" type="button">به‌روزرسانی محصولات</button>
     <p class="muted">در این فهرست فقط محصولات فعال فروشگاه نمایش داده می‌شوند.</p>
     <div id="products"></div>
   </section>
 
-  <section id="archiveSection">
+  <section id="archiveSection" data-page="products">
     <details id="productArchive">
       <summary>بایگانی محصولات <span id="archivedProductsCount">(۰)</span></summary>
       <p class="muted">محصولات این بخش در فروشگاه نمایش داده نمی‌شوند. برای بازگرداندن هر محصول، «فعال‌سازی مجدد» را بزنید. سوابق سفارش‌ها محفوظ می‌ماند.</p>
@@ -104,7 +112,7 @@
     </details>
   </section>
 
-  <section id="settingsSection">
+  <section id="settingsSection" data-page="settings">
     <h2>تنظیمات فروشگاه و حساب بانکی</h2>
     <p class="muted">اطلاعات این بخش فقط توسط مدیر قابل تغییر است.</p>
     <div id="gatewayStatus" class="muted" role="status">در حال بررسی وضعیت درگاه زرین‌پال...</div>
@@ -137,14 +145,14 @@
     <p id="settingsMessage" role="status"></p>
   </section>
 
-  <section id="customersSection">
+  <section id="customersSection" data-page="customers">
     <h2>مشتریان عضو AVELORA</h2>
     <button id="refreshCustomers" type="button">دریافت فهرست مشتریان</button>
     <p class="muted">مشتریان ثبت‌نام‌شده و سابقه سفارش‌های مرتبط با حسابشان.</p>
     <div id="customers"></div>
   </section>
 
-  <section id="ordersSection">
+  <section id="ordersSection" data-page="orders">
     <h2>سفارش‌ها</h2>
     <button id="refresh" type="button">دریافت سفارش‌ها</button>
     <div id="orders"></div>
