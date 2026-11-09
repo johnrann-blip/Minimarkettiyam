@@ -4,6 +4,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs/promises');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 
@@ -28,7 +29,8 @@ app.use(helmet({
   }
 }));
 app.use(cors({ origin: false }));
-app.use(express.json({ limit: '200kb' }));
+app.use(express.json({ limit: '7mb' }));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { maxAge: '7d', immutable: true }));
 app.use(express.static(path.join(__dirname, '../../frontend')));
 app.use('/admin', express.static(path.join(__dirname, '../../admin')));
 
@@ -640,10 +642,14 @@ function validateProduct(p) {
 
   if (image) {
     if (image.length > 2048) throw new Error('نشانی تصویر بیش از حد طولانی است.');
-    let url;
-    try { url = new URL(image); } catch { throw new Error('نشانی تصویر معتبر نیست.'); }
-    if (url.protocol !== 'https:' || !url.hostname) {
-      throw new Error('نشانی تصویر باید با HTTPS شروع شود.');
+    if (/^\/uploads\/products\/[a-f0-9]{32}\.(jpg|png|webp)$/.test(image)) {
+      // تصویر بارگذاری‌شده در فضای فایل سرور
+    } else {
+      let url;
+      try { url = new URL(image); } catch { throw new Error('نشانی تصویر معتبر نیست.'); }
+      if (url.protocol !== 'https:' || !url.hostname) {
+        throw new Error('نشانی تصویر باید با HTTPS شروع شود.');
+      }
     }
   }
 
@@ -672,6 +678,36 @@ async function validateCategory(client, categoryId) {
   );
   if (!result.rowCount) throw new Error('دسته‌بندی انتخاب‌شده معتبر یا فعال نیست.');
 }
+
+app.post('/api/admin/uploads/product', adminOnly, async (req, res) => {
+  try {
+    const mime = String(req.body?.mime_type || '');
+    const encoded = String(req.body?.image_base64 || '');
+    if (!['image/jpeg','image/png','image/webp'].includes(mime) ||
+        !encoded || encoded.length > 7 * 1024 * 1024 ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) {
+      return res.status(400).json({error:'فایل تصویر معتبر نیست یا بیش از حد بزرگ است.'});
+    }
+    const buffer = Buffer.from(encoded, 'base64');
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(413).json({error:'حجم عکس باید حداکثر ۵ مگابایت باشد.'});
+    }
+    const signatures = {
+      'image/jpeg': buffer.length > 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff,
+      'image/png': buffer.length > 8 && buffer.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),
+      'image/webp': buffer.length > 12 && buffer.toString('ascii',0,4) === 'RIFF' && buffer.toString('ascii',8,12) === 'WEBP'
+    };
+    if (!signatures[mime]) return res.status(400).json({error:'محتوای فایل با نوع تصویر اعلام‌شده مطابقت ندارد.'});
+    const extension = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[mime];
+    const filename = crypto.randomBytes(16).toString('hex') + '.' + extension;
+    const directory = path.join(__dirname, '../uploads/products');
+    await fs.mkdir(directory, {recursive:true});
+    await fs.writeFile(path.join(directory, filename), buffer, {flag:'wx'});
+    res.status(201).json({image_url:'/uploads/products/' + filename});
+  } catch {
+    res.status(500).json({error:'ذخیره عکس محصول انجام نشد.'});
+  }
+});
 
 app.get('/api/admin/products', adminOnly, async (_req, res) => {
   try {
