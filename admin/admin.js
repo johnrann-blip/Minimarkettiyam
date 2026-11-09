@@ -7,6 +7,7 @@ function escapeHtml(value) {
 }
 
 let adminUser = null;
+let productGallery = [];
 const ALL_ADMIN_PERMISSIONS = [
   'products.view','products.create','products.update','products.archive',
   'orders.view','orders.update','customers.view','customers.manage','payments.view','payments.manage',
@@ -191,10 +192,39 @@ async function categories() {
   }
 }
 
+function renderProductGallery() {
+  const host = $('#productGalleryEditor');
+  if (!host) return;
+  host.innerHTML = productGallery.map((item, index) => `
+    <div class="gallery-item">
+      <img src="${escapeHtml(item.preview || item.url || '')}" alt="تصویر شماره ${index + 1}">
+      <div class="gallery-item-info">
+        <b>${index === 0 ? 'تصویر اصلی' : 'تصویر ' + (index + 1)}</b>
+        ${item.file ? '<small>آماده آپلود</small>' : ''}
+        <div class="gallery-item-actions">
+          <button type="button" data-gallery-primary="${index}" ${index === 0 ? 'disabled' : ''}>تصویر اصلی</button>
+          <button type="button" data-gallery-up="${index}" ${index === 0 ? 'disabled' : ''}>↑</button>
+          <button type="button" data-gallery-down="${index}" ${index === productGallery.length - 1 ? 'disabled' : ''}>↓</button>
+          <button type="button" data-gallery-remove="${index}">حذف از گالری</button>
+        </div>
+      </div>
+    </div>
+  `).join('') || '<p class="muted">هنوز تصویری برای این محصول انتخاب نشده است.</p>';
+  const primary = productGallery[0];
+  $('#productForm [name="image_url"]').value = primary && !primary.file ? primary.url : '';
+}
+
+function releaseGalleryPreviews() {
+  productGallery.forEach(item => {
+    if (item.file && item.preview && item.preview.startsWith('blob:')) URL.revokeObjectURL(item.preview);
+  });
+}
+
 function resetProductForm() {
+  releaseGalleryPreviews();
+  productGallery = [];
   $('#productForm').reset();
-  $('#imagePreview').hidden = true;
-  $('#imagePreview').removeAttribute('src');
+  renderProductGallery();
   $('#productForm [name="id"]').value = '';
   $('#formTitle').textContent = 'افزودن محصول';
   $('#submitProduct').textContent = 'ثبت محصول';
@@ -210,16 +240,46 @@ $('#submitProduct').addEventListener('click', () => {
 });
 
 $('#imageFile').addEventListener('change', () => {
-  const file = $('#imageFile').files[0];
-  if (!file) return;
-  if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
-    message('عکس باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.');
+  const files = Array.from($('#imageFile').files || []);
+  if (!files.length) return;
+  if (productGallery.length + files.length > 10) {
+    message('هر محصول حداکثر می‌تواند ۱۰ تصویر داشته باشد.');
     $('#imageFile').value = '';
     return;
   }
-  $('#imagePreview').src = URL.createObjectURL(file);
-  $('#imagePreview').hidden = false;
-  message('عکس انتخاب شد و پیش‌نمایش آن آماده است. برای آپلود و ذخیره عکس، دکمه «ذخیره تغییرات» را بزن.');
+  const invalid = files.find(file =>
+    !['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024
+  );
+  if (invalid) {
+    message('همه عکس‌ها باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشند.');
+    $('#imageFile').value = '';
+    return;
+  }
+  files.forEach(file => productGallery.push({
+    file, url:'', preview:URL.createObjectURL(file)
+  }));
+  $('#imageFile').value = '';
+  renderProductGallery();
+  message('تصاویر انتخاب شدند. ترتیب، تصویر اصلی و حذف هر تصویر را می‌توانی همین‌جا تنظیم کنی.');
+});
+
+$('#productGalleryEditor').addEventListener('click', event => {
+  const button = event.target.closest('button');
+  if (!button) return;
+  const index = Number(button.dataset.galleryPrimary ?? button.dataset.galleryUp ??
+    button.dataset.galleryDown ?? button.dataset.galleryRemove);
+  if (!Number.isInteger(index) || index < 0 || index >= productGallery.length) return;
+  if (button.hasAttribute('data-gallery-primary')) {
+    productGallery.unshift(productGallery.splice(index, 1)[0]);
+  } else if (button.hasAttribute('data-gallery-up') && index > 0) {
+    [productGallery[index - 1], productGallery[index]] = [productGallery[index], productGallery[index - 1]];
+  } else if (button.hasAttribute('data-gallery-down') && index < productGallery.length - 1) {
+    [productGallery[index + 1], productGallery[index]] = [productGallery[index], productGallery[index + 1]];
+  } else if (button.hasAttribute('data-gallery-remove')) {
+    const [removed] = productGallery.splice(index, 1);
+    if (removed.file && removed.preview?.startsWith('blob:')) URL.revokeObjectURL(removed.preview);
+  }
+  renderProductGallery();
 });
 
 function showAdminPage(page) {
@@ -329,55 +389,66 @@ $('#productForm').onsubmit = async event => {
 
   const form = event.currentTarget;
   const data = Object.fromEntries(new FormData(form).entries());
-  const imageFile = form.elements.image_file.files[0];
   delete data.image_file;
   const id = data.id;
   delete data.id;
+
+  const typedImageUrl = String(data.image_url || '').trim();
+  if (typedImageUrl) {
+    const existingIndex = productGallery.findIndex(item => !item.file && item.url === typedImageUrl);
+    if (existingIndex >= 0) productGallery.unshift(productGallery.splice(existingIndex, 1)[0]);
+    else productGallery.unshift({url:typedImageUrl,preview:typedImageUrl,file:null});
+  }
+  if (productGallery.length > 10) throw new Error('هر محصول حداکثر می‌تواند ۱۰ تصویر داشته باشد.');
 
   data.price_toman = Number(data.price_toman);
   data.cost_price_toman = data.cost_price_toman === '' ? null : Number(data.cost_price_toman);
   data.stock = Number(data.stock);
   data.category_id = data.category_id ? Number(data.category_id) : null;
-  data.sale_price_toman =
-    data.sale_price_toman === '' ? null : Number(data.sale_price_toman);
+  data.sale_price_toman = data.sale_price_toman === '' ? null : Number(data.sale_price_toman);
 
   const editing = Boolean(id);
-
   const submitButton = $('#submitProduct');
   submitButton.disabled = true;
-  submitButton.textContent = imageFile ? 'در حال آپلود عکس و ذخیره...' : 'در حال ذخیره...';
-  message(imageFile ? 'در حال آپلود عکس؛ لطفاً صفحه را نبند...' : 'در حال ذخیره محصول...');
+  const hasFiles = productGallery.some(item => item.file);
+  submitButton.textContent = hasFiles ? 'در حال آپلود تصاویر و ذخیره...' : 'در حال ذخیره...';
+  message(hasFiles ? 'در حال آپلود تصاویر به‌ترتیب گالری؛ لطفاً صفحه را نبند...' : 'در حال ذخیره محصول...');
 
   try {
-    if (imageFile) {
-      if (!['image/jpeg','image/png','image/webp'].includes(imageFile.type)) {
-        throw new Error('فقط تصویر JPG، PNG یا WebP قابل قبول است.');
+    const images = [];
+    for (const item of productGallery) {
+      if (!item.file) {
+        images.push(item.url);
+        continue;
       }
-      if (imageFile.size > 5 * 1024 * 1024) {
-        throw new Error('حجم عکس باید حداکثر ۵ مگابایت باشد.');
+      if (!['image/jpeg','image/png','image/webp'].includes(item.file.type) ||
+          item.file.size > 5 * 1024 * 1024) {
+        throw new Error('هر عکس باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.');
       }
       const imageBase64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
-        reader.onerror = () => reject(new Error('خواندن عکس انجام نشد.'));
-        reader.readAsDataURL(imageFile);
+        reader.onerror = () => reject(new Error('خواندن یکی از عکس‌ها انجام نشد.'));
+        reader.readAsDataURL(item.file);
       });
       const uploaded = await request('/api/admin/uploads/product', {
-        method: 'POST',
-        body: JSON.stringify({ image_base64: imageBase64, mime_type: imageFile.type })
+        method:'POST',
+        body:JSON.stringify({image_base64:imageBase64,mime_type:item.file.type})
       });
-      data.image_url = uploaded.image_url;
+      images.push(uploaded.image_url);
     }
 
+    data.images = images;
+    data.image_url = images[0] || '';
     await request(
       editing ? `/api/admin/products/${encodeURIComponent(id)}` : '/api/admin/products',
       {
-        method: editing ? 'PATCH' : 'POST',
-        body: JSON.stringify(data)
+        method:editing ? 'PATCH' : 'POST',
+        body:JSON.stringify(data)
       }
     );
 
-    message(editing ? 'محصول ویرایش شد.' : 'محصول ثبت شد.');
+    message(editing ? 'محصول و گالری تصاویر ویرایش شد.' : 'محصول همراه گالری تصاویر ثبت شد.');
     resetProductForm();
     await products();
   } catch (error) {
@@ -468,14 +539,10 @@ $('#products').addEventListener('click', async event => {
       form.elements.cost_price_toman.value = p.cost_price_toman ?? '';
       form.elements.sale_price_toman.value = p.sale_price_toman ?? '';
       form.elements.stock.value = p.stock;
-      form.elements.image_url.value = p.image_url || '';
-      if (p.image_url) {
-        $('#imagePreview').src = p.image_url;
-        $('#imagePreview').hidden = false;
-      } else {
-        $('#imagePreview').hidden = true;
-        $('#imagePreview').removeAttribute('src');
-      }
+      releaseGalleryPreviews();
+      productGallery = (Array.isArray(p.images) ? p.images : (p.image_url ? [p.image_url] : []))
+        .map(url => ({url,preview:url,file:null}));
+      renderProductGallery();
       form.elements.image_file.value = '';
       form.elements.description.value = p.description || '';
 
