@@ -6,7 +6,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "check": "node --check src/server.js",
+    "check": "node --check src/server.js && node --check ../admin/admin.js && node --check ../frontend/app.js",
     "test:integration": "node test/integration.js"
   },
   "dependencies": {
