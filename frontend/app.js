@@ -49,7 +49,7 @@ async function loadProducts(){
     const data=await response.json();
     if(!response.ok||!Array.isArray(data))throw new Error(data.error||'پاسخ محصولات معتبر نیست.');
     products=data;
-    cart=cart.map(line=>{const p=products.find(x=>String(x.id)===String(line.product_id));return p?{...line,name:p.name,price:Number(p.sale_price_toman??p.price_toman)}:line;});
+    cart=cart.map(line=>{const p=products.find(x=>String(x.id)===String(line.product_id));return p?{...line,name:p.name,price:Number(p.sale_price_toman??p.price_toman),member_discount_toman:Number(p.member_discount_toman||0)}:line;});
     localStorage.setItem('mm_cart',JSON.stringify(cart));
     renderProducts();
     renderCart();
@@ -110,10 +110,10 @@ function openProductDetails(p){
   $('#productDialog').showModal();
 }
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function addCart(id){id=String(id);const p=products.find(x=>String(x.id)===id);if(!p)return;const line=cart.find(x=>String(x.product_id)===id);if(line)line.quantity=Math.min(20,line.quantity+1);else cart.push({product_id:id,name:p.name,price:Number(p.sale_price_toman??p.price_toman),quantity:1});saveCart()}
+function addCart(id){id=String(id);const p=products.find(x=>String(x.id)===id);if(!p)return;const line=cart.find(x=>String(x.product_id)===id);if(line)line.quantity=Math.min(20,line.quantity+1);else cart.push({product_id:id,name:p.name,price:Number(p.sale_price_toman??p.price_toman),member_discount_toman:Number(p.member_discount_toman||0),quantity:1});saveCart()}
 function saveCart(){localStorage.setItem('mm_cart',JSON.stringify(cart));$('#cartCount').textContent=tomanCount(cart.reduce((a,x)=>a+x.quantity,0));renderCart();if(typeof updateCheckout==='function')updateCheckout()}
 function tomanCount(n){return new Intl.NumberFormat('fa-IR').format(n)}
-function renderCart(){$('#cartItems').innerHTML=cart.map(x=>`<div class="cart-line"><span>${escapeHtml(x.name)} × ${tomanCount(x.quantity)}<br><small>${toman(x.price*x.quantity)}</small></span><button data-remove-cart="${escapeHtml(x.product_id)}">حذف</button></div>`).join('')||'<p>سبد خرید خالی است.</p>';$('#cartTotal').textContent=toman(cart.reduce((a,x)=>a+x.price*x.quantity,0))}
+function renderCart(){$('#cartItems').innerHTML=cart.map(x=>`<div class="cart-line"><span>${escapeHtml(x.name)} × ${tomanCount(x.quantity)}<br><small>${toman(x.price*x.quantity)}</small>${x.member_discount_toman>0?'<small class="member-price-tag">تخفیف عضویت اعمال شده</small>':''}</span><button data-remove-cart="${escapeHtml(x.product_id)}">حذف</button></div>`).join('')||'<p>سبد خرید خالی است.</p>';$('#cartTotal').textContent=toman(cart.reduce((a,x)=>a+x.price*x.quantity,0))}
 $('#cartItems').addEventListener('click',event=>{
   const button=event.target.closest?.('[data-remove-cart]');
   if(button)removeCart(button.dataset.removeCart);
@@ -147,7 +147,8 @@ function updateCheckout(){
   if(!storeSettings){summary.textContent='تنظیمات فروشگاه دریافت نشد. فعلاً امکان ثبت سفارش وجود ندارد.';button.disabled=true;return}
   if(storeSettings.payment_enabled!==true&&storeSettings.online_payment_enabled!==true){summary.textContent='هیچ روش پرداختی برای فروشگاه فعال نیست؛ امکان ثبت سفارش فعلاً وجود ندارد.';button.disabled=true;return}
   if(shipping===null||!Number.isSafeInteger(shipping)||shipping<0){summary.textContent='تعرفه روش ارسال انتخاب‌شده هنوز توسط مدیر تعیین نشده است.';button.disabled=true;return}
-  summary.textContent=`جمع کالاها: ${toman(subtotal)} | هزینه ارسال: ${toman(shipping)} | مبلغ نهایی: ${toman(subtotal+shipping)}`;
+  const memberSavings=cart.reduce((sum,item)=>sum+Number(item.member_discount_toman||0)*Number(item.quantity),0);
+  summary.textContent=(memberSavings>0?`تخفیف عضویت: ${toman(memberSavings)} | `:'')+`جمع کالاها: ${toman(subtotal)} | هزینه ارسال: ${toman(shipping)} | مبلغ نهایی: ${toman(subtotal+shipping)}`;
   button.disabled=cart.length===0;
 }
 function renderPaymentDetails(){
@@ -216,7 +217,7 @@ $('#orderForm').onsubmit=async e=>{
       window.location.assign(paymentData.redirect_url);
       return;
     }
-    $('#orderMessage').textContent=`سفارش ${data.order_code} ثبت شد. جمع کالاها: ${toman(data.subtotal_toman)}؛ هزینه ارسال: ${toman(data.shipping_toman)}؛ مبلغ نهایی: ${toman(data.total_toman)}. لطفاً مبلغ را به حساب اعلام‌شده در بخش اطلاعات پرداخت واریز کنید.`;
+    $('#orderMessage').textContent=`سفارش ${data.order_code} ثبت شد. ${Number(data.membership_discount_toman||0)>0?'تخفیف عضویت: '+toman(data.membership_discount_toman)+'؛ ':''}جمع کالاها: ${toman(data.subtotal_toman)}؛ هزینه ارسال: ${toman(data.shipping_toman)}؛ مبلغ نهایی: ${toman(data.total_toman)}. لطفاً مبلغ را به حساب اعلام‌شده در بخش اطلاعات پرداخت واریز کنید.`;
     localStorage.removeItem('mm_pending_order');
     cart=[];saveCart();e.target.reset();
   }catch(error){
