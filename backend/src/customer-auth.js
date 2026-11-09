@@ -20,7 +20,8 @@ function normalizePhone(value) {
 }
 function cookieValue(header,name) {
   const entry=String(header||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='));
-  return entry ? decodeURIComponent(entry.slice(name.length+1)) : '';
+  if (!entry) return '';
+  try { return decodeURIComponent(entry.slice(name.length+1)); } catch { return ''; }
 }
 function setSessionCookie(res, token) {
   const secure=process.env.NODE_ENV==='production' ? '; Secure' : '';
