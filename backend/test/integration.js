@@ -35,6 +35,7 @@ let memberProductId = null;
 let memberSessionCookie = null;
 let memberOrderCode = null;
 let memberPhone = null;
+let adminCookie = '';
 
 function assert(condition, message) {
   if (!condition) throw new Error('FAIL: ' + message);
@@ -43,7 +44,7 @@ function assert(condition, message) {
 
 async function request(path, options = {}) {
   const headers = { 'content-type': 'application/json', ...(options.headers || {}) };
-  if (options.admin) headers['x-admin-key'] = KEY;
+  if (options.admin) { headers['x-admin-request'] = '1'; if (adminCookie) headers.cookie = adminCookie; }
 
   const response = await fetch(BASE + path, {
     ...options,
@@ -69,8 +70,40 @@ async function waitForServer() {
 
 async function run() {
   const membershipMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/004_customer_membership.sql'), 'utf8');
+  const adminMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/005_admin_rbac.sql'), 'utf8');
   await db.query(membershipMigration);
+  await db.query(adminMigration);
+  await db.query('DELETE FROM admin_users');
   await waitForServer();
+
+  const bootstrap = await request('/api/admin/auth/bootstrap', {
+    method:'POST', headers:{'x-admin-request':'1'},
+    body:{admin_api_key:KEY,username:'owner',display_name:'مالک آزمون',password:'Owner-Test-Password-2026!'}
+  });
+  assert(bootstrap.status===201 && bootstrap.data.admin.role==='owner' && bootstrap.cookie,
+    'ساخت یک‌باره حساب مالک و ایجاد نشست امن');
+  adminCookie = bootstrap.cookie.split(';')[0];
+
+  const denied = await request('/api/admin/products');
+  assert(denied.status===401,'جلوگیری از دسترسی مدیریتی بدون نشست معتبر');
+
+  const managerCreated = await request('/api/admin/auth/managers',{
+    method:'POST',admin:true,
+    body:{username:'orders.manager',display_name:'مدیر سفارش‌ها',password:'Manager-Test-Password-2026!',permissions:['orders.view']}
+  });
+  assert(managerCreated.status===201,'ساخت مدیر فرعی با مجوز محدود توسط مالک');
+  const ownerCookie=adminCookie;
+  const managerLogin=await request('/api/admin/auth/login',{
+    method:'POST',headers:{'x-admin-request':'1'},
+    body:{username:'orders.manager',password:'Manager-Test-Password-2026!'}
+  });
+  assert(managerLogin.status===200 && managerLogin.cookie,'ورود مستقل مدیر فرعی');
+  adminCookie=managerLogin.cookie.split(';')[0];
+  const forbiddenProducts=await request('/api/admin/products',{admin:true});
+  assert(forbiddenProducts.status===403,'جلوگیری از مشاهده محصولات توسط مدیر فاقد مجوز');
+  const allowedOrders=await request('/api/admin/orders',{admin:true});
+  assert(allowedOrders.status===200,'اجازه مشاهده سفارش‌ها برای مدیر دارای مجوز');
+  adminCookie=ownerCookie;
 
   let staticResponse = await fetch(BASE + '/admin/');
   const adminHtml = await staticResponse.text();
