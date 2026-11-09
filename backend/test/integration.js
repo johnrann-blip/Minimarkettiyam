@@ -13,6 +13,7 @@ const env = {
   ...process.env,
   PORT: String(PORT),
   NODE_ENV: 'test',
+  TRUST_PROXY: '1',
   DATABASE_URL: process.env.TEST_DATABASE_URL || 'postgresql://u0_a289@127.0.0.1:5432/minimarkettiyam_test',
   ADMIN_API_KEY: KEY,
   ZARINPAL_ENABLED: 'false',
@@ -632,6 +633,32 @@ async function run() {
     body: { status: 'paid' }
   });
   assert(r.status === 409, 'جلوگیری از تغییر سفارش لغوشده به پرداخت‌شده');
+
+  // A trusted proxy must preserve per-client rate-limit buckets.
+  const proxyIpA = '198.51.100.41';
+  const proxyStatuses = [];
+  for (let i = 0; i < 11; i++) {
+    const limited = await request('/api/orders', {
+      method: 'POST',
+      headers: { 'X-Forwarded-For': proxyIpA },
+      body: {}
+    });
+    proxyStatuses.push(limited.status);
+  }
+  assert(
+    proxyStatuses.slice(0, 10).every(status => status === 400) && proxyStatuses[10] === 429,
+    'محدودیت ثبت سفارش بر اساس IP واقعی ارسال‌شده از پروکسی مورد اعتماد اعمال می‌شود'
+  );
+
+  const separateProxyClient = await request('/api/orders', {
+    method: 'POST',
+    headers: { 'X-Forwarded-For': '198.51.100.42' },
+    body: {}
+  });
+  assert(
+    separateProxyClient.status === 400,
+    'محدودیت یک مشتری باعث مسدودشدن مشتری دیگر پشت همان پروکسی نمی‌شود'
+  );
 
   console.log('\nALL INTEGRATION TESTS PASSED');
 }
