@@ -49,7 +49,11 @@ async function loadProducts(){
     const data=await response.json();
     if(!response.ok||!Array.isArray(data))throw new Error(data.error||'پاسخ محصولات معتبر نیست.');
     products=data;
+    cart=cart.map(line=>{const p=products.find(x=>String(x.id)===String(line.product_id));return p?{...line,name:p.name,price:Number(p.sale_price_toman??p.price_toman)}:line;});
+    localStorage.setItem('mm_cart',JSON.stringify(cart));
     renderProducts();
+    renderCart();
+    if(typeof updateCheckout==='function')updateCheckout();
   }catch{
     products=[];
     $('#productGrid').innerHTML='<p>دریافت محصولات با مشکل روبه‌رو شد. اتصال اینترنت را بررسی و دوباره تلاش کن.</p>';
@@ -240,3 +244,6 @@ loadCategories();loadProducts();saveCart();loadStoreSettings();
   const query=params.toString();
   history.replaceState({},'',location.pathname+(query?'?'+query:'')+location.hash);
 })();
+
+
+document.addEventListener('avelora:auth-changed',()=>loadProducts());
