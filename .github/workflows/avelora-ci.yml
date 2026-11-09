@@ -52,12 +52,16 @@ jobs:
       - name: Static checks
         working-directory: backend
         run: npm run check
+      - name: Validate backup scripts
+        run: bash -n backend/scripts/backup.sh backend/scripts/verify-backup.sh
       - name: ZarinPal unit tests
         working-directory: backend
         run: npm run test:zarinpal
       - name: Full integration tests
         working-directory: backend
         run: npm run test:integration
+      - name: Validate privacy-safe product catalog export
+        run: psql "$TEST_DATABASE_URL" -XAt -v ON_ERROR_STOP=1 -f database/reports/product_catalog_review.sql | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const rows=JSON.parse(s);if(!Array.isArray(rows))process.exit(1);for(const p of rows){if(!('name' in p)||!('price_toman' in p)||!Array.isArray(p.images)||('cost_price_toman' in p))process.exit(1)}console.log('PASS: product export is valid and excludes private cost data')})"
       - name: Create isolated restore-test database
         run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE avelora_restore_test"
       - name: Backup PostgreSQL and uploads
