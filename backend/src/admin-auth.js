@@ -36,7 +36,7 @@ async function audit(pool,admin,req,action,resource,status=200,id=null) {
 function requiredPermission(req) {
  const p=req.path.replace(/^\/api\/admin/,'')||'/',m=req.method;
  if(p==='/products') return m==='GET'?'products.view':m==='POST'?'products.create':'products.update';
- if(/^\/products\/[^/]+$/.test(p)) return m==='DELETE'?'products.archive':m==='GET'?'products.view':'products.update';
+ if(/^\/products\/[^/]+$/.test(p)) return m==='DELETE'||(m==='PATCH'&&typeof req.body?.is_active==='boolean')?'products.archive':m==='GET'?'products.view':'products.update';
  if(p==='/uploads/product') return 'products.update';
  if(p==='/orders') return 'orders.view';
  if(/^\/orders\/[^/]+\/status$/.test(p)) return 'orders.update';
@@ -154,7 +154,9 @@ function createAdminAuth({pool,rateLimit}) {
   if(req.method!=='GET'&&req.get('x-admin-request')!=='1') return res.status(403).json({error:'درخواست تغییر اطلاعات معتبر نیست.'});
   authenticate(req,res,()=>{
    const needed=requiredPermission(req);
-   if(req.admin.role!=='owner'&&!req.admin.permissions.includes(needed)) return res.status(403).json({error:'برای این عملیات دسترسی لازم را نداری.'});
+   const permissions=req.admin.permissions||[];
+   const implied=needed.endsWith('.view')&&[needed.replace('.view','.update'),needed.replace('.view','.create'),needed.replace('.view','.archive')].some(x=>permissions.includes(x));
+   if(req.admin.role!=='owner'&&!permissions.includes(needed)&&!implied) return res.status(403).json({error:'برای این عملیات دسترسی لازم را نداری.'});
    res.on('finish',()=>{ if(req.method!=='GET') audit(pool,req.admin,req,'admin.'+(req.method==='POST'?'create':req.method==='DELETE'?'archive':'update'),needed.split('.')[0],res.statusCode,req.params?.id||null); });
    next();
   });
