@@ -47,16 +47,21 @@ cd ~/Minimarkettiyam/backend
 npm ci
 ```
 
-پایگاه داده‌ها را بسازید و ساختار پایه را اجرا کنید:
+پایگاه داده‌ها را بسازید و ساختار کامل نسخه این شاخه را فقط روی دیتابیس تازه ایجاد کنید:
 
 ```bash
 createdb minimarkettiyam
 createdb minimarkettiyam_test
-psql -d minimarkettiyam -v ON_ERROR_STOP=1 -f ../database/schema.sql
-psql -d minimarkettiyam_test -v ON_ERROR_STOP=1 -f ../database/schema.sql
-psql -d minimarkettiyam -v ON_ERROR_STOP=1 -f ../database/migrations/004_customer_membership.sql
-psql -d minimarkettiyam_test -v ON_ERROR_STOP=1 -f ../database/migrations/004_customer_membership.sql
+
+for db in minimarkettiyam minimarkettiyam_test; do
+  psql -d "$db" -v ON_ERROR_STOP=1 -f ../database/schema.sql
+  for migration in 004_customer_membership.sql 005_admin_rbac.sql 006_accounting_error_center.sql 007_product_image_gallery.sql; do
+    psql -d "$db" -v ON_ERROR_STOP=1 -f "../database/migrations/$migration"
+  done
+done
 ```
+
+این دستورها برای دیتابیس تازه هستند. برای دیتابیس موجود، فایل‌ها را کورکورانه دوباره اجرا نکنید؛ ابتدا نسخه پشتیبان قابل‌بازیابی تهیه و مهاجرت‌های اعمال‌شده را بررسی کنید.
 
 فایل تنظیمات را از نمونه بسازید:
 
