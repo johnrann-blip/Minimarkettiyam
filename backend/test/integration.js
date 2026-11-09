@@ -429,8 +429,10 @@ async function run() {
   const memberCostSnapshot=await db.query('SELECT cost_price_toman FROM order_items i JOIN orders o ON o.id=i.order_id WHERE o.order_code=$1',[memberOrderCode]);
   assert(memberCostSnapshot.rowCount===1 && Number(memberCostSnapshot.rows[0].cost_price_toman)===7000,'ثبت بهای تمام‌شده در لحظه سفارش برای حسابداری');
   const memberCustomer=(await db.query('SELECT id FROM customers WHERE phone=$1',[memberPhone])).rows[0];
+  const linkedMemberOrder=await db.query('SELECT customer_id FROM orders WHERE order_code=$1',[memberOrderCode]);
+  assert(linkedMemberOrder.rowCount===1 && Number(linkedMemberOrder.rows[0].customer_id)===Number(memberCustomer.id),'اتصال سفارش عضویت به حساب مشتری');
   const refuseCustomerDeactivate=await request('/api/admin/customers/'+memberCustomer.id+'/status',{method:'PATCH',admin:true,body:{is_active:false}});
-  assert(refuseCustomerDeactivate.status===409,'جلوگیری از غیرفعال‌سازی مشتری دارای سابقه سفارش');
+  assert(refuseCustomerDeactivate.status===409,'جلوگیری از غیرفعال‌سازی مشتری دارای سابقه سفارش؛ پاسخ '+refuseCustomerDeactivate.status+' '+(refuseCustomerDeactivate.data.error||''));
 
 
   const orderKey = crypto.randomUUID();
