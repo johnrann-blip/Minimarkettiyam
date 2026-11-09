@@ -3,11 +3,56 @@ const $=s=>document.querySelector(s);let products=[],cart=JSON.parse(localStorag
 const toman=n=>new Intl.NumberFormat('fa-IR').format(Number(n))+' تومان';
 async function loadCategories(){try{const r=await fetch('/api/categories');if(!r.ok)throw new Error();const cats=await r.json();$('#categories').innerHTML='<button class="active" data-category="">همه</button>'+cats.map(c=>`<button data-category="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</button>`).join('');$('#categories').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{category=b.dataset.category;$('#categories').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));loadProducts()}))}catch{}}
 async function loadProducts(){const q=$('#search').value.trim();const p=new URLSearchParams();if(category)p.set('category',category);if(q)p.set('q',q);try{products=await fetch('/api/products?'+p).then(r=>r.json());renderProducts()}catch{$('#productGrid').innerHTML='<p>ارتباط با فروشگاه برقرار نشد.</p>'}}
-function renderProducts(){$('#productGrid').innerHTML=products.length?products.map(p=>`<article class="product">${p.image_url?`<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}">`:'<div class="placeholder">👜</div>'}<div class="product-info"><h3>${escapeHtml(p.name)}</h3><div class="price">${toman(p.sale_price_toman??p.price_toman)}</div>${p.sale_price_toman?`<span class="old">${toman(p.price_toman)}</span>`:''}<div class="stock">${p.stock>0?'موجود در انبار':'ناموجود'}</div><button class="add" ${p.stock<1?'disabled':''} data-add-cart="${escapeHtml(p.id)}">افزودن به سبد</button></div></article>`).join(''):'<p>هنوز محصولی برای نمایش ثبت نشده است.</p>'}
+function renderProducts(){
+  $('#productGrid').innerHTML=products.length?products.map(p=>`<article class="product">
+    <button type="button" class="product-view" data-open-product="${escapeHtml(p.id)}" aria-label="مشاهده مشخصات ${escapeHtml(p.name)}">
+      ${p.image_url?`<img class="product-image" src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy">`:'<div class="placeholder">👜</div>'}
+      <div class="product-info"><h3>${escapeHtml(p.name)}</h3><div class="price">${toman(p.sale_price_toman??p.price_toman)}</div>${p.sale_price_toman? `<span class="old">${toman(p.price_toman)}</span>`:''}<div class="stock">${p.stock>0?'موجود در انبار':'ناموجود'}</div></div>
+    </button>
+    <button class="add" type="button" ${p.stock<1?'disabled':''} data-add-cart="${escapeHtml(p.id)}">افزودن به سبد</button>
+  </article>`).join(''):'<p>هنوز محصولی برای نمایش ثبت نشده است.</p>';
+}
 $('#productGrid').addEventListener('click',event=>{
-  const button=event.target.closest?.('[data-add-cart]');
-  if(button&&!button.disabled)addCart(button.dataset.addCart);
+  const addButton=event.target.closest?.('[data-add-cart]');
+  if(addButton){if(!addButton.disabled)addCart(addButton.dataset.addCart);return}
+  const viewButton=event.target.closest?.('[data-open-product]');
+  if(viewButton){
+    const product=products.find(p=>String(p.id)===String(viewButton.dataset.openProduct));
+    if(product)openProductDetails(product);
+  }
 });
+$('#productDialogClose').addEventListener('click',()=>$('#productDialog').close());
+$('#productDialog').addEventListener('click',event=>{
+  if(event.target===$('#productDialog'))$('#productDialog').close();
+});
+document.addEventListener('error',event=>{
+  const img=event.target;
+  if(img instanceof HTMLImageElement&&img.classList.contains('product-image')){
+    const fallback=document.createElement('div');
+    fallback.className='placeholder';
+    fallback.textContent='👜';
+    img.replaceWith(fallback);
+  }
+},true);
+function openProductDetails(p){
+  const image=p.image_url
+    ? `<img class="detail-image product-image" src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}">`
+    : '<div class="placeholder detail-placeholder">👜</div>';
+  $('#productDialogContent').innerHTML=`
+    ${image}
+    <div class="detail-copy">
+      <span class="eyebrow">${escapeHtml(p.category_name||'محصول AVELORA')}</span>
+      <h2>${escapeHtml(p.name)}</h2>
+      <div class="price detail-price">${toman(p.sale_price_toman??p.price_toman)}</div>
+      ${p.sale_price_toman?`<span class="old">${toman(p.price_toman)}</span>`:''}
+      <p class="detail-description">${escapeHtml(p.description||'توضیحاتی برای این محصول ثبت نشده است.')}</p>
+      <p class="stock">${p.stock>0?'موجود در انبار':'ناموجود'}</p>
+      <button class="primary" type="button" data-detail-add="${escapeHtml(p.id)}" ${p.stock<1?'disabled':''}>افزودن به سبد خرید</button>
+    </div>`;
+  const add=$('#productDialogContent').querySelector('[data-detail-add]');
+  add.addEventListener('click',()=>{addCart(p.id);$('#productDialog').close()});
+  $('#productDialog').showModal();
+}
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function addCart(id){id=String(id);const p=products.find(x=>String(x.id)===id);if(!p)return;const line=cart.find(x=>String(x.product_id)===id);if(line)line.quantity=Math.min(20,line.quantity+1);else cart.push({product_id:id,name:p.name,price:Number(p.sale_price_toman??p.price_toman),quantity:1});saveCart()}
 function saveCart(){localStorage.setItem('mm_cart',JSON.stringify(cart));$('#cartCount').textContent=tomanCount(cart.reduce((a,x)=>a+x.quantity,0));renderCart();if(typeof updateCheckout==='function')updateCheckout()}
