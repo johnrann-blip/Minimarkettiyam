@@ -132,6 +132,7 @@ async function run() {
 
   let r = await request('/api/admin/uploads/product', {
     method: 'POST',
+    headers: { 'x-admin-request': '1' },
     body: { mime_type: 'image/png', image_base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=' }
   });
   assert(r.status === 401, 'جلوگیری از آپلود عکس بدون کلید مدیر');
