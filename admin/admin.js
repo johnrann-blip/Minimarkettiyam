@@ -9,13 +9,13 @@ function escapeHtml(value) {
 let adminUser = null;
 const ALL_ADMIN_PERMISSIONS = [
   'products.view','products.create','products.update','products.archive',
-  'orders.view','orders.update','customers.view','settings.view','settings.update','payments.view','payments.manage',
+  'orders.view','orders.update','customers.view','customers.manage','settings.view','settings.update','payments.view','payments.manage',
   'reports.view','audit.view'
 ];
 const PERMISSION_LABELS = {
   'products.view':'مشاهده محصولات','products.create':'ثبت محصول','products.update':'ویرایش محصول',
   'products.archive':'بایگانی محصول','orders.view':'مشاهده سفارش‌ها','orders.update':'تغییر وضعیت سفارش',
-  'customers.view':'مشاهده مشتریان','settings.view':'مشاهده تنظیمات','settings.update':'تغییر تنظیمات','payments.view':'مشاهده اطلاعات بانکی و پرداخت','payments.manage':'مدیریت اطلاعات بانکی و پرداخت',
+  'customers.view':'مشاهده مشتریان','customers.manage':'غیرفعال‌سازی مشتری بدون سفارش','settings.view':'مشاهده تنظیمات','settings.update':'تغییر تنظیمات','payments.view':'مشاهده اطلاعات بانکی و پرداخت','payments.manage':'مدیریت اطلاعات بانکی و پرداخت',
   'reports.view':'گزارش‌ها','audit.view':'سوابق فعالیت'
 };
 function adminCan(permission) {
@@ -186,7 +186,7 @@ function setAdminSession(admin) {
     productsSection:adminCan('products.view'),
     archiveSection:adminCan('products.archive') || adminCan('products.view'),
     settingsSection:adminCan('payments.view') || adminCan('payments.manage'),
-    customersSection:adminCan('customers.view'),
+    customersSection:adminCan('customers.view') || adminCan('customers.manage'),
     ordersSection:adminCan('orders.view') || adminCan('orders.update')
   };
   for (const section of document.querySelectorAll('#adminWorkspace section[data-page]')) {
@@ -512,11 +512,25 @@ async function customers() {
         <p>شماره موبایل: ${escapeHtml(customer.phone)}</p>
         <p>تعداد سفارش: ${Number(customer.order_count).toLocaleString('fa-IR')}</p>
         <p>مجموع خریدهای غیرلغوشده: ${Number(customer.total_spent_toman).toLocaleString('fa-IR')} تومان</p>
+        <p>وضعیت حساب: ${customer.is_active ? 'فعال' : 'غیرفعال'}</p>
         <p class="muted">عضویت از: ${new Date(customer.created_at).toLocaleDateString('fa-IR')}</p>
+        ${adminCan('customers.manage') && Number(customer.order_count)===0 ? `<button type="button" data-customer-active="${escapeHtml(customer.id)}" data-next-active="${customer.is_active?'false':'true'}">${customer.is_active?'غیرفعال‌سازی حساب':'فعال‌سازی دوباره حساب'}</button>` : ''}
       </div>
     `).join('') || 'هنوز مشتری عضوی ثبت‌نام نکرده است.';
   } catch(error) { $('#customers').textContent=error.message; }
 }
+
+$('#customers').addEventListener('click',async event=>{
+  const button=event.target.closest('[data-customer-active]');
+  if(!button)return;
+  const id=button.dataset.customerActive,active=button.dataset.nextActive==='true';
+  if(!confirm(active?'این حساب مشتری دوباره فعال شود؟':'حساب این مشتری غیرفعال شود؟'))return;
+  try{
+    await request('/api/admin/customers/'+encodeURIComponent(id)+'/status',{method:'PATCH',body:JSON.stringify({is_active:active})});
+    message(active?'حساب مشتری فعال شد.':'حساب مشتری غیرفعال شد؛ سوابق حذف نشده‌اند.');
+    await customers();
+  }catch(error){message(error.message);}
+});
 
 async function orders() {
   try {
