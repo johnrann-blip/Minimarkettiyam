@@ -145,6 +145,17 @@ const customerAuth = createCustomerAuth({pool,rateLimit:customerAuthRateLimit});
 app.use('/api',customerAuth.optionalCustomer);
 app.use('/api/auth',customerAuth.router);
 app.use('/api/admin', adminRateLimit);
+app.use('/api', (req,res,next) => {
+  res.on('finish', () => {
+    if (res.statusCode >= 500) {
+      pool.query(
+        'INSERT INTO admin_error_logs(level,message,request_method,request_path,response_status,stack,user_agent) VALUES($1,$2,$3,$4,$5,$6,$7)',
+        ['error','API returned a server error',req.method,String(req.originalUrl||req.path).slice(0,300),res.statusCode,'',String(req.get('user-agent')||'').slice(0,300)]
+      ).catch(error=>console.error('API error log write failed:',error.message));
+    }
+  });
+  next();
+});
 app.use('/api/payments/zarinpal', createZarinpalRouter({ pool, paymentRateLimit }));
 
 pool.on('error', error => {
@@ -1042,12 +1053,6 @@ app.use((error, req, res, next) => {
   }
   console.error('Unhandled request error:', error && error.message ? error.message : error);
   const status = Number(error?.status) >= 400 && Number(error?.status) <= 599 ? Number(error.status) : 500;
-  if (status >= 500) {
-    pool.query(
-      'INSERT INTO admin_error_logs(level,message,request_method,request_path,response_status,stack,user_agent) VALUES($1,$2,$3,$4,$5,$6,$7)',
-      ['error',String(error?.message||'Unhandled request error').slice(0,2000),req.method,String(req.originalUrl||req.path).slice(0,300),status,String(error?.stack||'').slice(0,12000),String(req.get('user-agent')||'').slice(0,300)]
-    ).catch(logError=>console.error('Error log write failed:',logError.message));
-  }
   return res.status(status >= 500 ? 500 : 400).json({error:'در پردازش درخواست خطایی رخ داد. دوباره تلاش کنید.'});
 });
 
