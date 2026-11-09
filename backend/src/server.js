@@ -19,7 +19,8 @@ function validateRuntimeConfig() {
   if (!Number.isInteger(port) || port < 1 || port > 65535) errors.push('PORT must be an integer from 1 to 65535.');
 
   if (process.env.NODE_ENV === 'production') {
-    if (!process.env.ADMIN_API_KEY || Buffer.byteLength(process.env.ADMIN_API_KEY) < 32) {
+    if (!process.env.ADMIN_API_KEY || Buffer.byteLength(process.env.ADMIN_API_KEY) < 32 ||
+        process.env.ADMIN_API_KEY.startsWith('REPLACE_WITH_')) {
       errors.push('ADMIN_API_KEY must contain at least 32 bytes in production.');
     }
 
