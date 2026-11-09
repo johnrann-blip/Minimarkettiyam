@@ -120,8 +120,13 @@ const adminRateLimit = createRateLimiter({
   message: 'تعداد درخواست‌های مدیریتی بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
 });
 
-const adminAuth = createAdminAuth({pool,rateLimit:adminRateLimit});
-app.use('/api/admin/auth', adminRateLimit, adminAuth.router);
+const adminAuthRateLimit = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'تعداد تلاش‌های ورود مدیریت زیاد است. ۱۵ دقیقه بعد دوباره تلاش کن.'
+});
+const adminAuth = createAdminAuth({pool,rateLimit:adminAuthRateLimit});
+app.use('/api/admin/auth', adminAuth.router);
 
 const orderRateLimit = createRateLimiter({
   windowMs: 10 * 60 * 1000,
