@@ -34,6 +34,7 @@ let secondProductId = null;
 let memberProductId = null;
 let memberSessionCookie = null;
 let memberOrderCode = null;
+let memberPhone = null;
 
 function assert(condition, message) {
   if (!condition) throw new Error('FAIL: ' + message);
@@ -135,7 +136,7 @@ async function run() {
   r = await request('/api/health');
   assert(r.status === 200 && r.data.status === 'ok', 'سلامت API و اتصال دیتابیس');
 
-  const memberPhone = '0912' + String(crypto.randomInt(1000000,9999999));
+  memberPhone = '0912' + String(crypto.randomInt(1000000,9999999));
   r = await request('/api/auth/register', {method:'POST',body:{name:'عضو آزمایشی',phone:memberPhone,password:'TestMemberPass123'}});
   assert(r.status === 201 && r.data.discount_percent === 5 && !!r.cookie, 'ثبت‌نام مشتری و ایجاد نشست عضویت با تخفیف ۵ درصد');
   memberSessionCookie = r.cookie;
@@ -438,6 +439,7 @@ async function run() {
         const token=(memberSessionCookie.match(/avelora_session=([^;]+)/)||[])[1];
         if(token) await db.query('DELETE FROM customer_sessions WHERE token_hash=$1',[crypto.createHash('sha256').update(decodeURIComponent(token)).digest('hex')]);
       }
+      if (memberPhone) await db.query('DELETE FROM customers WHERE phone=$1',[memberPhone]);
     } catch (error) {
       console.error('Test cleanup warning:', error.message);
       process.exitCode = 1;
