@@ -105,11 +105,15 @@ async function run() {
   assert(forbiddenProducts.status===403,'جلوگیری از مشاهده محصولات توسط مدیر فاقد مجوز');
   const allowedOrders=await request('/api/admin/orders',{admin:true});
   assert(allowedOrders.status===200,'اجازه مشاهده سفارش‌ها برای مدیر دارای مجوز');
+  const managerSessionsDenied=await request('/api/admin/auth/sessions',{admin:true});
+  assert(managerSessionsDenied.status===403,'جلوگیری از مشاهده نشست‌های مدیران توسط مدیر فرعی');
   const deniedAccounting=await request('/api/admin/accounting/expenses',{admin:true});
   assert(deniedAccounting.status===403,'جلوگیری از مشاهده دفتر هزینه‌ها بدون مجوز حسابداری');
   adminCookie=ownerCookie;
   const auditRows=await request('/api/admin/auth/audit',{admin:true});
   assert(auditRows.status===200 && auditRows.data.some(x=>x.action==='admin.login'),'ثبت و نمایش رویدادهای ورود و فعالیت مدیران');
+  const ownerSessions=await request('/api/admin/auth/sessions',{admin:true});
+  assert(ownerSessions.status===200 && ownerSessions.data.some(x=>x.username==='owner'),'نمایش نشست‌های فعال فقط برای مالک');
   const managerDisabled=await request('/api/admin/auth/managers/'+managerCreated.data.id,{
     method:'PATCH',admin:true,body:{is_active:false}
   });
