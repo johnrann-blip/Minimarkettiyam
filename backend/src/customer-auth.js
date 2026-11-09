@@ -41,8 +41,7 @@ async function createSession(pool, customerId, res) {
   setSessionCookie(res,token);
 }
 function createCustomerAuth({pool, rateLimit}) {
-  router.use(rateLimit);
-  router.post('/register', async (req,res) => {
+  router.post('/register', rateLimit, async (req,res) => {
     const name=String(req.body?.name||'').trim().slice(0,120);
     const phone=normalizePhone(req.body?.phone||'');
     const password=String(req.body?.password||'');
@@ -64,7 +63,7 @@ function createCustomerAuth({pool, rateLimit}) {
       res.status(503).json({error:'ثبت‌نام موقتاً انجام نشد. دوباره تلاش کن.'});
     }
   });
-  router.post('/login', async (req,res) => {
+  router.post('/login', rateLimit, async (req,res) => {
     const phone=normalizePhone(req.body?.phone||'');
     const password=String(req.body?.password||'');
     if(!phone || !password) return res.status(400).json({error:'شماره موبایل و رمز عبور را وارد کن.'});
