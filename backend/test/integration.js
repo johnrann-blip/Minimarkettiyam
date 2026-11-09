@@ -67,7 +67,13 @@ async function run() {
   await waitForServer();
 
   let staticResponse = await fetch(BASE + '/admin/');
-  assert(staticResponse.status === 200, 'بارگذاری صفحه پنل مدیریت');
+  const adminHtml = await staticResponse.text();
+  assert(staticResponse.status === 200 && adminHtml.includes('noindex,nofollow'), 'بارگذاری پنل مدیریت با جلوگیری از ایندکس موتورهای جست‌وجو');
+  staticResponse = await fetch(BASE + '/');
+  const storefrontHtml = await staticResponse.text();
+  assert(staticResponse.status === 200 && storefrontHtml.includes('name="description"') &&
+    staticResponse.headers.get('x-content-type-options') === 'nosniff',
+    'بارگذاری فروشگاه همراه با توضیحات SEO و هدر امنیتی nosniff');
   staticResponse = await fetch(BASE + '/assistant.js');
   assert(staticResponse.status === 200 && (await staticResponse.text()).includes('راهنمای خرید AVELORA'), 'بارگذاری دستیار رایگان راهنمای خرید');
   staticResponse = await fetch(BASE + '/admin/admin.js');
