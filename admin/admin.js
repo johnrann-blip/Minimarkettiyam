@@ -56,6 +56,7 @@ async function loadManagers() {
         <b>${escapeHtml(manager.display_name)} — @${escapeHtml(manager.username)}</b>
         <p>آخرین ورود: ${manager.last_login_at ? new Date(manager.last_login_at).toLocaleString('fa-IR') : 'هنوز وارد نشده'}</p>
         <label class="setting-check"><input class="manager-active" type="checkbox" ${manager.is_active ? 'checked' : ''}> حساب فعال باشد</label>
+        <input class="manager-password" type="password" minlength="12" placeholder="رمز جدید مدیر (اختیاری؛ حداقل ۱۲ نویسه)">
         <div class="permission-grid">
           ${ALL_ADMIN_PERMISSIONS.map(permission => `
             <label><input class="manager-permission" type="checkbox" value="${permission}" ${(manager.permissions || []).includes(permission) ? 'checked' : ''}> ${PERMISSION_LABELS[permission]}</label>
@@ -84,11 +85,14 @@ $('#managerList').addEventListener('click',async event=>{
   const card=button.closest('[data-manager-id]');
   const permissions=Array.from(card.querySelectorAll('.manager-permission:checked')).map(x=>x.value);
   const is_active=card.querySelector('.manager-active').checked;
+  const password=card.querySelector('.manager-password').value;
+  const update={permissions,is_active};
+  if(password) update.password=password;
   try {
     await request('/api/admin/auth/managers/'+encodeURIComponent(button.dataset.managerSave),{
-      method:'PATCH',body:JSON.stringify({permissions,is_active})
+      method:'PATCH',body:JSON.stringify(update)
     });
-    message('دسترسی مدیر به‌روزرسانی شد؛ نشست‌های او در صورت غیرفعال‌سازی باطل می‌شوند.');
+    message('دسترسی مدیر ذخیره شد؛ در صورت تغییر رمز یا غیرفعال‌سازی، نشست‌های قبلی او باطل می‌شوند.');
     await loadManagers();
   } catch(error) { message(error.message); }
 });
