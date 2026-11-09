@@ -25,7 +25,10 @@
       <input name="price_toman" type="number" min="0" step="1" placeholder="قیمت فروش به تومان" required>
       <input name="sale_price_toman" type="number" min="0" step="1" placeholder="قیمت تخفیفی (اختیاری)">
       <input name="stock" type="number" min="0" step="1" placeholder="تعداد موجودی" required>
-      <input name="image_url" type="url" placeholder="نشانی تصویر HTTPS محصول">
+      <label for="imageFile">انتخاب عکس از گالری گوشی (JPG، PNG یا WebP؛ حداکثر ۵ مگابایت)</label>
+      <input id="imageFile" name="image_file" type="file" accept="image/jpeg,image/png,image/webp">
+      <img id="imagePreview" alt="پیش‌نمایش عکس محصول" hidden style="max-width:180px;max-height:180px;object-fit:contain">
+      <input name="image_url" type="url" placeholder="یا نشانی تصویر HTTPS محصول">
       <textarea name="description" maxlength="5000" placeholder="توضیحات محصول"></textarea>
       <button id="submitProduct" type="submit">ثبت محصول</button>
       <button id="cancelEdit" type="button" hidden>انصراف از ویرایش</button>
@@ -78,6 +81,6 @@
 
   <p id="msg" role="status"></p>
 </main>
-<script src="/admin/admin.js"></script>
+<script src="/admin/admin.js?v=20261109-3"></script>
 </body>
 </html>
