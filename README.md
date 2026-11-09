@@ -1,4 +1,4 @@
-# Minimarkettiyam Store — MVP foundation
+# AVELORA Store — MVP foundation
 
 فروشگاه چندمحصولی فارسی برای کیف، لوازم آرایشی و دسته‌های قابل‌افزایش.
 
