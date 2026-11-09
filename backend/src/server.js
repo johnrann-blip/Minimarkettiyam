@@ -138,8 +138,8 @@ const paymentRateLimit = createRateLimiter({
 
 const customerAuthRateLimit = createRateLimiter({windowMs:15*60*1000,max:10,message:'تعداد تلاش‌های ورود یا ثبت‌نام زیاد است. کمی بعد دوباره تلاش کن.'});
 const customerAuth = createCustomerAuth({pool,rateLimit:customerAuthRateLimit});
-app.use('/api/auth',customerAuth.router);
 app.use('/api',customerAuth.optionalCustomer);
+app.use('/api/auth',customerAuth.router);
 app.use('/api/admin', adminRateLimit);
 app.use('/api/payments/zarinpal', createZarinpalRouter({ pool, paymentRateLimit }));
 
@@ -168,13 +168,14 @@ app.get('/api/products', async (req, res) => {
       `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,c.name AS category_name,c.slug AS category_slug
        FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE ${where} ORDER BY p.created_at DESC LIMIT 100`, values);
     res.json(r.rows.map(p => {
+      const {cost_price_toman,...publicProduct}=p;
       const regular=Number(p.price_toman), current=Number(p.sale_price_toman ?? p.price_toman);
       let effective=current, discount=0;
       if(req.customer && p.cost_price_toman!==null){
         const candidate=Math.floor(regular*95/100);
         if(candidate>=Number(p.cost_price_toman)){effective=Math.min(current,candidate);discount=Math.max(0,current-effective);}
       }
-      return {...p,price_toman:regular,sale_price_toman:effective<regular?effective:null,
+      return {...publicProduct,price_toman:regular,sale_price_toman:effective<regular?effective:null,
         member_discount_toman:discount,member_price_eligible:Boolean(req.customer&&discount>0)};
     }));
   } catch { res.status(500).json({ error: 'خطا در دریافت محصولات' }); }
