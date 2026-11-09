@@ -1,0 +1,48 @@
+name: AVELORA CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, feature/admin-rbac-foundation]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: u0_a289
+          POSTGRES_PASSWORD: test-password
+          POSTGRES_DB: minimarkettiyam_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U u0_a289 -d minimarkettiyam_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgresql://u0_a289:test-password@127.0.0.1:5432/minimarkettiyam_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Initialize isolated test database
+        run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f database/schema.sql
+      - name: Static checks
+        working-directory: backend
+        run: npm run check
+      - name: ZarinPal unit tests
+        working-directory: backend
+        run: npm run test:zarinpal
+      - name: Full integration tests
+        working-directory: backend
+        run: npm run test:integration
