@@ -547,9 +547,10 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
     for (const x of normalized) {
       await client.query(
         `INSERT INTO order_items
-         (order_id,product_id,product_name,unit_price_toman,quantity,line_total_toman)
-         VALUES($1,$2,$3,$4,$5,$6)`,
-        [order.id,x.product.id,x.product.name,x.price,x.qty,x.line]
+         (order_id,product_id,product_name,unit_price_toman,quantity,line_total_toman,cost_price_toman)
+         VALUES($1,$2,$3,$4,$5,$6,$7)`,
+        [order.id,x.product.id,x.product.name,x.price,x.qty,x.line,
+         x.product.cost_price_toman===null ? null : Number(x.product.cost_price_toman)]
       );
 
       await client.query(
@@ -614,6 +615,60 @@ app.get('/api/admin/customers', adminOnly, async (_req,res) => {
     res.json(result.rows);
   } catch {
     res.status(500).json({error:'دریافت فهرست مشتریان انجام نشد.'});
+  }
+});
+
+app.get('/api/admin/reports/summary', adminOnly, async (req,res) => {
+  const validDate = value => /^\\d{4}-\\d{2}-\\d{2}$/.test(String(value||'')) && !Number.isNaN(Date.parse(String(value)+'T00:00:00Z'));
+  const to = validDate(req.query.to) ? String(req.query.to) : new Date().toISOString().slice(0,10);
+  const fromDefault = new Date(Date.now()-29*86400000).toISOString().slice(0,10);
+  const from = validDate(req.query.from) ? String(req.query.from) : fromDefault;
+  if (from > to) return res.status(400).json({error:'بازه تاریخ گزارش معتبر نیست.'});
+  try {
+    const summary = await pool.query(`
+      WITH paid AS (
+        SELECT id,created_at,subtotal_toman,shipping_toman,total_toman
+        FROM orders
+        WHERE payment_status='verified' AND status<>'cancelled'
+          AND created_at >= $1::date AND created_at < ($2::date + INTERVAL '1 day')
+      ), item_costs AS (
+        SELECT i.order_id,
+          SUM(i.line_total_toman)::bigint AS item_revenue,
+          SUM(i.cost_price_toman * i.quantity) FILTER (WHERE i.cost_price_toman IS NOT NULL)::bigint AS known_cost,
+          COUNT(*) FILTER (WHERE i.cost_price_toman IS NULL)::int AS unknown_cost_items
+        FROM order_items i JOIN paid p ON p.id=i.order_id GROUP BY i.order_id
+      )
+      SELECT COUNT(*)::int AS paid_order_count,
+        COALESCE(SUM(p.subtotal_toman),0)::bigint AS product_revenue_toman,
+        COALESCE(SUM(p.shipping_toman),0)::bigint AS shipping_collected_toman,
+        COALESCE(SUM(p.total_toman),0)::bigint AS total_collected_toman,
+        COALESCE(SUM(COALESCE(c.unknown_cost_items,0)),0)::int AS items_without_cost,
+        CASE WHEN COALESCE(SUM(COALESCE(c.unknown_cost_items,0)),0)=0
+          THEN (COALESCE(SUM(c.item_revenue),0)-COALESCE(SUM(c.known_cost),0))::bigint
+          ELSE NULL END AS gross_profit_toman
+      FROM paid p LEFT JOIN item_costs c ON c.order_id=p.id
+    `,[from,to]);
+    const daily = await pool.query(`
+      SELECT created_at::date::text AS day,COUNT(*)::int AS paid_orders,
+        SUM(total_toman)::bigint AS collected_toman
+      FROM orders
+      WHERE payment_status='verified' AND status<>'cancelled'
+        AND created_at >= $1::date AND created_at < ($2::date + INTERVAL '1 day')
+      GROUP BY created_at::date ORDER BY created_at::date
+    `,[from,to]);
+    res.json({from,to,summary:summary.rows[0],daily:daily.rows});
+  } catch(error) {
+    console.error('Accounting report failed:',error.message);
+    res.status(500).json({error:'گزارش مالی دریافت نشد.'});
+  }
+});
+
+app.get('/api/admin/reports/errors', adminOnly, async (_req,res) => {
+  try {
+    const result=await pool.query('SELECT id,level,message,request_method,request_path,response_status,created_at FROM admin_error_logs ORDER BY created_at DESC LIMIT 200');
+    res.json(result.rows);
+  } catch(error) {
+    res.status(500).json({error:'گزارش خطاها دریافت نشد.'});
   }
 });
 
@@ -963,7 +1018,14 @@ app.use((error, req, res, next) => {
     return res.status(413).json({error:'حجم درخواست یا عکس بیش از حد مجاز است. حجم عکس را به حداکثر ۵ مگابایت کاهش دهید.'});
   }
   console.error('Unhandled request error:', error && error.message ? error.message : error);
-  return res.status(400).json({error:'در پردازش درخواست خطایی رخ داد. دوباره تلاش کنید.'});
+  const status = Number(error?.status) >= 400 && Number(error?.status) <= 599 ? Number(error.status) : 500;
+  if (status >= 500) {
+    pool.query(
+      'INSERT INTO admin_error_logs(level,message,request_method,request_path,response_status,stack,user_agent) VALUES($1,$2,$3,$4,$5,$6,$7)',
+      ['error',String(error?.message||'Unhandled request error').slice(0,2000),req.method,String(req.originalUrl||req.path).slice(0,300),status,String(error?.stack||'').slice(0,12000),String(req.get('user-agent')||'').slice(0,300)]
+    ).catch(logError=>console.error('Error log write failed:',logError.message));
+  }
+  return res.status(status >= 500 ? 500 : 400).json({error:'در پردازش درخواست خطایی رخ داد. دوباره تلاش کنید.'});
 });
 
 app.get('*', (_req,res) => res.sendFile(path.join(__dirname,'../../frontend/index.html')));
