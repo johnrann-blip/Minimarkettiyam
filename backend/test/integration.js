@@ -76,9 +76,11 @@ async function run() {
   const membershipMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/004_customer_membership.sql'), 'utf8');
   const adminMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/005_admin_rbac.sql'), 'utf8');
   const accountingMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/006_accounting_error_center.sql'), 'utf8');
+  const galleryMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/007_product_image_gallery.sql'), 'utf8');
   await db.query(membershipMigration);
   await db.query(adminMigration);
   await db.query(accountingMigration);
+  await db.query(galleryMigration);
   await db.query('DELETE FROM admin_users');
   await waitForServer();
 
@@ -289,11 +291,35 @@ async function run() {
       sale_price_toman: 10000,
       stock: 5,
       image_url: uploadedImageUrl,
+      images: [uploadedImageUrl, 'https://example.com/test-angle.jpg'],
       is_active: true
     }
   });
-  assert(r.status === 201 && r.data.id && r.data.image_url === uploadedImageUrl, 'ثبت محصول همراه با تصویر آپلودشده');
+  assert(r.status === 201 && r.data.id && r.data.image_url === uploadedImageUrl &&
+    Array.isArray(r.data.images) && r.data.images.length === 2 &&
+    r.data.images[0] === uploadedImageUrl,
+    'ثبت محصول با دو تصویر و تعیین تصویر اول به‌عنوان اصلی');
   productId = r.data.id;
+
+  const galleryRows = await db.query(
+    'SELECT image_url,position,is_primary FROM product_images WHERE product_id=$1 ORDER BY position',
+    [productId]
+  );
+  assert(galleryRows.rowCount === 2 &&
+    Number(galleryRows.rows[0].position) === 0 && galleryRows.rows[0].is_primary === true &&
+    Number(galleryRows.rows[1].position) === 1 && galleryRows.rows[1].is_primary === false,
+    'ذخیره ترتیب تصاویر و یکتایی تصویر اصلی در پایگاه داده');
+
+  r = await request('/api/admin/products', {admin:true});
+  const adminGallery = r.data.find(p => String(p.id) === String(productId));
+  assert(r.status === 200 && adminGallery && adminGallery.images.length === 2,
+    'نمایش کامل گالری در فهرست مدیریت');
+
+  r = await request('/api/products');
+  const publicGallery = r.data.find(p => String(p.id) === String(productId));
+  assert(r.status === 200 && publicGallery && publicGallery.images.length === 2 &&
+    !Object.prototype.hasOwnProperty.call(publicGallery, 'cost_price_toman'),
+    'نمایش گالری برای مشتری بدون افشای قیمت خرید');
 
   r = await request('/api/admin/products', {
     method: 'POST',
@@ -337,9 +363,52 @@ async function run() {
   r = await request(`/api/admin/products/${productId}`, {
     method: 'PATCH',
     admin: true,
+    body: { images: ['https://example.com/test-angle.jpg', uploadedImageUrl] }
+  });
+  assert(r.status === 200 && r.data.image_url === 'https://example.com/test-angle.jpg' &&
+    r.data.images[0] === 'https://example.com/test-angle.jpg',
+    'تغییر ترتیب تصاویر و انتقال تصویر اصلی به ابتدای گالری');
+  const reorderedPrimary = await db.query(
+    'SELECT COUNT(*) FILTER (WHERE is_primary) AS primary_count FROM product_images WHERE product_id=$1',
+    [productId]
+  );
+  assert(Number(reorderedPrimary.rows[0].primary_count) === 1,
+    'حفظ دقیقاً یک تصویر اصلی پس از جابه‌جایی');
+
+  r = await request(`/api/admin/products/${productId}`, {
+    method: 'PATCH',
+    admin: true,
+    body: { images: [uploadedImageUrl] }
+  });
+  assert(r.status === 200 && r.data.images.length === 1 && r.data.image_url === uploadedImageUrl,
+    'حذف تصویر از گالری بدون حذف فایل فیزیکی');
+
+  r = await request('/api/admin/products', {
+    method:'POST', admin:true,
+    body:{
+      sku:SKU+'-TOO-MANY',name:'گالری بیش از حد',category_id:categoryId,
+      price_toman:12000,stock:1,images:Array.from({length:11},(_,i)=>'https://example.com/image-'+i+'.jpg')
+    }
+  });
+  assert(r.status === 400, 'رد گالری دارای بیش از ۱۰ تصویر');
+
+  r = await request('/api/admin/products', {
+    method:'POST', admin:true,
+    body:{
+      sku:SKU+'-BAD-URL',name:'نشانی تصویر نامعتبر',category_id:categoryId,
+      price_toman:12000,stock:1,images:['http://example.com/not-secure.jpg']
+    }
+  });
+  assert(r.status === 400, 'رد نشانی تصویر ناامن در گالری');
+
+  r = await request(`/api/admin/products/${productId}`, {
+    method: 'PATCH',
+    admin: true,
     body: { name: 'محصول ویرایش‌شده', price_toman: 15000 }
   });
-  assert(r.status === 200 && r.data.name === 'محصول ویرایش‌شده', 'ویرایش محصول');
+  assert(r.status === 200 && r.data.name === 'محصول ویرایش‌شده' &&
+    r.data.images.length === 1 && r.data.images[0] === uploadedImageUrl,
+    'ویرایش اطلاعات محصول بدون تغییر ناخواسته گالری');
 
   r = await request(`/api/admin/products/${productId}`, {
     method: 'PATCH',
