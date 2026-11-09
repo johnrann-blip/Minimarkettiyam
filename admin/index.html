@@ -10,12 +10,64 @@
 <body>
 <main>
   <h1>مدیریت فروشگاه AVELORA</h1>
-  <p>کلید مدیریت را وارد کن. این کلید را در اختیار دیگران قرار نده.</p>
-  <input id="key" type="password" placeholder="کلید مدیریت" autocomplete="current-password">
-  <button id="saveKey" type="button">ورود</button>
+  <section id="adminAuth">
+    <div id="bootstrapBox" hidden>
+      <h2>راه‌اندازی حساب مالک AVELORA</h2>
+      <p class="muted">این مرحله فقط یک‌بار انجام می‌شود. کلید راه‌اندازی همان کلید محرمانه فعلی سرور است و پس از ساخت حساب مالک دیگر برای ورود روزانه استفاده نمی‌شود.</p>
+      <form id="bootstrapForm">
+        <input name="admin_api_key" type="password" placeholder="کلید راه‌اندازی سرور" autocomplete="off" required>
+        <input name="username" value="owner" maxlength="60" placeholder="نام کاربری مالک" required>
+        <input name="display_name" value="مالک فروشگاه" maxlength="120" placeholder="نام نمایشی" required>
+        <input name="password" type="password" minlength="12" placeholder="رمز عبور جدید، حداقل ۱۲ نویسه" autocomplete="new-password" required>
+        <button type="submit">ساخت حساب مالک</button>
+      </form>
+    </div>
+    <div id="loginBox" hidden>
+      <h2>ورود مدیر AVELORA</h2>
+      <form id="loginForm">
+        <input name="username" maxlength="60" placeholder="نام کاربری" autocomplete="username" required>
+        <input name="password" type="password" placeholder="رمز عبور" autocomplete="current-password" required>
+        <button type="submit">ورود امن</button>
+      </form>
+    </div>
+    <p id="authMessage" role="status"></p>
+  </section>
 
-  <section>
-    <h2 id="formTitle">افزودن محصول</h2>
+  <div id="adminWorkspace" hidden>
+    <p id="adminIdentity" class="muted"></p>
+    <button id="logoutAdmin" type="button">خروج از حساب مدیریت</button>
+    <section id="managerSection" hidden>
+      <h2>مدیریت مدیران و سطح دسترسی</h2>
+      <p class="muted">فقط مالک می‌تواند حساب مدیر بسازد، دسترسی‌ها را تغییر دهد یا حسابی را غیرفعال کند.</p>
+      <form id="managerForm">
+        <input name="username" maxlength="60" placeholder="نام کاربری مدیر (انگلیسی)" required>
+        <input name="display_name" maxlength="120" placeholder="نام مدیر" required>
+        <input name="password" type="password" minlength="12" placeholder="رمز اولیه حداقل ۱۲ نویسه" required>
+        <div class="permission-grid">
+          <label><input type="checkbox" name="permissions" value="products.view"> مشاهده محصولات</label>
+          <label><input type="checkbox" name="permissions" value="products.create"> ثبت محصول</label>
+          <label><input type="checkbox" name="permissions" value="products.update"> ویرایش محصول</label>
+          <label><input type="checkbox" name="permissions" value="products.archive"> بایگانی محصول</label>
+          <label><input type="checkbox" name="permissions" value="orders.view"> مشاهده سفارش‌ها</label>
+          <label><input type="checkbox" name="permissions" value="orders.update"> تغییر وضعیت سفارش</label>
+          <label><input type="checkbox" name="permissions" value="customers.view"> مشاهده مشتریان</label>
+          <label><input type="checkbox" name="permissions" value="settings.view"> مشاهده تنظیمات</label>
+          <label><input type="checkbox" name="permissions" value="settings.update"> تغییر تنظیمات</label>
+          <label><input type="checkbox" name="permissions" value="reports.view"> مشاهده گزارش‌ها</label>
+          <label><input type="checkbox" name="permissions" value="audit.view"> مشاهده سوابق فعالیت</label>
+        </div>
+        <button type="submit">ساخت مدیر با دسترسی انتخاب‌شده</button>
+      </form>
+      <div id="managerList"></div>
+    </section>
+    <section id="auditSection">
+      <h2>گزارش ورودها و فعالیت مدیران</h2>
+      <button id="refreshAudit" type="button">به‌روزرسانی گزارش فعالیت</button>
+      <div id="auditLogs"></div>
+    </section>
+
+    <section id="productFormSection">
+      <h2 id="formTitle">افزودن محصول</h2>
     <form id="productForm">
       <input type="hidden" name="id">
       <input name="name" placeholder="نام محصول" maxlength="180" required>
@@ -37,14 +89,14 @@
     </form>
   </section>
 
-  <section>
+  <section id="productsSection">
     <h2>محصولات فروشگاه</h2>
     <button id="refreshProducts" type="button">به‌روزرسانی محصولات</button>
     <p class="muted">در این فهرست فقط محصولات فعال فروشگاه نمایش داده می‌شوند.</p>
     <div id="products"></div>
   </section>
 
-  <section>
+  <section id="archiveSection">
     <details id="productArchive">
       <summary>بایگانی محصولات <span id="archivedProductsCount">(۰)</span></summary>
       <p class="muted">محصولات این بخش در فروشگاه نمایش داده نمی‌شوند. برای بازگرداندن هر محصول، «فعال‌سازی مجدد» را بزنید. سوابق سفارش‌ها محفوظ می‌ماند.</p>
@@ -52,7 +104,7 @@
     </details>
   </section>
 
-  <section id="storeSettings">
+  <section id="settingsSection">
     <h2>تنظیمات فروشگاه و حساب بانکی</h2>
     <p class="muted">اطلاعات این بخش فقط توسط مدیر قابل تغییر است.</p>
     <div id="gatewayStatus" class="muted" role="status">در حال بررسی وضعیت درگاه زرین‌پال...</div>
@@ -85,21 +137,22 @@
     <p id="settingsMessage" role="status"></p>
   </section>
 
-  <section>
+  <section id="customersSection">
     <h2>مشتریان عضو AVELORA</h2>
     <button id="refreshCustomers" type="button">دریافت فهرست مشتریان</button>
     <p class="muted">مشتریان ثبت‌نام‌شده و سابقه سفارش‌های مرتبط با حسابشان.</p>
     <div id="customers"></div>
   </section>
 
-  <section>
+  <section id="ordersSection">
     <h2>سفارش‌ها</h2>
     <button id="refresh" type="button">دریافت سفارش‌ها</button>
     <div id="orders"></div>
   </section>
+  </div>
 
   <p id="msg" role="status"></p>
 </main>
-<script src="/admin/admin.js?v=20261109-member-discount-1"></script>
+<script src="/admin/admin.js?v=20261109-admin-rbac-1"></script>
 </body>
 </html>
