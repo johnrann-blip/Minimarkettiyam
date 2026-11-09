@@ -34,7 +34,7 @@ async function audit(pool,admin,req,action,resource,status=200,id=null) {
  } catch(error) { console.error('Admin audit write failed:',error.message); }
 }
 function requiredPermission(req) {
- const p=req.path.replace(/^\\/api\\/admin/,'')||'/',m=req.method;
+ const p=req.path.replace(/^\/api\/admin/,'')||'/',m=req.method;
  if(p==='/products') return m==='GET'?'products.view':m==='POST'?'products.create':'products.update';
  if(/^\/products\/[^/]+$/.test(p)) return m==='DELETE'?'products.archive':m==='GET'?'products.view':'products.update';
  if(p==='/uploads/product') return 'products.update';
