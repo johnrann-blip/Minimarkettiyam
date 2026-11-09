@@ -16,6 +16,7 @@ async function loadCategories(){
     const response=await fetch('/api/categories');
     if(!response.ok)throw new Error('دریافت دسته‌بندی‌ها ناموفق بود.');
     const cats=await response.json();
+    if(!Array.isArray(cats))throw new Error('پاسخ دسته‌بندی‌ها معتبر نیست.');
     const preferred=[
       {slug:'bags-accessories',name:'کیف و اکسسوری'},
       {slug:'beauty',name:'لوازم آرایشی'}
@@ -38,7 +39,22 @@ document.querySelectorAll('.category-entry').forEach(button=>
     $('#products').scrollIntoView({behavior:'smooth',block:'start'});
   })
 );
-async function loadProducts(){const q=$('#search').value.trim();const p=new URLSearchParams();if(category)p.set('category',category);if(q)p.set('q',q);try{products=await fetch('/api/products?'+p).then(r=>r.json());renderProducts()}catch{$('#productGrid').innerHTML='<p>ارتباط با فروشگاه برقرار نشد.</p>'}}
+async function loadProducts(){
+  const q=$('#search').value.trim();
+  const p=new URLSearchParams();
+  if(category)p.set('category',category);
+  if(q)p.set('q',q);
+  try{
+    const response=await fetch('/api/products?'+p);
+    const data=await response.json();
+    if(!response.ok||!Array.isArray(data))throw new Error(data.error||'پاسخ محصولات معتبر نیست.');
+    products=data;
+    renderProducts();
+  }catch{
+    products=[];
+    $('#productGrid').innerHTML='<p>دریافت محصولات با مشکل روبه‌رو شد. اتصال اینترنت را بررسی و دوباره تلاش کن.</p>';
+  }
+}
 function renderProducts(){
   $('#productGrid').innerHTML=products.length?products.map(p=>`<article class="product">
     <button type="button" class="product-view" data-open-product="${escapeHtml(p.id)}" aria-label="مشاهده مشخصات ${escapeHtml(p.name)}">

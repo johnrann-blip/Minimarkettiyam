@@ -12,6 +12,31 @@ const { createZarinpalRouter, getConfig } = require('./zarinpal');
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+function validateRuntimeConfig() {
+  const errors = [];
+  if (!process.env.DATABASE_URL) errors.push('DATABASE_URL is required.');
+  if (!Number.isInteger(port) || port < 1 || port > 65535) errors.push('PORT must be an integer from 1 to 65535.');
+
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.ADMIN_API_KEY || Buffer.byteLength(process.env.ADMIN_API_KEY) < 32 ||
+        process.env.ADMIN_API_KEY.startsWith('REPLACE_WITH_')) {
+      errors.push('ADMIN_API_KEY must contain at least 32 bytes in production.');
+    }
+
+    const paymentEnabled = String(process.env.ZARINPAL_ENABLED || 'false').trim().toLowerCase() === 'true';
+    if (paymentEnabled) {
+      if (String(process.env.ZARINPAL_MODE || '').trim().toLowerCase() !== 'production') {
+        errors.push('ZARINPAL_MODE must be production when live payments are enabled.');
+      }
+      if (!getConfig().ready) errors.push('ZarinPal production configuration is incomplete or invalid.');
+    }
+  }
+
+  if (errors.length) throw new Error('Invalid AVELORA runtime configuration: ' + errors.join(' '));
+}
+
+validateRuntimeConfig();
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -30,7 +55,11 @@ app.use(helmet({
   }
 }));
 app.use(cors({ origin: false }));
-app.use(express.json({ limit: '9mb' }));
+// Keep ordinary JSON requests small; only the authenticated image-upload route gets the larger body limit.
+app.use((req, res, next) => {
+  if (req.method === 'POST' && req.path === '/api/admin/uploads/product') return next();
+  return express.json({ limit: '1mb' })(req, res, next);
+});
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { maxAge: '7d', immutable: true }));
 app.use(express.static(path.join(__dirname, '../../frontend')));
 app.use('/admin', express.static(path.join(__dirname, '../../admin')));
@@ -38,7 +67,7 @@ app.use('/admin', express.static(path.join(__dirname, '../../admin')));
 function adminOnly(req, res, next) {
   const expected = process.env.ADMIN_API_KEY;
   const supplied = req.get('x-admin-key') || '';
-  if (!expected || expected.length < 24) return res.status(503).json({ error: 'کلید مدیریت در سرور تنظیم نشده است.' });
+  if (!expected || Buffer.byteLength(expected) < 32) return res.status(503).json({ error: 'کلید مدیریت در سرور تنظیم نشده است یا طول کافی ندارد.' });
   const a = Buffer.from(expected), b = Buffer.from(supplied);
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: 'دسترسی غیرمجاز' });
   next();
@@ -108,6 +137,10 @@ const paymentRateLimit = createRateLimiter({
 
 app.use('/api/admin', adminRateLimit);
 app.use('/api/payments/zarinpal', createZarinpalRouter({ pool, paymentRateLimit }));
+
+pool.on('error', error => {
+  console.error('Unexpected PostgreSQL pool error:', error && error.message ? error.message : error);
+});
 
 const toman = n => Number.isSafeInteger(Number(n)) && Number(n) >= 0;
 const orderCode = () => 'MM' + Date.now().toString().slice(-9) + crypto.randomBytes(2).toString('hex').toUpperCase();
@@ -562,7 +595,7 @@ app.patch('/api/admin/orders/:id/status', adminOnly, async (req,res) => {
     await client.query('BEGIN');
 
     const found = await client.query(
-      'SELECT id,status,payment_status FROM orders WHERE id=$1 FOR UPDATE',
+      'SELECT id,status,payment_status,payment_method,payment_provider FROM orders WHERE id=$1 FOR UPDATE',
       [id]
     );
 
@@ -587,8 +620,17 @@ app.patch('/api/admin/orders/:id/status', adminOnly, async (req,res) => {
     }
 
     if (next === 'paid') {
+      const payment = found.rows[0];
+      // A ZarinPal payment can only become paid after the provider callback verifies it.
+      // Manual card-to-card orders remain confirmable by the store administrator.
+      if (payment.payment_provider === 'zarinpal' || payment.payment_method === 'zarinpal') {
+        throw new Error('پرداخت زرین‌پال فقط پس از تأیید مستقیم درگاه قابل نهایی‌شدن است.');
+      }
+      if (payment.payment_status === 'verified') {
+        throw new Error('وضعیت تأیید پرداخت با وضعیت سفارش سازگار نیست؛ بررسی دستی لازم است.');
+      }
       await client.query(
-        "UPDATE orders SET status='paid',payment_status='verified',updated_at=NOW() WHERE id=$1",
+        "UPDATE orders SET status='paid',payment_status='verified',payment_verified_at=NOW(),updated_at=NOW() WHERE id=$1",
         [id]
       );
     } else {
@@ -620,9 +662,13 @@ app.patch('/api/admin/orders/:id/status', adminOnly, async (req,res) => {
     if (client) {
       try { await client.query('ROLLBACK'); } catch {}
     }
-    res.status(e.message === 'تغییر وضعیت از حالت فعلی مجاز نیست.' ? 409 : 503)
-      .json({error:e.message === 'تغییر وضعیت از حالت فعلی مجاز نیست.'
-        ? e.message : 'به‌روزرسانی سفارش انجام نشد.'});
+    const conflict = [
+      'تغییر وضعیت از حالت فعلی مجاز نیست.',
+      'پرداخت زرین‌پال فقط پس از تأیید مستقیم درگاه قابل نهایی‌شدن است.',
+      'وضعیت تأیید پرداخت با وضعیت سفارش سازگار نیست؛ بررسی دستی لازم است.'
+    ].includes(e.message);
+    res.status(conflict ? 409 : 503)
+      .json({error:conflict ? e.message : 'به‌روزرسانی سفارش انجام نشد.'});
   } finally {
     if (client) client.release();
   }
@@ -690,7 +736,7 @@ async function validateCategory(client, categoryId) {
   if (!result.rowCount) throw new Error('دسته‌بندی انتخاب‌شده معتبر یا فعال نیست.');
 }
 
-app.post('/api/admin/uploads/product', adminOnly, async (req, res) => {
+app.post('/api/admin/uploads/product', adminOnly, express.json({ limit: '9mb' }), async (req, res) => {
   try {
     const mime = String(req.body?.mime_type || '');
     const encoded = String(req.body?.image_base64 || '');
@@ -856,6 +902,10 @@ app.delete('/api/admin/products/:id', adminOnly, async (req, res) => {
   }
 });
 
+// Unknown API and upload paths must return machine-readable 404s, never the storefront HTML.
+app.use('/api', (_req, res) => res.status(404).json({ error: 'مسیر API پیدا نشد.' }));
+app.use('/uploads', (_req, res) => res.status(404).json({ error: 'فایل موردنظر پیدا نشد.' }));
+
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
   if (error && error.type === 'entity.too.large') {
@@ -866,4 +916,23 @@ app.use((error, req, res, next) => {
 });
 
 app.get('*', (_req,res) => res.sendFile(path.join(__dirname,'../../frontend/index.html')));
-app.listen(port, '0.0.0.0', () => console.log(`AVELORA running on ${port}`));
+
+const server = app.listen(port, '0.0.0.0', () => console.log(`AVELORA running on ${port}`));
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`Received ${signal}; shutting down AVELORA gracefully...`);
+  server.close(async () => {
+    try {
+      await pool.end();
+      process.exit(0);
+    } catch (error) {
+      console.error('Database pool shutdown failed:', error && error.message ? error.message : error);
+      process.exit(1);
+    }
+  });
+  setTimeout(() => process.exit(1), 10000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

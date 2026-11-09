@@ -67,7 +67,13 @@ async function run() {
   await waitForServer();
 
   let staticResponse = await fetch(BASE + '/admin/');
-  assert(staticResponse.status === 200, 'بارگذاری صفحه پنل مدیریت');
+  const adminHtml = await staticResponse.text();
+  assert(staticResponse.status === 200 && adminHtml.includes('noindex,nofollow'), 'بارگذاری پنل مدیریت با جلوگیری از ایندکس موتورهای جست‌وجو');
+  staticResponse = await fetch(BASE + '/');
+  const storefrontHtml = await staticResponse.text();
+  assert(staticResponse.status === 200 && storefrontHtml.includes('name="description"') &&
+    staticResponse.headers.get('x-content-type-options') === 'nosniff',
+    'بارگذاری فروشگاه همراه با توضیحات SEO و هدر امنیتی nosniff');
   staticResponse = await fetch(BASE + '/assistant.js');
   assert(staticResponse.status === 200 && (await staticResponse.text()).includes('راهنمای خرید AVELORA'), 'بارگذاری دستیار رایگان راهنمای خرید');
   staticResponse = await fetch(BASE + '/admin/admin.js');
@@ -80,6 +86,14 @@ async function run() {
     body: { mime_type: 'image/png', image_base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=' }
   });
   assert(r.status === 401, 'جلوگیری از آپلود عکس بدون کلید مدیر');
+
+  r = await request('/api/unknown-endpoint');
+  assert(r.status === 404 && typeof r.data.error === 'string', 'پاسخ JSON استاندارد برای مسیر API ناشناخته');
+
+  const missingUpload = await fetch(BASE + '/uploads/does-not-exist.png');
+  const missingUploadBody = await missingUpload.json();
+  assert(missingUpload.status === 404 && typeof missingUploadBody.error === 'string',
+    'پاسخ ۴۰۴ استاندارد برای فایل آپلودی ناموجود');
 
   r = await request('/api/admin/uploads/product', {
     method: 'POST',
@@ -324,6 +338,16 @@ async function run() {
 
   const order = r.data.find(x => x.order_code === orderCode);
   assert(!!order, 'یافتن سفارش آزمایشی');
+
+  // Simulate an order with a pending ZarinPal authority: admin UI must not bypass gateway verification.
+  await db.query("UPDATE orders SET payment_method='zarinpal',payment_provider='zarinpal',payment_status='pending',payment_authority='TESTAUTHORITY1234567890' WHERE id=$1", [order.id]);
+  r = await request(`/api/admin/orders/${order.id}/status`, {
+    method: 'PATCH', admin: true, body: { status: 'paid' }
+  });
+  assert(r.status === 409, 'جلوگیری از تأیید دستی پرداخت زرین‌پال بدون تأیید درگاه');
+  const guardedOrder = await db.query('SELECT status,payment_status FROM orders WHERE id=$1', [order.id]);
+  assert(guardedOrder.rows[0].status === 'awaiting_payment' && guardedOrder.rows[0].payment_status === 'pending', 'حفظ وضعیت پرداخت زرین‌پال تا تأیید واقعی');
+  await db.query("UPDATE orders SET payment_method='card_to_card',payment_provider=NULL,payment_status='unverified',payment_authority=NULL WHERE id=$1", [order.id]);
 
   r = await request(`/api/admin/orders/${order.id}/status`, {
     method: 'PATCH',
