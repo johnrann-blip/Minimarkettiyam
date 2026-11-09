@@ -7,6 +7,10 @@ function showAccountState() {
     $account('#accountOpen').textContent = 'حساب من';
     welcome.hidden = false;
     welcome.textContent = 'سلام ' + currentCustomer.full_name + '؛ تخفیف ۵٪ عضویت برای محصولات واجد شرایط فعال است.';
+    const nameField=document.querySelector('#orderForm [name=name]');
+    const phoneField=document.querySelector('#orderForm [name=phone]');
+    if(nameField && !nameField.value) nameField.value=currentCustomer.full_name;
+    if(phoneField && !phoneField.value) phoneField.value=currentCustomer.phone;
     $account('#registerForm').hidden = true;
     $account('#loginForm').hidden = true;
     $account('#logoutButton').hidden = false;
