@@ -87,7 +87,7 @@
         <label>تاریخ هزینه <input name="expense_date" type="date"></label>
         <input name="category" maxlength="80" placeholder="دسته هزینه؛ مانند بسته‌بندی یا تبلیغات" required>
         <input name="description" maxlength="500" placeholder="شرح هزینه">
-        <input name="amount_toman" type="number" min="1" step="1" placeholder="مبلغ به تومان" required>
+        <input name="amount_toman" type="number" step="1" placeholder="مبلغ؛ مثبت = هزینه، منفی = اصلاح/برگشت (تومان)" required>
         <button type="submit">ثبت هزینه</button>
       </form>
       <button id="refreshExpenses" type="button">به‌روزرسانی دفتر هزینه‌ها</button>
