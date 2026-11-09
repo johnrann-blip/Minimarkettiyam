@@ -6,19 +6,29 @@ function escapeHtml(value) {
   })[c]);
 }
 
-let key = sessionStorage.getItem('mm_admin_key') || '';
-$('#key').value = key;
-
+let adminUser = null;
+const ALL_ADMIN_PERMISSIONS = [
+  'products.view','products.create','products.update','products.archive',
+  'orders.view','orders.update','customers.view','settings.view','settings.update',
+  'reports.view','audit.view'
+];
+const PERMISSION_LABELS = {
+  'products.view':'مشاهده محصولات','products.create':'ثبت محصول','products.update':'ویرایش محصول',
+  'products.archive':'بایگانی محصول','orders.view':'مشاهده سفارش‌ها','orders.update':'تغییر وضعیت سفارش',
+  'customers.view':'مشاهده مشتریان','settings.view':'مشاهده تنظیمات','settings.update':'تغییر تنظیمات',
+  'reports.view':'گزارش‌ها','audit.view':'سوابق فعالیت'
+};
+function adminCan(permission) {
+  return Boolean(adminUser && (adminUser.role === 'owner' || (adminUser.permissions || []).includes(permission)));
+}
 function headers() {
-  return {
-    'Content-Type':'application/json',
-    'x-admin-key':key
-  };
+  return {'Content-Type':'application/json','x-admin-request':'1'};
 }
 
 async function request(url, options = {}) {
   const response = await fetch(url, {
     ...options,
+    credentials:'same-origin',
     headers: {...headers(), ...(options.headers || {})}
   });
   const data = await response.json().catch(() => ({}));
@@ -74,15 +84,74 @@ $('#imageFile').addEventListener('change', () => {
   message('عکس انتخاب شد و پیش‌نمایش آن آماده است. برای آپلود و ذخیره عکس، دکمه «ذخیره تغییرات» را بزن.');
 });
 
-$('#saveKey').onclick = async () => {
-  key = $('#key').value.trim();
-  if (!key) {
-    message('کلید مدیریت را وارد کن.');
+function setAdminSession(admin) {
+  adminUser = admin || null;
+  $('#adminAuth').hidden = Boolean(adminUser);
+  $('#adminWorkspace').hidden = !adminUser;
+  if (!adminUser) {
+    document.body.classList.remove('admin-authenticated');
     return;
   }
-  sessionStorage.setItem('mm_admin_key', key);
-  message('کلید ذخیره شد؛ در حال دریافت اطلاعات...');
-  await Promise.all([products(), orders(), customers(), loadStoreSettings()]);
+  document.body.classList.add('admin-authenticated');
+  $('#adminIdentity').textContent = 'واردشده: ' + adminUser.display_name + ' (' + (adminUser.role === 'owner' ? 'مالک فروشگاه' : 'مدیر') + ')';
+  $('#managerSection').hidden = adminUser.role !== 'owner';
+  $('#auditSection').hidden = !adminCan('audit.view');
+  $('#productFormSection').hidden = !(adminCan('products.create') || adminCan('products.update'));
+  $('#productsSection').hidden = !adminCan('products.view');
+  $('#archiveSection').hidden = !adminCan('products.view');
+  $('#settingsSection').hidden = !(adminCan('settings.view') || adminCan('settings.update'));
+  $('#customersSection').hidden = !adminCan('customers.view');
+  $('#ordersSection').hidden = !adminCan('orders.view');
+  for (const field of $('#settingsForm').elements) field.disabled = !adminCan('settings.update');
+  Promise.all([
+    adminCan('products.view') || adminCan('products.create') || adminCan('products.update') ? products() : Promise.resolve(),
+    adminCan('orders.view') ? orders() : Promise.resolve(),
+    adminCan('customers.view') ? customers() : Promise.resolve(),
+    adminCan('settings.view') || adminCan('settings.update') ? loadStoreSettings() : Promise.resolve(),
+    adminUser.role === 'owner' ? loadManagers() : Promise.resolve(),
+    adminCan('audit.view') ? loadAudit() : Promise.resolve()
+  ]);
+}
+async function initializeAdminAuth() {
+  try {
+    const status = await fetch('/api/admin/auth/status').then(r => r.json());
+    $('#bootstrapBox').hidden = !status.setup_required;
+    $('#loginBox').hidden = status.setup_required;
+    const me = await fetch('/api/admin/auth/me').then(async r => {
+      if (!r.ok) return null;
+      return r.json();
+    });
+    if (me && me.admin) setAdminSession(me.admin);
+  } catch {
+    $('#authMessage').textContent = 'ارتباط با سرور مدیریت برقرار نشد؛ وضعیت سرور را بررسی کن.';
+  }
+}
+$('#bootstrapForm').onsubmit = async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = Object.fromEntries(new FormData(form).entries());
+  $('#authMessage').textContent = 'در حال ساخت حساب مالک...';
+  try {
+    const result = await request('/api/admin/auth/bootstrap',{method:'POST',body:JSON.stringify(data)});
+    form.reset();
+    setAdminSession(result.admin);
+    $('#authMessage').textContent = 'حساب مالک ساخته شد. کلید راه‌اندازی دیگر برای ورود روزانه لازم نیست.';
+  } catch(error) { $('#authMessage').textContent = error.message; }
+};
+$('#loginForm').onsubmit = async event => {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+  $('#authMessage').textContent = 'در حال بررسی اطلاعات ورود...';
+  try {
+    const result = await request('/api/admin/auth/login',{method:'POST',body:JSON.stringify(data)});
+    event.currentTarget.reset();
+    setAdminSession(result.admin);
+    $('#authMessage').textContent = 'ورود موفق بود.';
+  } catch(error) { $('#authMessage').textContent = error.message; }
+};
+$('#logoutAdmin').onclick = async () => {
+  try { await request('/api/admin/auth/logout',{method:'POST',body:'{}'}); }
+  finally { setAdminSession(null); $('#loginBox').hidden=false; $('#bootstrapBox').hidden=true; }
 };
 
 $('#productForm').onsubmit = async event => {
@@ -429,5 +498,4 @@ $('#archivedProducts').addEventListener('click', async event => {
   }
 });
 
-categories();
-customers();
+initializeAdminAuth();
