@@ -8,7 +8,7 @@
 
 شاخه مورد بازبینی: `feature/admin-rbac-foundation`  
 Pull Request: [#6](https://github.com/johnrann-blip/Minimarkettiyam/pull/6)  
-Commit بازبینی‌شده: `f2f2d9d3e532d16073fd2ad821530bd6b9896f5c`
+Commit بازبینی‌شده: آخرین HEAD شاخه `feature/admin-rbac-foundation`؛ SHA جاری در بخش Commits مربوط به PR شماره ۶ نمایش داده می‌شود.
 
 نتایج ارسالی از Termux:
 - بررسی نحوی JavaScript: موفق
@@ -81,6 +81,16 @@ Commit بازبینی‌شده: `f2f2d9d3e532d16073fd2ad821530bd6b9896f5c`
 وضعیت فعلی: مهاجرت‌های ۰۰۵، ۰۰۶ و ۰۰۷ در آزمون یکپارچه روی دیتابیس آزمایشی اجرا می‌شوند؛ دیتابیس اصلی نباید در این مرحله تغییر کند.
 
 ## موارد مهم پیش از دریافت سفارش واقعی
+
+### P1 — حفاظت شاخه اصلی GitHub
+
+- [ ] فعال‌سازی Branch Protection/Ruleset برای شاخه `main`
+- [ ] الزام ادغام از طریق Pull Request
+- [ ] الزام موفقیت بررسی GitHub Actions با job به نام `backend` پیش از ادغام
+- [ ] ممنوع‌کردن force-push و حذف شاخه اصلی
+- [ ] جلوگیری از push مستقیم روزمره به `main`
+
+وضعیت مشاهده‌شده هنگام ممیزی: شاخه `main` هنوز در GitHub محافظت‌شده نیست. این تنظیم باید در تنظیمات مخزن توسط مالک فعال شود؛ تغییرات کد و CI به‌تنهایی branch protection را فعال نمی‌کنند.
 
 ### P1 — اطلاعات و سیاست‌های فروشگاه
 
