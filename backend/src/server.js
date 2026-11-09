@@ -619,7 +619,7 @@ app.get('/api/admin/customers', adminOnly, async (_req,res) => {
     const result=await pool.query(`
       SELECT c.id,c.full_name,c.phone,c.is_active,c.created_at,
              COUNT(o.id)::int AS order_count,
-             COALESCE(SUM(o.total_toman) FILTER (WHERE o.status<>'cancelled'),0)::bigint AS total_spent_toman
+             COALESCE(SUM(o.total_toman) FILTER (WHERE o.payment_status='verified' AND o.status<>'cancelled'),0)::bigint AS total_spent_toman
       FROM customers c LEFT JOIN orders o ON o.customer_id=c.id
       GROUP BY c.id ORDER BY c.created_at DESC LIMIT 500
     `);
