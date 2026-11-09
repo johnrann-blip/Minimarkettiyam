@@ -103,9 +103,9 @@ async function run() {
   assert(forbiddenProducts.status===403,'جلوگیری از مشاهده محصولات توسط مدیر فاقد مجوز');
   const allowedOrders=await request('/api/admin/orders',{admin:true});
   assert(allowedOrders.status===200,'اجازه مشاهده سفارش‌ها برای مدیر دارای مجوز');
+  adminCookie=ownerCookie;
   const auditRows=await request('/api/admin/auth/audit',{admin:true});
   assert(auditRows.status===200 && auditRows.data.some(x=>x.action==='admin.login'),'ثبت و نمایش رویدادهای ورود و فعالیت مدیران');
-  adminCookie=ownerCookie;
   const managerDisabled=await request('/api/admin/auth/managers/'+managerCreated.data.id,{
     method:'PATCH',admin:true,body:{is_active:false}
   });
