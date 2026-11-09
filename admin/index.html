@@ -38,9 +38,16 @@
   <section>
     <h2>محصولات فروشگاه</h2>
     <button id="refreshProducts" type="button">به‌روزرسانی محصولات</button>
-    <button id="toggleArchivedProducts" type="button">نمایش محصولات حذف‌شده</button>
-    <p class="muted">محصولات حذف‌شده از ویترین در فهرست اصلی پنهان می‌شوند؛ سوابق سفارش‌های قبلی محفوظ می‌ماند.</p>
+    <p class="muted">در این فهرست فقط محصولات فعال فروشگاه نمایش داده می‌شوند.</p>
     <div id="products"></div>
+  </section>
+
+  <section>
+    <details id="productArchive">
+      <summary>بایگانی محصولات <span id="archivedProductsCount">(۰)</span></summary>
+      <p class="muted">محصولات این بخش در فروشگاه نمایش داده نمی‌شوند. برای بازگرداندن هر محصول، «فعال‌سازی مجدد» را بزنید. سوابق سفارش‌ها محفوظ می‌ماند.</p>
+      <div id="archivedProducts"></div>
+    </details>
   </section>
 
   <section id="storeSettings">
@@ -84,6 +91,6 @@
 
   <p id="msg" role="status"></p>
 </main>
-<script src="/admin/admin.js?v=20261109-product-archive-3"></script>
+<script src="/admin/admin.js?v=20261109-product-archive-4"></script>
 </body>
 </html>
