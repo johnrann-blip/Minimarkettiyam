@@ -3,14 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#3b281f"><title>AVELORA | کیف، زیبایی و بیشتر</title>
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/style.css?v=20261109-5">
 </head>
 <body>
 <header class="top"><a class="brand" href="/">AVELORA <small>BAGS • BEAUTY • MORE</small></a><button id="cartOpen" class="cart">سبد خرید <b id="cartCount">۰</b></button></header>
 <section class="hero"><span class="eyebrow">انتخابی برای هر سلیقه</span><h1>زیبایی، استایل<br>و خرید جذاب</h1><p>کیف، لوازم آرایشی و انتخاب‌های متنوع</p><a href="#products" class="primary">مشاهده محصولات</a></section>
 <main id="products">
 <div class="section-head"><div><span class="eyebrow">ویترین فروشگاه</span><h2>محصولات</h2></div><input id="search" placeholder="جست‌وجوی محصول..."></div>
-<nav id="categories" class="chips"><button class="active" data-category="">همه</button></nav>
+<div class="category-entry-grid" aria-label="دسته‌بندی‌های اصلی فروشگاه">
+  <button class="category-entry" type="button" data-category="bags-accessories"><span aria-hidden="true">👜</span><strong>کیف</strong><small>مشاهده کیف‌ها و اکسسوری‌ها</small></button>
+  <button class="category-entry" type="button" data-category="beauty"><span aria-hidden="true">💄</span><strong>لوازم آرایشی</strong><small>مشاهده محصولات زیبایی</small></button>
+</div>
+<nav id="categories" class="chips" aria-label="فیلتر محصولات"><button class="active" data-category="">همه محصولات</button></nav>
 <div id="productGrid" class="grid"><p>در حال دریافت محصولات...</p></div>
 </main>
 <dialog id="productDialog" class="product-dialog" aria-labelledby="productDialogTitle">
@@ -30,5 +34,5 @@
 <button id="submitOrder" class="primary" type="submit" disabled>ثبت سفارش</button><p id="orderMessage" role="status"></p>
 </form></aside><div id="scrim" class="scrim hidden"></div>
 <footer>© AVELORA — BAGS • BEAUTY • MORE</footer>
-<script src="/app.js"></script>
+<script src="/app.js?v=20261109-5"></script>
 </body></html>
