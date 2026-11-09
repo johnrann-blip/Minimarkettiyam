@@ -672,6 +672,29 @@ app.get('/api/admin/reports/errors', adminOnly, async (_req,res) => {
   }
 });
 
+app.patch('/api/admin/customers/:id/status', adminOnly, async (req,res) => {
+  const id=String(req.params.id||'');
+  const active=req.body?.is_active;
+  if(!/^[1-9][0-9]*$/.test(id)||typeof active!=='boolean') return res.status(400).json({error:'شناسه یا وضعیت مشتری معتبر نیست.'});
+  const client=await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const found=await client.query('SELECT id,is_active FROM customers WHERE id=$1 FOR UPDATE',[id]);
+    if(!found.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'مشتری پیدا نشد.'});}
+    if(!active){
+      const orders=await client.query('SELECT 1 FROM orders WHERE customer_id=$1 LIMIT 1',[id]);
+      if(orders.rowCount){await client.query('ROLLBACK');return res.status(409).json({error:'این مشتری سابقه سفارش دارد و قابل غیرفعال‌سازی از این بخش نیست.'});}
+      await client.query('DELETE FROM customer_sessions WHERE customer_id=$1',[id]);
+    }
+    const updated=await client.query('UPDATE customers SET is_active=$1,updated_at=NOW() WHERE id=$2 RETURNING id,is_active',[active,id]);
+    await client.query('COMMIT');
+    res.json({success:true,customer:updated.rows[0]});
+  } catch(error) {
+    try{await client.query('ROLLBACK');}catch{}
+    res.status(500).json({error:'تغییر وضعیت مشتری انجام نشد.'});
+  } finally {client.release();}
+});
+
 app.get('/api/admin/orders', adminOnly, async (_req,res) => {
   try {
     const r = await pool.query(`SELECT o.*, COALESCE(json_agg(json_build_object('name',i.product_name,'quantity',i.quantity,'unit_price_toman',i.unit_price_toman)) FILTER (WHERE i.id IS NOT NULL),'[]') items
