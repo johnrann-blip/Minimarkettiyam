@@ -12,6 +12,30 @@ const { createZarinpalRouter, getConfig } = require('./zarinpal');
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+function validateRuntimeConfig() {
+  const errors = [];
+  if (!process.env.DATABASE_URL) errors.push('DATABASE_URL is required.');
+  if (!Number.isInteger(port) || port < 1 || port > 65535) errors.push('PORT must be an integer from 1 to 65535.');
+
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.ADMIN_API_KEY || Buffer.byteLength(process.env.ADMIN_API_KEY) < 32) {
+      errors.push('ADMIN_API_KEY must contain at least 32 bytes in production.');
+    }
+
+    const paymentEnabled = String(process.env.ZARINPAL_ENABLED || 'false').trim().toLowerCase() === 'true';
+    if (paymentEnabled) {
+      if (String(process.env.ZARINPAL_MODE || '').trim().toLowerCase() !== 'production') {
+        errors.push('ZARINPAL_MODE must be production when live payments are enabled.');
+      }
+      if (!getConfig().ready) errors.push('ZarinPal production configuration is incomplete or invalid.');
+    }
+  }
+
+  if (errors.length) throw new Error('Invalid AVELORA runtime configuration: ' + errors.join(' '));
+}
+
+validateRuntimeConfig();
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -30,7 +54,11 @@ app.use(helmet({
   }
 }));
 app.use(cors({ origin: false }));
-app.use(express.json({ limit: '9mb' }));
+// Keep ordinary JSON requests small; only the authenticated image-upload route gets the larger body limit.
+app.use((req, res, next) => {
+  if (req.method === 'POST' && req.path === '/api/admin/uploads/product') return next();
+  return express.json({ limit: '1mb' })(req, res, next);
+});
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { maxAge: '7d', immutable: true }));
 app.use(express.static(path.join(__dirname, '../../frontend')));
 app.use('/admin', express.static(path.join(__dirname, '../../admin')));
@@ -38,7 +66,7 @@ app.use('/admin', express.static(path.join(__dirname, '../../admin')));
 function adminOnly(req, res, next) {
   const expected = process.env.ADMIN_API_KEY;
   const supplied = req.get('x-admin-key') || '';
-  if (!expected || expected.length < 24) return res.status(503).json({ error: 'کلید مدیریت در سرور تنظیم نشده است.' });
+  if (!expected || Buffer.byteLength(expected) < 32) return res.status(503).json({ error: 'کلید مدیریت در سرور تنظیم نشده است یا طول کافی ندارد.' });
   const a = Buffer.from(expected), b = Buffer.from(supplied);
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: 'دسترسی غیرمجاز' });
   next();
@@ -694,7 +722,7 @@ async function validateCategory(client, categoryId) {
   if (!result.rowCount) throw new Error('دسته‌بندی انتخاب‌شده معتبر یا فعال نیست.');
 }
 
-app.post('/api/admin/uploads/product', adminOnly, async (req, res) => {
+app.post('/api/admin/uploads/product', adminOnly, express.json({ limit: '9mb' }), async (req, res) => {
   try {
     const mime = String(req.body?.mime_type || '');
     const encoded = String(req.body?.image_base64 || '');
