@@ -8,6 +8,7 @@ const fs = require('fs/promises');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 const { createZarinpalRouter, getConfig } = require('./zarinpal');
+const { createCustomerAuth } = require('./customer-auth');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -135,6 +136,10 @@ const paymentRateLimit = createRateLimiter({
   message: 'تعداد درخواست‌های پرداخت بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
 });
 
+const customerAuthRateLimit = createRateLimiter({windowMs:15*60*1000,max:10,message:'تعداد تلاش‌های ورود یا ثبت‌نام زیاد است. کمی بعد دوباره تلاش کن.'});
+const customerAuth = createCustomerAuth({pool,rateLimit:customerAuthRateLimit});
+app.use('/api',customerAuth.optionalCustomer);
+app.use('/api/auth',customerAuth.router);
 app.use('/api/admin', adminRateLimit);
 app.use('/api/payments/zarinpal', createZarinpalRouter({ pool, paymentRateLimit }));
 
@@ -160,9 +165,19 @@ app.get('/api/products', async (req, res) => {
     if (req.query.category) { values.push(String(req.query.category)); where += ` AND c.slug=$${values.length}`; }
     if (req.query.q) { values.push('%' + String(req.query.q).slice(0,80) + '%'); where += ` AND (p.name ILIKE $${values.length} OR p.description ILIKE $${values.length})`; }
     const r = await pool.query(
-      `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.stock,p.image_url,c.name AS category_name,c.slug AS category_slug
+      `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,c.name AS category_name,c.slug AS category_slug
        FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE ${where} ORDER BY p.created_at DESC LIMIT 100`, values);
-    res.json(r.rows);
+    res.json(r.rows.map(p => {
+      const {cost_price_toman,...publicProduct}=p;
+      const regular=Number(p.price_toman), current=Number(p.sale_price_toman ?? p.price_toman);
+      let effective=current, discount=0;
+      if(req.customer && p.cost_price_toman!==null){
+        const candidate=Math.floor(regular*95/100);
+        if(candidate>=Number(p.cost_price_toman)){effective=Math.min(current,candidate);discount=Math.max(0,current-effective);}
+      }
+      return {...publicProduct,price_toman:regular,sale_price_toman:effective<regular?effective:null,
+        member_discount_toman:discount,member_price_eligible:Boolean(req.customer&&discount>0)};
+    }));
   } catch { res.status(500).json({ error: 'خطا در دریافت محصولات' }); }
 });
 
@@ -397,7 +412,9 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
   }
 
   const crypto = require('crypto');
+  const customerId = req.customer ? req.customer.id : null;
   const canonicalRequest = {
+    customer_id: customerId,
     customer: {name,phone,city,province,address,postal},
     items: [...quantities.entries()].sort((a,b) => a[0] - b[0]),
     delivery_method,
@@ -419,7 +436,7 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
     );
 
     const previous = await client.query(
-      `SELECT order_code,subtotal_toman,shipping_toman,total_toman,status,request_hash
+      `SELECT order_code,subtotal_toman,shipping_toman,total_toman,status,request_hash,membership_discount_toman,membership_discount_percent
        FROM orders WHERE idempotency_key=$1`,
       [idempotencyKey]
     );
@@ -437,6 +454,8 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
         subtotal_toman:Number(old.subtotal_toman),
         shipping_toman:Number(old.shipping_toman),
         total_toman:Number(old.total_toman),
+        membership_discount_toman:Number(old.membership_discount_toman||0),
+        membership_discount_percent:Number(old.membership_discount_percent||0),
         status:old.status,
         duplicate:true,
         message:'این سفارش قبلاً ثبت شده است.'
@@ -468,11 +487,12 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
     }
 
     let subtotal = 0;
+    let membershipDiscount = 0;
     const normalized = [];
 
     for (const [id, qty] of quantities) {
       const result = await client.query(
-        'SELECT id,name,price_toman,sale_price_toman,stock FROM products WHERE id=$1 AND is_active=true FOR UPDATE',
+        'SELECT id,name,price_toman,sale_price_toman,cost_price_toman,stock FROM products WHERE id=$1 AND is_active=true FOR UPDATE',
         [id]
       );
 
@@ -483,7 +503,14 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
         throw new Error('موجودی ' + product.name + ' کافی نیست.');
       }
 
-      const price = Number(product.sale_price_toman ?? product.price_toman);
+      const regularPrice=Number(product.price_toman);
+      const currentPrice=Number(product.sale_price_toman ?? product.price_toman);
+      let price=currentPrice;
+      if(req.customer && product.cost_price_toman!==null){
+        const candidate=Math.floor(regularPrice*95/100);
+        if(candidate>=Number(product.cost_price_toman)) price=Math.min(currentPrice,candidate);
+      }
+      const discountPerUnit=Math.max(0,currentPrice-price);
       const line = price * qty;
 
       if (!Number.isSafeInteger(price) || price < 0 ||
@@ -493,6 +520,7 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
       }
 
       subtotal += line;
+      membershipDiscount += discountPerUnit*qty;
       normalized.push({product,qty,price,line});
     }
 
@@ -502,13 +530,12 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
     const code = orderCode();
     const inserted = await client.query(
       `INSERT INTO orders
-       (order_code,customer_name,phone,city,province,address,postal_code,
-        delivery_method,subtotal_toman,shipping_toman,total_toman,customer_note,
-        idempotency_key,request_hash)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       (order_code,customer_id,customer_name,phone,city,province,address,postal_code,delivery_method,
+        subtotal_toman,shipping_toman,total_toman,customer_note,membership_discount_toman,membership_discount_percent,idempotency_key,request_hash)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING id,order_code,total_toman,status`,
-      [code,name,phone,city,province,address,postal,delivery_method,
-       subtotal,shipping,total,customerNote,idempotencyKey,requestHash]
+      [code,customerId,name,phone,city,province,address,postal,delivery_method,
+       subtotal,shipping,total,customerNote,membershipDiscount,membershipDiscount>0?5:0,idempotencyKey,requestHash]
     );
 
     const order = inserted.rows[0];
@@ -532,6 +559,8 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
     res.status(201).json({
       order_code:order.order_code,
       subtotal_toman:subtotal,
+      membership_discount_toman:membershipDiscount,
+      membership_discount_percent:membershipDiscount>0?5:0,
       shipping_toman:shipping,
       total_toman:Number(order.total_toman),
       status:order.status,
@@ -566,6 +595,21 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
     });
   } finally {
     if (client) client.release();
+  }
+});
+
+app.get('/api/admin/customers', adminOnly, async (_req,res) => {
+  try {
+    const result=await pool.query(`
+      SELECT c.id,c.full_name,c.phone,c.created_at,
+             COUNT(o.id)::int AS order_count,
+             COALESCE(SUM(o.total_toman) FILTER (WHERE o.status<>'cancelled'),0)::bigint AS total_spent_toman
+      FROM customers c LEFT JOIN orders o ON o.customer_id=c.id
+      GROUP BY c.id ORDER BY c.created_at DESC LIMIT 500
+    `);
+    res.json(result.rows);
+  } catch {
+    res.status(500).json({error:'دریافت فهرست مشتریان انجام نشد.'});
   }
 });
 
@@ -714,7 +758,10 @@ function validateProduct(p) {
     throw new Error('وضعیت فعال‌بودن محصول معتبر نیست.');
   }
 
+  const cost = p.cost_price_toman === null || p.cost_price_toman === '' || p.cost_price_toman === undefined ? null : Number(p.cost_price_toman);
+  if(cost!==null && (!Number.isSafeInteger(cost)||cost<0)) throw new Error('قیمت خرید محصول معتبر نیست.');
   return {
+    cost_price_toman:cost,
     sku: sku || null,
     name,
     category_id: category,
@@ -771,7 +818,7 @@ app.get('/api/admin/products', adminOnly, async (_req, res) => {
   try {
     const result = await pool.query(
       `SELECT p.id,p.sku,p.name,p.category_id,p.description,
-              p.price_toman,p.sale_price_toman,p.stock,p.image_url,
+              p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,
               p.is_active,p.created_at,p.updated_at,
               c.name AS category_name
        FROM products p
@@ -794,10 +841,10 @@ app.post('/api/admin/products', adminOnly, async (req, res) => {
 
     const result = await client.query(
       `INSERT INTO products
-       (sku,name,category_id,description,price_toman,sale_price_toman,stock,image_url,is_active)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id,name,sku,category_id,description,price_toman,sale_price_toman,stock,image_url,is_active`,
+       (sku,name,category_id,description,price_toman,sale_price_toman,cost_price_toman,stock,image_url,is_active)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id,name,sku,category_id,description,price_toman,sale_price_toman,cost_price_toman,stock,image_url,is_active`,
       [p.sku,p.name,p.category_id,p.description,p.price_toman,
-       p.sale_price_toman,p.stock,p.image_url,p.is_active]
+       p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,p.is_active]
     );
     res.status(201).json(result.rows[0]);
   } catch (e) {
@@ -839,7 +886,7 @@ app.patch('/api/admin/products/:id', adminOnly, async (req, res) => {
     const current = found.rows[0];
     const allowed = [
       'sku','name','category_id','description','price_toman',
-      'sale_price_toman','stock','image_url','is_active'
+      'sale_price_toman','cost_price_toman','stock','image_url','is_active'
     ];
     const merged = {};
 
@@ -854,11 +901,11 @@ app.patch('/api/admin/products/:id', adminOnly, async (req, res) => {
     const result = await client.query(
       `UPDATE products SET
        sku=$1,name=$2,category_id=$3,description=$4,price_toman=$5,
-       sale_price_toman=$6,stock=$7,image_url=$8,is_active=$9,updated_at=NOW()
-       WHERE id=$10
-       RETURNING id,name,sku,category_id,description,price_toman,sale_price_toman,stock,image_url,is_active`,
+       sale_price_toman=$6,cost_price_toman=$7,stock=$8,image_url=$9,is_active=$10,updated_at=NOW()
+       WHERE id=$11
+       RETURNING id,name,sku,category_id,description,price_toman,sale_price_toman,cost_price_toman,stock,image_url,is_active`,
       [p.sku,p.name,p.category_id,p.description,p.price_toman,
-       p.sale_price_toman,p.stock,p.image_url,p.is_active,id]
+       p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,p.is_active,id]
     );
 
     await client.query('COMMIT');

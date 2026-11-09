@@ -82,7 +82,7 @@ $('#saveKey').onclick = async () => {
   }
   sessionStorage.setItem('mm_admin_key', key);
   message('کلید ذخیره شد؛ در حال دریافت اطلاعات...');
-  await Promise.all([products(), orders(), loadStoreSettings()]);
+  await Promise.all([products(), orders(), customers(), loadStoreSettings()]);
 };
 
 $('#productForm').onsubmit = async event => {
@@ -96,6 +96,7 @@ $('#productForm').onsubmit = async event => {
   delete data.id;
 
   data.price_toman = Number(data.price_toman);
+  data.cost_price_toman = data.cost_price_toman === '' ? null : Number(data.cost_price_toman);
   data.stock = Number(data.stock);
   data.category_id = data.category_id ? Number(data.category_id) : null;
   data.sale_price_toman =
@@ -158,7 +159,8 @@ function renderProductCard(p, archived = false) {
     <div class="order">
       <b>${escapeHtml(p.name)}</b>
       <p>شناسه: ${escapeHtml(p.id)} | کد کالا: ${escapeHtml(p.sku || 'ندارد')}</p>
-      <p>قیمت: ${Number(p.price_toman).toLocaleString('fa-IR')} تومان</p>
+      <p>قیمت فروش: ${Number(p.price_toman).toLocaleString('fa-IR')} تومان</p>
+      <p>قیمت خرید: ${p.cost_price_toman === null || p.cost_price_toman === undefined ? 'ثبت نشده' : Number(p.cost_price_toman).toLocaleString('fa-IR') + ' تومان'}</p>
       <p>تخفیف: ${p.sale_price_toman === null ? 'ندارد' : Number(p.sale_price_toman).toLocaleString('fa-IR') + ' تومان'}</p>
       <p>موجودی: ${Number(p.stock).toLocaleString('fa-IR')}</p>
       <p>دسته: ${escapeHtml(p.category_name || 'بدون دسته')}</p>
@@ -225,6 +227,7 @@ $('#products').addEventListener('click', async event => {
       form.elements.category_id.value = p.category_id ?? '';
       form.elements.sku.value = p.sku || '';
       form.elements.price_toman.value = p.price_toman;
+      form.elements.cost_price_toman.value = p.cost_price_toman ?? '';
       form.elements.sale_price_toman.value = p.sale_price_toman ?? '';
       form.elements.stock.value = p.stock;
       form.elements.image_url.value = p.image_url || '';
@@ -333,6 +336,22 @@ $('#settingsForm').onsubmit = async event => {
   }
 };
 
+async function customers() {
+  try {
+    const data=await request('/api/admin/customers');
+    if(!Array.isArray(data)) throw new Error('پاسخ فهرست مشتریان معتبر نیست.');
+    $('#customers').innerHTML=data.map(customer=>`
+      <div class="order">
+        <b>${escapeHtml(customer.full_name)}</b>
+        <p>شماره موبایل: ${escapeHtml(customer.phone)}</p>
+        <p>تعداد سفارش: ${Number(customer.order_count).toLocaleString('fa-IR')}</p>
+        <p>مجموع خریدهای غیرلغوشده: ${Number(customer.total_spent_toman).toLocaleString('fa-IR')} تومان</p>
+        <p class="muted">عضویت از: ${new Date(customer.created_at).toLocaleDateString('fa-IR')}</p>
+      </div>
+    `).join('') || 'هنوز مشتری عضوی ثبت‌نام نکرده است.';
+  } catch(error) { $('#customers').textContent=error.message; }
+}
+
 async function orders() {
   try {
     const data = await request('/api/admin/orders');
@@ -348,6 +367,7 @@ async function orders() {
         <p>هزینه ارسال: ${Number(o.shipping_toman).toLocaleString('fa-IR')} تومان</p>
         <p><b>مبلغ نهایی: ${Number(o.total_toman).toLocaleString('fa-IR')} تومان</b></p>
         <p>وضعیت سفارش: ${escapeHtml(o.status)} | پرداخت: ${escapeHtml(o.payment_status || 'نامشخص')}</p>
+        <p>نوع مشتری: ${o.customer_id ? 'عضو AVELORA' : 'مهمان'} | تخفیف عضویت: ${Number(o.membership_discount_toman||0).toLocaleString('fa-IR')} تومان</p>
         <p>روش پرداخت: ${escapeHtml(o.payment_method || 'نامشخص')} | کد پیگیری: ${escapeHtml(o.payment_reference || 'ثبت نشده')}</p>
         <p class="muted">${(o.items || []).map(i =>
           `${escapeHtml(i.name)} × ${escapeHtml(i.quantity)}`
@@ -389,6 +409,7 @@ $('#orders').addEventListener('click', async event => {
 });
 
 $('#refresh').onclick = orders;
+$('#refreshCustomers').onclick = customers;
 $('#refreshProducts').onclick = products;
 $('#archivedProducts').addEventListener('click', async event => {
   const button = event.target.closest('[data-restore]');
@@ -409,3 +430,4 @@ $('#archivedProducts').addEventListener('click', async event => {
 });
 
 categories();
+customers();
