@@ -63,7 +63,7 @@ function renderProducts(){
   $('#productGrid').innerHTML=products.length?products.map(p=>`<article class="product">
     <button type="button" class="product-view" data-open-product="${escapeHtml(p.id)}" aria-label="مشاهده مشخصات ${escapeHtml(p.name)}">
       ${p.image_url?`<img class="product-image" src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy">`:'<div class="placeholder">👜</div>'}
-      <div class="product-info"><h3>${escapeHtml(p.name)}</h3><div class="price">${toman(p.sale_price_toman??p.price_toman)}</div>${p.sale_price_toman? `<span class="old">${toman(p.price_toman)}</span>`:''}<div class="stock">${p.stock>0?'موجود در انبار':'ناموجود'}</div></div>
+      <div class="product-info"><h3>${escapeHtml(p.name)}</h3><div class="price">${toman(p.sale_price_toman??p.price_toman)}</div>${p.sale_price_toman? `<span class="old">${toman(p.price_toman)}</span>`:''}${p.member_discount_toman>0?'<small class="member-price-tag">۵٪ تخفیف عضویت</small>':''}<div class="stock">${p.stock>0?'موجود در انبار':'ناموجود'}</div></div>
     </button>
     <button class="add" type="button" ${p.stock<1?'disabled':''} data-add-cart="${escapeHtml(p.id)}">افزودن به سبد</button>
   </article>`).join(''):'<p>هنوز محصولی برای نمایش ثبت نشده است.</p>';
@@ -101,6 +101,7 @@ function openProductDetails(p){
       <h2>${escapeHtml(p.name)}</h2>
       <div class="price detail-price">${toman(p.sale_price_toman??p.price_toman)}</div>
       ${p.sale_price_toman?`<span class="old">${toman(p.price_toman)}</span>`:''}
+      ${p.member_discount_toman>0?'<small class="member-price-tag">۵٪ تخفیف عضویت</small>':''}
       <p class="detail-description">${escapeHtml(p.description||'توضیحاتی برای این محصول ثبت نشده است.')}</p>
       <p class="stock">${p.stock>0?'موجود در انبار':'ناموجود'}</p>
       <button class="primary" type="button" data-detail-add="${escapeHtml(p.id)}" ${p.stock<1?'disabled':''}>افزودن به سبد خرید</button>
