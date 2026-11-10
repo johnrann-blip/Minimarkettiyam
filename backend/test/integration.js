@@ -36,6 +36,7 @@ let memberSessionCookie = null;
 let memberOrderCode = null;
 let memberPhone = null;
 let adminSessionCookie = null;
+let managerUsername = null;
 
 function assert(condition, message) {
   if (!condition) throw new Error('FAIL: ' + message);
@@ -75,6 +76,9 @@ async function run() {
   await db.query(membershipMigration);
   const adminMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/008_admin_auth.sql'), 'utf8');
   await db.query(adminMigration);
+  await db.query('DELETE FROM admin_sessions');
+  await db.query('DELETE FROM admin_audit_logs');
+  await db.query('DELETE FROM admin_users');
   await waitForServer();
 
   let staticResponse = await fetch(BASE + '/admin/');
@@ -114,6 +118,24 @@ async function run() {
   });
   assert(r.status === 200 && !!r.cookie, 'ورود مدیر با رمز صحیح و صدور نشست جدید');
   adminSessionCookie = r.cookie;
+
+  managerUsername = 'manager_' + crypto.randomBytes(4).toString('hex');
+  r = await request('/api/admin/auth/managers', {method:'POST',admin:true,body:{
+    username:managerUsername,display_name:'مدیر آزمایشی',password:'TestManagerPassword123',
+    permissions:['orders.view']
+  }});
+  assert(r.status===201 && r.data.username===managerUsername, 'ساخت حساب مدیر با مجوزهای محدود');
+  r = await request('/api/admin/auth/login', {method:'POST',headers:{'x-admin-request':'1'},body:{
+    username:managerUsername,password:'TestManagerPassword123'
+  }});
+  assert(r.status===200 && r.data.admin.role==='manager' && !!r.cookie, 'ورود مدیر دوم با حساب مستقل');
+  const ownerSessionCookie = adminSessionCookie;
+  adminSessionCookie = r.cookie;
+  r = await request('/api/admin/orders',{admin:true});
+  assert(r.status===200 && Array.isArray(r.data), 'دسترسی مدیر محدود به مشاهده سفارش‌ها');
+  r = await request('/api/admin/products',{admin:true});
+  assert(r.status===403, 'جلوگیری از دسترسی مدیر به محصولات بدون مجوز');
+  adminSessionCookie = ownerSessionCookie;
 
   r = await request('/api/admin/uploads/product', {
     method: 'POST',
@@ -510,6 +532,9 @@ async function run() {
         if(token) await db.query('DELETE FROM customer_sessions WHERE token_hash=$1',[crypto.createHash('sha256').update(decodeURIComponent(token)).digest('hex')]);
       }
       if (memberPhone) await db.query('DELETE FROM customers WHERE phone=$1',[memberPhone]);
+      await db.query('DELETE FROM admin_sessions');
+      await db.query('DELETE FROM admin_audit_logs');
+      await db.query('DELETE FROM admin_users');
     } catch (error) {
       console.error('Test cleanup warning:', error.message);
       process.exitCode = 1;
