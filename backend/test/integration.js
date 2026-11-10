@@ -320,10 +320,14 @@ async function run() {
       footer_bale_url: 'https://ble.ir/avelora_test',
       footer_telegram_url: 'https://t.me/avelora_test',
       footer_address: 'نشانی آزمایشی',
-      footer_hours: 'شنبه تا پنجشنبه ۹ تا ۱۷'
+      footer_hours: 'شنبه تا پنجشنبه ۹ تا ۱۷',
+      policy_terms: 'قوانین خرید آزمایشی',
+      policy_privacy: 'حریم خصوصی آزمایشی',
+      policy_shipping: 'شرایط ارسال آزمایشی',
+      policy_returns: 'شرایط مرجوعی آزمایشی'
     }
   });
-  assert(r.status === 200 && r.data.success === true, 'ذخیره تنظیمات معتبر فروشگاه');
+  assert(r.status === 200 && r.data.success === true, 'ذخیره تنظیمات معتبر فروشگاه و سیاست‌ها');
 
   r = await request('/api/store-settings');
   assert(r.status === 200 && r.data.payment_enabled === true &&
@@ -333,13 +337,25 @@ async function run() {
     r.data.footer_bale_url === 'https://ble.ir/avelora_test' &&
     r.data.footer_about === 'معرفی آزمایشی AVELORA', 'نمایش تنظیمات تماس و شبکه‌های اجتماعی در فوتر عمومی');
 
+  r = await request('/api/store-policies');
+  assert(r.status === 200 &&
+    r.data.policy_terms === 'قوانین خرید آزمایشی' &&
+    r.data.policy_privacy === 'حریم خصوصی آزمایشی' &&
+    r.data.policy_shipping === 'شرایط ارسال آزمایشی' &&
+    r.data.policy_returns === 'شرایط مرجوعی آزمایشی',
+    'نمایش عمومی سیاست‌های منتشرشده فروشگاه');
+
   r = await request('/api/admin/store-settings', { admin: true });
   assert(r.status === 200 &&
     Number(r.data.local_shipping_toman) === 5000 &&
     Number(r.data.nationwide_shipping_toman) === 10000 &&
     r.data.footer_support_email === 'support@example.com' &&
-    r.data.footer_hours === 'شنبه تا پنجشنبه ۹ تا ۱۷',
-    'دریافت تنظیمات فوتر در پنل مدیریت');
+    r.data.footer_hours === 'شنبه تا پنجشنبه ۹ تا ۱۷' &&
+    r.data.policy_terms === 'قوانین خرید آزمایشی' &&
+    r.data.policy_privacy === 'حریم خصوصی آزمایشی' &&
+    r.data.policy_shipping === 'شرایط ارسال آزمایشی' &&
+    r.data.policy_returns === 'شرایط مرجوعی آزمایشی',
+    'دریافت تنظیمات فوتر و صفحات راهنما در پنل مدیریت');
 
   const memberOrderKey=crypto.randomUUID();
   const memberOrderPayload={
