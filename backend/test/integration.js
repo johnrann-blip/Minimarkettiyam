@@ -161,8 +161,7 @@ async function run() {
   assert(r.status===200 && r.data.some(x=>x.id===adCampaignId), 'نمایش کمپین پرداخت‌شده در جایگاه عمومی');
   const adClick=await fetch(BASE+'/api/advertising/click/'+adCampaignId,{redirect:'manual'});
   assert(adClick.status===302 && adClick.headers.get('location')==='https://example.com/', 'ثبت کلیک و هدایت به مقصد امن تبلیغ');
-  r = await request('/api/admin/advertising/campaigns');
-  console.log('AD METRICS DEBUG:',r.status,JSON.stringify(r.data));
+  r = await request('/api/admin/advertising/campaigns',{admin:true});
   const trackedAd = Array.isArray(r.data) ? r.data.find(x=>String(x.id)===String(adCampaignId)) : null;
   assert(r.status===200 && !!trackedAd && Number(trackedAd.impressions)>=1 && Number(trackedAd.clicks)>=1, 'ثبت آمار نمایش و کلیک کمپین');
   r = await request('/api/admin/auth/me', {headers:{cookie:adminSessionCookie}});
