@@ -162,7 +162,9 @@ async function run() {
   const adClick=await fetch(BASE+'/api/advertising/click/'+adCampaignId,{redirect:'manual'});
   assert(adClick.status===302 && adClick.headers.get('location')==='https://example.com/', 'ثبت کلیک و هدایت به مقصد امن تبلیغ');
   r = await request('/api/admin/advertising/campaigns');
-  assert(r.status===200 && Number(r.data.find(x=>x.id===adCampaignId).impressions)>=1 && Number(r.data.find(x=>x.id===adCampaignId).clicks)>=1, 'ثبت آمار نمایش و کلیک کمپین');
+  console.log('AD METRICS DEBUG:',r.status,JSON.stringify(r.data));
+  const trackedAd = Array.isArray(r.data) ? r.data.find(x=>String(x.id)===String(adCampaignId)) : null;
+  assert(r.status===200 && !!trackedAd && Number(trackedAd.impressions)>=1 && Number(trackedAd.clicks)>=1, 'ثبت آمار نمایش و کلیک کمپین');
   r = await request('/api/admin/auth/me', {headers:{cookie:adminSessionCookie}});
   assert(r.status === 200 && r.data.admin.username === 'owner', 'بازیابی حساب مالک از نشست کوکی');
   r = await request('/api/admin/auth/login', {
