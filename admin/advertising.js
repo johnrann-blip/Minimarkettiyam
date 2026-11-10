@@ -55,6 +55,7 @@ document.addEventListener('submit',async event=>{
  if(!form)return;
  event.preventDefault();
  const data=Object.fromEntries(new FormData(form).entries());
+ data.starts_at=new Date(data.starts_at).toISOString();data.ends_at=new Date(data.ends_at).toISOString();
  try{await api('/api/admin/advertising/requests/'+form.dataset.campaignForm+'/campaign',{method:'POST',body:JSON.stringify(data)});say('کمپین با موفقیت زمان‌بندی شد.');await refresh();}catch(error){say(error.message);}
 });
 (async()=>{
