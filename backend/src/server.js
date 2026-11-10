@@ -15,7 +15,7 @@ const port = Number(process.env.PORT || 3000);
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Additive migration for persistent AVELORA footer contact settings.
-const footerSettingsMigration = pool.query(\`
+const footerSettingsMigration = pool.query(`
   ALTER TABLE store_settings
     ADD COLUMN IF NOT EXISTS footer_support_phone VARCHAR(30) NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS footer_support_email VARCHAR(254) NOT NULL DEFAULT '',
@@ -26,7 +26,7 @@ const footerSettingsMigration = pool.query(\`
     ADD COLUMN IF NOT EXISTS footer_address VARCHAR(500) NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS footer_hours VARCHAR(160) NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS footer_about TEXT NOT NULL DEFAULT ''
-\`).catch(error => {
+`).catch(error => {
   console.error('AVELORA footer settings migration failed:', error.message);
   return false;
 });
