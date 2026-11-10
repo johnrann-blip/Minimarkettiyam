@@ -11,6 +11,7 @@ const { createZarinpalRouter, getConfig } = require('./zarinpal');
 const { createCustomerAuth } = require('./customer-auth');
 const { createAdminAuth } = require('./admin-auth');
 const { createAdvertisingRouter, createAdvertisingAdminRouter } = require('./advertising');
+const { createSeoRouter } = require('./seo');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -88,6 +89,7 @@ app.use((req, res, next) => {
   if (req.method === 'POST' && req.path === '/api/admin/uploads/product') return next();
   return express.json({ limit: '1mb' })(req, res, next);
 });
+app.use(createSeoRouter({pool}));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { maxAge: '7d', immutable: true }));
 app.use(express.static(path.join(__dirname, '../../frontend')));
 app.use('/admin', express.static(path.join(__dirname, '../../admin')));
