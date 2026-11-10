@@ -155,6 +155,7 @@ async function run() {
   const quotedRequestId=r.data.request.id;
   r = await request('/api/admin/advertising/requests/'+quotedRequestId,{method:'PATCH',admin:true,body:{status:'approved',payment_status:'unpaid',quote_toman:350000,admin_notes:'تأیید آزمایشی'}});
   assert(r.status===200 && r.data.status==='approved', 'تأیید درخواست و ثبت مبلغ نهایی');
+  await db.query('UPDATE advertising_requests SET target_clicks=1 WHERE id=$1',[quotedRequestId]);
   r = await request('/api/admin/advertising/requests/'+quotedRequestId+'/campaign',{method:'POST',admin:true,body:{
     title:'تبلیغ برند آزمایشی',image_url:'https://example.com/ad.jpg',target_url:'https://example.com/',
     starts_at:new Date(Date.now()-60000).toISOString(),ends_at:new Date(Date.now()+7*86400000).toISOString()
@@ -172,6 +173,8 @@ async function run() {
   assert(r.status===200 && r.data.some(x=>x.id===adCampaignId), 'نمایش کمپین پرداخت‌شده در جایگاه عمومی');
   const adClick=await fetch(BASE+'/api/advertising/click/'+adCampaignId,{redirect:'manual'});
   assert(adClick.status===302 && adClick.headers.get('location')==='https://example.com/', 'ثبت کلیک و هدایت به مقصد امن تبلیغ');
+  r = await request('/api/advertising/campaigns/home_banner');
+  assert(r.status===200 && !r.data.some(x=>x.id===adCampaignId), 'توقف نمایش تبلیغ پس از تکمیل سقف کلیک توافق‌شده');
   r = await request('/api/admin/advertising/campaigns',{admin:true});
   const trackedAd = Array.isArray(r.data) ? r.data.find(x=>String(x.id)===String(adCampaignId)) : null;
   assert(r.status===200 && !!trackedAd && Number(trackedAd.impressions)>=1 && Number(trackedAd.clicks)>=1, 'ثبت آمار نمایش و کلیک کمپین');
