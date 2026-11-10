@@ -29,6 +29,7 @@ async function refreshCustomer() {
   document.dispatchEvent(new CustomEvent('avelora:auth-changed'));
 }
 $account('#accountOpen').addEventListener('click', () => $account('#accountDialog').showModal());
+$account('#footerAccountLink')?.addEventListener('click', event => { event.preventDefault(); $account('#accountDialog').showModal(); });
 $account('#accountClose').addEventListener('click', () => $account('#accountDialog').close());
 $account('#accountDialog').addEventListener('click', event => { if (event.target === $account('#accountDialog')) $account('#accountDialog').close(); });
 async function submitAccount(form, action) {
