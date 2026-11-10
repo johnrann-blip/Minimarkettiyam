@@ -14,6 +14,7 @@
 <body>
 <header class="top"><a class="brand" href="/">AVELORA <small>BAGS • BEAUTY • MORE</small></a><div class="top-actions"><button id="accountOpen" class="account-open" type="button">عضویت / ورود</button><button id="cartOpen" class="cart">سبد خرید <b id="cartCount">۰</b></button></div></header><dialog id="accountDialog" class="account-dialog"><div class="dialog-head"><span>حساب کاربری AVELORA</span><button id="accountClose" type="button">✕</button></div><div class="account-body"><div id="accountWelcome" class="hint" hidden></div><form id="registerForm"><h3>عضویت رایگان AVELORA</h3><input name="name" placeholder="نام و نام خانوادگی" maxlength="120" required><input name="phone" type="tel" inputmode="tel" placeholder="شماره موبایل" required><input name="password" type="password" minlength="10" placeholder="رمز عبور (حداقل ۱۰ نویسه)" required><button class="primary" type="submit">ساخت حساب</button></form><form id="loginForm"><h3>ورود اعضا</h3><input name="phone" type="tel" inputmode="tel" placeholder="شماره موبایل" required><input name="password" type="password" placeholder="رمز عبور" required><button class="primary" type="submit">ورود به حساب</button></form><button id="logoutButton" type="button" hidden>خروج از حساب</button><p id="accountMessage" role="status" class="hint">فعلاً کد پیامکی برای تأیید مالکیت شماره فعال نیست؛ شماره را با دقت وارد کن.</p></div></dialog>
 <section class="hero hero-editorial"><div class="hero-copy"><span class="eyebrow">انتخابی برای هر سلیقه</span><h1>استایل خاص،<br>با AVELORA</h1><p>کیف، اکسسوری و زیبایی؛ انتخاب‌هایی برای درخشش هر روز تو</p><a href="#products" class="primary">مشاهده محصولات</a></div><div class="hero-visual"><img src="https://images.unsplash.com/photo-1771072428050-1492abb58f4a?auto=format&fit=crop&fm=jpg&ixid=NHwxMjA3fDA%3D&ixlib=rb-4.1.0&q=60&w=3000" alt="مدل با استایل مشکی و کیف دستی" fetchpriority="high"></div></section>
+<section id="homeAdSlot" class="advertising-slot" aria-label="تبلیغات صفحه اصلی" hidden></section>
 <main id="products">
 <div class="section-head"><div><span class="eyebrow">ویترین فروشگاه</span><h2>محصولات</h2></div><input id="search" placeholder="جست‌وجوی محصول..."></div>
 <div class="category-entry-grid" aria-label="دسته‌بندی‌های اصلی فروشگاه">
@@ -21,6 +22,7 @@
   <button class="category-entry" type="button" data-category="beauty"><span aria-hidden="true">💄</span><strong>لوازم آرایشی</strong><small>مشاهده محصولات زیبایی</small></button>
 </div>
 <nav id="categories" class="chips" aria-label="فیلتر محصولات"><button class="active" data-category="">همه محصولات</button></nav>
+<div id="categoryAdSlot" class="advertising-slot" aria-label="تبلیغات بخش محصولات" hidden></div>
 <div id="productGrid" class="grid"><p>در حال دریافت محصولات...</p></div>
 </main>
 <dialog id="productDialog" class="product-dialog" aria-labelledby="productDialogTitle">
@@ -52,6 +54,7 @@
       <a href="/">صفحه اصلی</a>
       <a href="#products">مشاهده محصولات</a>
       <a href="#categories">دسته‌بندی‌ها</a>
+      <a href="/advertising.html">تبلیغات و همکاری با AVELORA</a>
       <a href="#orderForm">راهنمای ثبت سفارش</a>
     </nav>
     <section class="footer-column">
@@ -92,7 +95,7 @@
   </div>
   <div id="policyDialogBody" class="policy-dialog-body">در حال دریافت متن...</div>
 </dialog>
-<script src="/app.js?v=20261110-policy-pages-1"></script>
+<script src="/app.js?v=20261110-advertising-1"></script>
 <script src="/account.js?v=20261110-manager-discounts-1"></script>
 <script src="/assistant.js?v=20261109-free-assistant-1"></script>
 </body></html>
