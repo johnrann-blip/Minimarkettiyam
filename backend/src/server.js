@@ -28,10 +28,10 @@ const footerSettingsMigration = pool.query(\`
     ADD COLUMN IF NOT EXISTS footer_about TEXT NOT NULL DEFAULT ''
 \`).catch(error => {
   console.error('AVELORA footer settings migration failed:', error.message);
-  throw error;
+  return false;
 });
 async function requireFooterSettingsMigration(_req, res, next) {
-  try { await footerSettingsMigration; next(); }
+  try { if (await footerSettingsMigration === false) throw new Error('migration failed'); next(); }
   catch { res.status(503).json({error:'به‌روزرسانی تنظیمات ارتباط با مشتری انجام نشد.'}); }
 }
 
