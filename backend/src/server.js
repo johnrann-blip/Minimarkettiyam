@@ -211,7 +211,8 @@ app.get('/api/store-settings', requireFooterSettingsMigration, async (_req, res)
               local_shipping_toman,nationwide_shipping_toman,
               footer_support_phone,footer_support_email,footer_instagram_url,
               footer_whatsapp_phone,footer_bale_url,footer_telegram_url,
-              footer_address,footer_hours,footer_about
+              footer_address,footer_hours,footer_about,
+              policy_terms,policy_privacy,policy_shipping,policy_returns
        FROM store_settings WHERE id=1`
     );
     if (!r.rowCount) return res.status(503).json({error:'تنظیمات فروشگاه ثبت نشده است.'});
