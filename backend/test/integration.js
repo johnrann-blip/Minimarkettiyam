@@ -101,7 +101,7 @@ async function run() {
   });
   assert(r.status === 201 && r.data.admin.role === 'owner' && !!r.cookie, 'ساخت حساب مالک و ایجاد نشست امن');
   adminSessionCookie = r.cookie;
-  r = await request('/api/admin/auth/me');
+  r = await request('/api/admin/auth/me', {headers:{cookie:adminSessionCookie}});
   assert(r.status === 200 && r.data.admin.username === 'owner', 'بازیابی حساب مالک از نشست کوکی');
   r = await request('/api/admin/auth/login', {
     method:'POST',headers:{'x-admin-request':'1'},
