@@ -142,4 +142,4 @@ function createFeedbackAdminRouter({pool}) {
   return router;
 }
 
-module.exports = {createEngagementRouter,createFeedbackAdminRouter};
+module.exports = {createEngagementRouter,createFeedbackAdminRouter,visitorKey};
