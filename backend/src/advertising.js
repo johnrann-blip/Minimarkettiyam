@@ -194,6 +194,19 @@ function createAdvertisingAdminRouter({pool}) {
     } catch { res.status(503).json({error:'ذخیره تعرفه انجام نشد.'}); }
   });
 
+  router.get('/summary', async (_req,res) => {
+    try {
+      const r=await pool.query(`
+        SELECT
+          (SELECT COUNT(*)::int FROM advertising_requests WHERE status='pending') AS pending_requests,
+          (SELECT COUNT(*)::int FROM advertising_requests WHERE status='quoted') AS quoted_requests,
+          (SELECT COUNT(*)::int FROM advertising_requests WHERE status='approved' AND payment_status='unpaid') AS awaiting_payment,
+          (SELECT COUNT(*)::int FROM advertising_campaigns WHERE status IN ('active','scheduled')) AS campaigns
+      `);
+      res.json(r.rows[0]);
+    } catch { res.status(503).json({error:'دریافت خلاصه تبلیغات انجام نشد.'}); }
+  });
+
   router.get('/requests', async (_req,res) => {
     try {
       const r=await pool.query(
