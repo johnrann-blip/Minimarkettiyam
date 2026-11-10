@@ -267,7 +267,7 @@ app.get('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly, 
   }
 });
 
-app.patch('/api/admin/store-settings', adminOnly, async (req, res) => {
+app.patch('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly, async (req, res) => {
   let client;
   try {
     client = await pool.connect();
@@ -319,7 +319,7 @@ app.patch('/api/admin/store-settings', adminOnly, async (req, res) => {
       }
     }
     if (!validationError && value.footer_support_email &&
-        !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value.footer_support_email)) {
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.footer_support_email)) {
       validationError = 'ایمیل پشتیبانی معتبر نیست.';
     }
     if (!validationError && (value.footer_support_phone.length > 30 ||
