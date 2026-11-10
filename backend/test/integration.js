@@ -137,6 +137,8 @@ async function run() {
   assert(r.status===401, 'محافظت از درخواست‌های تبلیغاتی در برابر دسترسی غیرمجاز');
   r = await request('/api/admin/advertising/packages',{admin:true});
   assert(r.status===200 && r.data.some(x=>x.id===adPackage.id), 'دسترسی مالک به مدیریت تعرفه‌ها');
+  r = await request('/api/admin/advertising/summary',{admin:true});
+  assert(r.status===200 && Number(r.data.pending_requests)===1, 'نمایش تعداد درخواست‌های جدید تبلیغ به مالک');
   r = await request('/api/admin/advertising/packages/'+adPackage.id,{method:'PATCH',admin:true,body:{pricing_model:'daily',rate_toman:50000,is_active:true}});
   assert(r.status===200 && Number(r.data.rate_toman)===50000, 'تنظیم تعرفه روزانه جایگاه توسط مالک');
   r = await request('/api/advertising/requests',{method:'POST',body:{
