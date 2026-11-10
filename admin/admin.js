@@ -72,18 +72,19 @@ $('#imageFile').addEventListener('change', () => {
   message('عکس انتخاب شد و پیش‌نمایش آن آماده است. برای آپلود و ذخیره عکس، دکمه «ذخیره تغییرات» را بزن.');
 });
 
-async function loadAdminWorkspace() {
+async function loadAdminWorkspace(admin) {
   $('#adminWorkspace').hidden = false;
+  $('#managerAdmin').hidden = !admin || admin.role !== 'owner';
   $('#loginPanel').hidden = true;
   message('ورود موفق بود؛ در حال دریافت اطلاعات فروشگاه...');
-  await Promise.all([categories(), products(), orders(), customers(), loadStoreSettings()]);
+  await Promise.all([categories(), products(), orders(), customers(), loadStoreSettings(), admin?.role === 'owner' ? loadManagers() : Promise.resolve()]);
 }
 
 async function checkAdminSession() {
   try {
     const data = await request('/api/admin/auth/me');
     if (!data.admin) throw new Error('نشست مدیریت معتبر نیست.');
-    await loadAdminWorkspace();
+    await loadAdminWorkspace(data.admin);
   } catch {
     $('#adminWorkspace').hidden = true;
     $('#loginPanel').hidden = false;
@@ -106,12 +107,12 @@ $('#loginForm').onsubmit = async event => {
   const form = event.currentTarget;
   $('#authMessage').textContent = 'در حال بررسی اطلاعات ورود...';
   try {
-    await request('/api/admin/auth/login', {method:'POST', body:JSON.stringify({
+    const data = await request('/api/admin/auth/login', {method:'POST', body:JSON.stringify({
       username:form.elements.username.value.trim(),
       password:form.elements.password.value
     })});
     form.reset();
-    await loadAdminWorkspace();
+    await loadAdminWorkspace(data.admin);
   } catch(error) { $('#authMessage').textContent = error.message; }
 };
 
@@ -124,14 +125,14 @@ $('#bootstrapForm').onsubmit = async event => {
   }
   $('#authMessage').textContent = 'در حال ساخت حساب مالک...';
   try {
-    await request('/api/admin/auth/bootstrap', {method:'POST', body:JSON.stringify({
+    const data = await request('/api/admin/auth/bootstrap', {method:'POST', body:JSON.stringify({
       admin_api_key:form.elements.admin_api_key.value,
       username:form.elements.username.value.trim(),
       display_name:form.elements.display_name.value.trim(),
       password:form.elements.password.value
     })});
     form.reset();
-    await loadAdminWorkspace();
+    await loadAdminWorkspace(data.admin);
   } catch(error) { $('#authMessage').textContent = error.message; }
 };
 
@@ -420,6 +421,60 @@ $('#settingsForm').onsubmit = async event => {
   }
 };
 
+const managerPermissions = [
+  ['products.view','مشاهده محصولات'],['products.create','ثبت محصول'],['products.update','ویرایش محصول'],
+  ['products.archive','بایگانی محصول'],['products.upload','آپلود عکس محصول'],
+  ['orders.view','مشاهده سفارش‌ها'],['orders.update','تغییر وضعیت سفارش'],
+  ['customers.view','مشاهده مشتریان'],['customers.manage','مدیریت مشتریان'],
+  ['payments.view','مشاهده تنظیمات پرداخت'],['payments.manage','مدیریت پرداخت و تنظیمات فروشگاه'],
+  ['accounting.view','مشاهده حسابداری'],['accounting.manage','مدیریت حسابداری'],
+  ['reports.view','مشاهده گزارش‌ها'],['audit.view','مشاهده گزارش فعالیت مدیران']
+];
+
+async function loadManagers() {
+  try {
+    const data = await request('/api/admin/auth/managers');
+    $('#managerList').innerHTML = data.map(manager => \`
+      <div class="order">
+        <b>\${escapeHtml(manager.display_name)} (@\${escapeHtml(manager.username)})</b>
+        <p>وضعیت: \${manager.is_active ? 'فعال' : 'غیرفعال'}</p>
+        <p>مجوزها: \${(manager.permissions || []).map(p => escapeHtml(managerPermissions.find(x => x[0] === p)?.[1] || p)).join('، ') || 'بدون مجوز'}</p>
+        <p class="muted">آخرین ورود: \${manager.last_login_at ? new Date(manager.last_login_at).toLocaleString('fa-IR') : 'هنوز وارد نشده'}</p>
+        <button type="button" data-manager-toggle="\${escapeHtml(manager.id)}" data-active="\${manager.is_active ? '1' : '0'}">\${manager.is_active ? 'غیرفعال‌کردن حساب' : 'فعال‌کردن حساب'}</button>
+      </div>
+    \`).join('') || 'هنوز حساب مدیریتی دیگری ساخته نشده است.';
+  } catch(error) { $('#managerList').textContent = error.message; }
+}
+
+$('#managerForm').onsubmit = async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const permissions = [...form.querySelectorAll('[name="permissions"]:checked')].map(x => x.value);
+  try {
+    await request('/api/admin/auth/managers', {method:'POST',body:JSON.stringify({
+      username:form.elements.username.value.trim(),
+      display_name:form.elements.display_name.value.trim(),
+      password:form.elements.password.value,
+      permissions
+    })});
+    form.reset();
+    $('#managerMessage').textContent = 'حساب مدیر با موفقیت ساخته شد.';
+    await loadManagers();
+  } catch(error) { $('#managerMessage').textContent = error.message; }
+};
+
+$('#managerList').addEventListener('click', async event => {
+  const button = event.target.closest('[data-manager-toggle]');
+  if (!button) return;
+  const active = button.dataset.active === '1';
+  try {
+    await request('/api/admin/auth/managers/' + encodeURIComponent(button.dataset.managerToggle), {
+      method:'PATCH',body:JSON.stringify({is_active:!active})
+    });
+    await loadManagers();
+  } catch(error) { $('#managerMessage').textContent = error.message; }
+});
+
 async function customers() {
   try {
     const data=await request('/api/admin/customers');
@@ -492,6 +547,7 @@ $('#orders').addEventListener('click', async event => {
   }
 });
 
+$('#refreshManagers').onclick = loadManagers;
 $('#refresh').onclick = orders;
 $('#refreshCustomers').onclick = customers;
 $('#refreshProducts').onclick = products;
