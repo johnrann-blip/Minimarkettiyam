@@ -25,7 +25,11 @@ const footerSettingsMigration = pool.query(`
     ADD COLUMN IF NOT EXISTS footer_telegram_url VARCHAR(500) NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS footer_address VARCHAR(500) NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS footer_hours VARCHAR(160) NOT NULL DEFAULT '',
-    ADD COLUMN IF NOT EXISTS footer_about TEXT NOT NULL DEFAULT ''
+    ADD COLUMN IF NOT EXISTS footer_about TEXT NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS policy_terms TEXT NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS policy_privacy TEXT NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS policy_shipping TEXT NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS policy_returns TEXT NOT NULL DEFAULT ''
 `).catch(error => {
   console.error('AVELORA footer settings migration failed:', error.message);
   return false;
@@ -231,10 +235,26 @@ app.get('/api/store-settings', requireFooterSettingsMigration, async (_req, res)
       footer_telegram_url:x.footer_telegram_url,
       footer_address:x.footer_address,
       footer_hours:x.footer_hours,
-      footer_about:x.footer_about
+      footer_about:x.footer_about,
+      policy_terms:x.policy_terms,
+      policy_privacy:x.policy_privacy,
+      policy_shipping:x.policy_shipping,
+      policy_returns:x.policy_returns
     });
   } catch {
     res.status(500).json({error:'دریافت تنظیمات فروشگاه انجام نشد.'});
+  }
+});
+
+app.get('/api/store-policies', requireFooterSettingsMigration, async (_req, res) => {
+  try {
+    const r = await pool.query(
+      'SELECT policy_terms,policy_privacy,policy_shipping,policy_returns FROM store_settings WHERE id=1'
+    );
+    if (!r.rowCount) return res.status(503).json({error:'تنظیمات فروشگاه ثبت نشده است.'});
+    res.json(r.rows[0]);
+  } catch {
+    res.status(500).json({error:'دریافت سیاست‌های فروشگاه انجام نشد.'});
   }
 });
 
@@ -260,7 +280,11 @@ app.get('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly, 
       footer_telegram_url:x.footer_telegram_url,
       footer_address:x.footer_address,
       footer_hours:x.footer_hours,
-      footer_about:x.footer_about
+      footer_about:x.footer_about,
+      policy_terms:x.policy_terms,
+      policy_privacy:x.policy_privacy,
+      policy_shipping:x.policy_shipping,
+      policy_returns:x.policy_returns
     });
   } catch {
     res.status(500).json({error:'دریافت تنظیمات مدیریت انجام نشد.'});
@@ -290,7 +314,8 @@ app.patch('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly
       'local_shipping_toman','nationwide_shipping_toman',
       'footer_support_phone','footer_support_email','footer_instagram_url',
       'footer_whatsapp_phone','footer_bale_url','footer_telegram_url',
-      'footer_address','footer_hours','footer_about'
+      'footer_address','footer_hours','footer_about',
+      'policy_terms','policy_privacy','policy_shipping','policy_returns'
     ];
 
     const value = {};
@@ -307,7 +332,8 @@ app.patch('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly
 
     let validationError = null;
     for (const field of ['footer_support_phone','footer_support_email','footer_instagram_url',
-      'footer_whatsapp_phone','footer_bale_url','footer_telegram_url','footer_address','footer_hours','footer_about']) {
+      'footer_whatsapp_phone','footer_bale_url','footer_telegram_url','footer_address','footer_hours','footer_about',
+      'policy_terms','policy_privacy','policy_shipping','policy_returns']) {
       value[field] = String(value[field] ?? '').trim();
     }
     for (const field of ['footer_instagram_url','footer_bale_url','footer_telegram_url']) {
@@ -325,7 +351,9 @@ app.patch('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly
     if (!validationError && (value.footer_support_phone.length > 30 ||
         value.footer_whatsapp_phone.length > 30 || value.footer_support_email.length > 254 ||
         value.footer_address.length > 500 || value.footer_hours.length > 160 ||
-        value.footer_about.length > 1000)) {
+        value.footer_about.length > 1000 || value.policy_terms.length > 12000 ||
+        value.policy_privacy.length > 12000 || value.policy_shipping.length > 12000 ||
+        value.policy_returns.length > 12000)) {
       validationError = 'طول یکی از اطلاعات ارتباطی بیش از حد مجاز است.';
     }
     value.footer_whatsapp_phone = normalizeDigits(value.footer_whatsapp_phone).replace(/[^0-9]/g, '');
@@ -382,6 +410,7 @@ app.patch('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly
        footer_support_phone=$9,footer_support_email=$10,footer_instagram_url=$11,
        footer_whatsapp_phone=$12,footer_bale_url=$13,footer_telegram_url=$14,
        footer_address=$15,footer_hours=$16,footer_about=$17,
+       policy_terms=$18,policy_privacy=$19,policy_shipping=$20,policy_returns=$21,
        updated_at=NOW()
        WHERE id=1
        RETURNING bank_name,card_number,cardholder_name,iban,
@@ -389,14 +418,16 @@ app.patch('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly
                  local_shipping_toman,nationwide_shipping_toman,
                  footer_support_phone,footer_support_email,footer_instagram_url,
                  footer_whatsapp_phone,footer_bale_url,footer_telegram_url,
-                 footer_address,footer_hours,footer_about`,
+                 footer_address,footer_hours,footer_about,
+                 policy_terms,policy_privacy,policy_shipping,policy_returns`,
       [
         value.bank_name,value.card_number,value.cardholder_name,value.iban,
         value.payment_instructions,value.payment_enabled,
         value.local_shipping_toman,value.nationwide_shipping_toman,
         value.footer_support_phone,value.footer_support_email,value.footer_instagram_url,
         value.footer_whatsapp_phone,value.footer_bale_url,value.footer_telegram_url,
-        value.footer_address,value.footer_hours,value.footer_about
+        value.footer_address,value.footer_hours,value.footer_about,
+        value.policy_terms,value.policy_privacy,value.policy_shipping,value.policy_returns
       ]
     );
 
@@ -422,7 +453,11 @@ app.patch('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly
       footer_telegram_url:x.footer_telegram_url,
       footer_address:x.footer_address,
       footer_hours:x.footer_hours,
-      footer_about:x.footer_about
+      footer_about:x.footer_about,
+      policy_terms:x.policy_terms,
+      policy_privacy:x.policy_privacy,
+      policy_shipping:x.policy_shipping,
+      policy_returns:x.policy_returns
       }
     });
   } catch (error) {
