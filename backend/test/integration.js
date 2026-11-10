@@ -9,10 +9,22 @@ const KEY = crypto.randomBytes(32).toString('hex');
 const SKU = 'TEST-' + crypto.randomBytes(6).toString('hex');
 const BASE = `http://127.0.0.1:${PORT}`;
 
+const TEST_DATABASE_URL = 'postgresql://u0_a289@127.0.0.1:5432/avelora_integration_test';
+const testDbUrl = new URL(TEST_DATABASE_URL);
+
+if (
+  testDbUrl.protocol !== 'postgresql:' ||
+  testDbUrl.hostname !== '127.0.0.1' ||
+  testDbUrl.port !== '5432' ||
+  testDbUrl.pathname !== '/avelora_integration_test'
+) {
+  throw new Error('SAFETY STOP: Integration tests require the isolated local AVELORA test database.');
+}
+
 const env = {
   ...process.env,
   PORT: String(PORT),
-  DATABASE_URL: 'postgresql://u0_a289@127.0.0.1:5432/minimarkettiyam_test',
+  DATABASE_URL: TEST_DATABASE_URL,
   ADMIN_API_KEY: KEY,
   ZARINPAL_ENABLED: 'false',
   ZARINPAL_MODE: 'sandbox',
