@@ -56,7 +56,7 @@ function createCustomerAuth({pool, rateLimit}) {
         [name,phone,hash.toString('hex'),salt.toString('hex')]
       );
       await createSession(pool,result.rows[0].id,res);
-      res.status(201).json({customer:result.rows[0],discount_percent:5,message:'حساب عضویت AVELORA ساخته شد.'});
+      res.status(201).json({customer:result.rows[0],discount_percent:0,message:'حساب عضویت AVELORA ساخته شد.'});
     } catch(error) {
       if(error.code==='23505') return res.status(409).json({error:'این شماره موبایل قبلاً ثبت‌نام کرده است. وارد حساب شو.'});
       console.error('Customer registration failed:',error.message);
@@ -76,7 +76,7 @@ function createCustomerAuth({pool, rateLimit}) {
       if(candidate.length!==expected.length || !crypto.timingSafeEqual(candidate,expected))
         return res.status(401).json({error:'شماره موبایل یا رمز عبور درست نیست.'});
       await createSession(pool,customer.id,res);
-      res.json({customer:{id:customer.id,full_name:customer.full_name,phone:customer.phone},discount_percent:5});
+      res.json({customer:{id:customer.id,full_name:customer.full_name,phone:customer.phone},discount_percent:0});
     } catch(error) {
       console.error('Customer login failed:',error.message);
       res.status(503).json({error:'ورود موقتاً انجام نشد. دوباره تلاش کن.'});
@@ -92,7 +92,7 @@ function createCustomerAuth({pool, rateLimit}) {
     res.json({success:true});
   });
   router.get('/me', async (req,res) => {
-    res.json({customer:req.customer||null,discount_percent:req.customer?5:0});
+    res.json({customer:req.customer||null,discount_percent:0});
   });
   async function optionalCustomer(req,res,next) {
     try {
