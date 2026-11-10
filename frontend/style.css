@@ -390,3 +390,39 @@ button:focus-visible,a:focus-visible{outline:2px solid #b68a4c;outline-offset:3p
 
 /* Crawlable category links on the AVELORA homepage */
 .seo-category-links{display:flex;flex-wrap:wrap;gap:12px;margin:18px auto 8px;max-width:1180px;padding:0 18px}.seo-category-links a{display:inline-flex;align-items:center;padding:10px 16px;border:1px solid #e7d9d0;border-radius:999px;color:#6f4a39;text-decoration:none;background:#fff;font-size:.92rem}.seo-category-links a:hover{background:#f8f1ec;border-color:#b99782}
+
+
+/* AVELORA Smart Shopping Assistant — accessible premium chat */
+.assistant-launcher{display:flex;align-items:center;gap:8px;padding:13px 18px;font-size:13px;letter-spacing:0;box-shadow:0 10px 30px #24170f38}
+.assistant-panel{height:min(650px,calc(100dvh - 112px));border:1px solid #d9c8b5;box-shadow:0 24px 80px #21150f45}
+.assistant-head{padding:15px 16px;background:linear-gradient(120deg,#302019,#5d4030)}
+.assistant-brand{display:flex;align-items:center;gap:10px}
+.assistant-mark{display:grid;place-items:center;width:35px;height:35px;border:1px solid #d9b98f;border-radius:50%;font:700 18px Georgia,serif;color:#e7cba7}
+.assistant-trust{padding:7px 12px;background:#f5eee6;color:#816548;text-align:center;font-size:10px;border-bottom:1px solid #eee3d7}
+.assistant-messages{gap:12px;padding:14px}
+.assistant-message{max-width:96%;font-size:13px;line-height:2}
+.assistant-products{gap:9px}
+.assistant-product{grid-template-columns:76px minmax(0,1fr);gap:10px;padding:9px;border-color:#e6d9ca}
+.assistant-product img,.assistant-product .assistant-no-image{width:76px;height:82px;object-fit:cover;border-radius:7px}
+.assistant-no-image{display:grid;place-items:center;font-size:27px;color:#a17d54}
+.assistant-product-info{min-width:0}
+.assistant-product strong{font-size:12px;line-height:1.8}
+.assistant-product small{font-size:10px;line-height:1.8}
+.assistant-product .assistant-reason{color:#7a6a58}
+.assistant-product-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:5px}
+.assistant-product-actions button,.assistant-clear-compare{border:1px solid #d8c4ad;border-radius:4px;background:#f4ece2;color:#533b2b;padding:6px 9px;font-size:10px;cursor:pointer}
+.assistant-product-actions .assistant-compare-add{background:#fff;border-color:#e4dacf}
+.assistant-compare-table{display:grid;gap:7px;margin-top:8px}
+.assistant-compare-row{display:grid;gap:3px;padding:9px;border:1px solid #eadfd2;border-radius:8px;background:#fff;font-size:11px}
+.assistant-compare-row strong{color:#493629}
+.assistant-compare-row span{color:#786454}
+.assistant-clear-compare{margin-top:8px}
+.assistant-contact-links{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.assistant-contact-links a{display:inline-flex;padding:7px 10px;border:1px solid #dfcfbd;border-radius:18px;color:#634832;background:#fffaf4;text-decoration:none;font-size:11px}
+.assistant-quick{padding:9px 10px}
+.assistant-quick button{font-size:10px;padding:7px 10px}
+.assistant-form{padding:11px}
+.assistant-form input{font-family:inherit;font-size:13px}
+.assistant-form button{font-family:inherit;font-size:12px;min-width:60px}
+.assistant-disclaimer{line-height:1.8}
+@media(max-width:480px){.assistant-panel{left:7px;bottom:68px;width:calc(100vw - 14px);height:min(680px,calc(100dvh - 82px));border-radius:12px}.assistant-launcher{left:10px;bottom:10px;padding:12px 14px;font-size:12px}.assistant-product{grid-template-columns:66px minmax(0,1fr)}.assistant-product img,.assistant-product .assistant-no-image{width:66px;height:74px}}
