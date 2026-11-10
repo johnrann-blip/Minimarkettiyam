@@ -141,7 +141,7 @@ async function run() {
     method: 'POST',
     body: { mime_type: 'image/png', image_base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=' }
   });
-  assert(r.status === 401, 'جلوگیری از آپلود عکس بدون نشست مدیر');
+  assert(r.status === 403, 'رد آپلود بدون سربرگ معتبر درخواست پنل مدیریت');
 
   r = await request('/api/unknown-endpoint');
   assert(r.status === 404 && typeof r.data.error === 'string', 'پاسخ JSON استاندارد برای مسیر API ناشناخته');
