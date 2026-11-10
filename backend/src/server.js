@@ -14,7 +14,7 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// Additive migration for persistent AVELORA footer contact settings.
+// Additive migration for persistent AVELORA footer and policy settings.
 const footerSettingsMigration = pool.query(`
   ALTER TABLE store_settings
     ADD COLUMN IF NOT EXISTS footer_support_phone VARCHAR(30) NOT NULL DEFAULT '',
@@ -354,7 +354,7 @@ app.patch('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly
         value.footer_about.length > 1000 || value.policy_terms.length > 12000 ||
         value.policy_privacy.length > 12000 || value.policy_shipping.length > 12000 ||
         value.policy_returns.length > 12000)) {
-      validationError = 'طول یکی از اطلاعات ارتباطی بیش از حد مجاز است.';
+      validationError = 'طول یکی از فیلدهای تنظیمات فروشگاه بیش از حد مجاز است.';
     }
     value.footer_whatsapp_phone = normalizeDigits(value.footer_whatsapp_phone).replace(/[^0-9]/g, '');
     if (value.footer_whatsapp_phone.startsWith('0')) {
