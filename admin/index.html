@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>مدیریت AVELORA</title>
-  <link rel="stylesheet" href="/admin/admin.css?v=20261110-footer-settings-1">
+  <link rel="stylesheet" href="/admin/admin.css?v=20261110-policy-settings-1">
 </head>
 <body>
 <main>
@@ -83,6 +83,17 @@
       <textarea name="footer_address" maxlength="500" rows="2" placeholder="نشانی دفتر یا محل پاسخ‌گویی (اختیاری)"></textarea>
       <input name="footer_hours" maxlength="160" placeholder="ساعات پاسخ‌گویی، مثلاً شنبه تا پنجشنبه ۹ تا ۱۷">
 
+      <h3>متن صفحات راهنما و قوانین</h3>
+      <p class="muted">متن‌ها را خودت تعیین کن. فقط مواردی که ذخیره می‌کنی در صفحه عمومی سایت قابل مشاهده می‌شوند؛ متن نمونه حقوقی به‌صورت خودکار ساخته نمی‌شود.</p>
+      <label for="policy_terms">قوانین و مقررات خرید</label>
+      <textarea id="policy_terms" name="policy_terms" maxlength="12000" rows="6" placeholder="قوانین ثبت سفارش، پرداخت و مسئولیت‌های خریدار و فروشگاه"></textarea>
+      <label for="policy_privacy">حریم خصوصی</label>
+      <textarea id="policy_privacy" name="policy_privacy" maxlength="12000" rows="6" placeholder="نحوه استفاده و نگهداری از اطلاعات مشتریان"></textarea>
+      <label for="policy_shipping">شرایط ارسال و تحویل</label>
+      <textarea id="policy_shipping" name="policy_shipping" maxlength="12000" rows="6" placeholder="محدوده ارسال، زمان تقریبی و شرایط تحویل سفارش"></textarea>
+      <label for="policy_returns">شرایط تعویض و مرجوعی</label>
+      <textarea id="policy_returns" name="policy_returns" maxlength="12000" rows="6" placeholder="مهلت و شرایط درخواست تعویض یا مرجوعی کالا"></textarea>
+
       <h3>تعرفه ارسال به تومان</h3>
       <label>هزینه ارسال داخل شهر</label>
       <input name="local_shipping_toman" type="number" min="0" step="1"
@@ -112,6 +123,6 @@
 
   <p id="msg" role="status"></p>
 </main>
-<script src="/admin/admin.js?v=20261110-footer-settings-1"></script>
+<script src="/admin/admin.js?v=20261110-policy-settings-1"></script>
 </body>
 </html>
