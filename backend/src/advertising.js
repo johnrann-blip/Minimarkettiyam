@@ -104,22 +104,38 @@ function createAdvertisingRouter({pool, rateLimit}) {
     const placement = String(req.params.placement || '');
     if (!PLACEMENTS.has(placement)) return res.status(400).json({error:'جایگاه تبلیغاتی نامعتبر است.'});
     try {
-      const found = await pool.query(
-        `SELECT c.id,c.title,c.image_url,p.placement
+      const candidates = await pool.query(
+        `SELECT c.id
          FROM advertising_campaigns c
          JOIN advertising_packages p ON p.id=c.package_id
          JOIN advertising_requests r ON r.id=c.request_id
          WHERE p.placement=$1 AND p.is_active=true AND r.payment_status='paid'
            AND c.status IN ('active','scheduled') AND c.starts_at<=NOW() AND c.ends_at>NOW()
+           AND (r.target_impressions IS NULL OR c.impressions<r.target_impressions)
+           AND (r.target_clicks IS NULL OR c.clicks<r.target_clicks)
          ORDER BY c.created_at DESC LIMIT 5`,
         [placement]
       );
-      for (const campaign of found.rows) {
-        await pool.query('UPDATE advertising_campaigns SET impressions=impressions+1 WHERE id=$1',[campaign.id]);
-        await pool.query("INSERT INTO advertising_events(campaign_id,event_type) VALUES($1,'impression')",[campaign.id]);
+      const delivered=[];
+      for (const candidate of candidates.rows) {
+        const updated=await pool.query(
+          `UPDATE advertising_campaigns c SET impressions=c.impressions+1,updated_at=NOW()
+           FROM advertising_packages p,advertising_requests r
+           WHERE c.id=$1 AND p.id=c.package_id AND r.id=c.request_id
+             AND p.placement=$2 AND p.is_active=true AND r.payment_status='paid'
+             AND c.status IN ('active','scheduled') AND c.starts_at<=NOW() AND c.ends_at>NOW()
+             AND (r.target_impressions IS NULL OR c.impressions<r.target_impressions)
+             AND (r.target_clicks IS NULL OR c.clicks<r.target_clicks)
+           RETURNING c.id,c.title,c.image_url,p.placement`,
+          [candidate.id,placement]
+        );
+        if(updated.rowCount){
+          await pool.query("INSERT INTO advertising_events(campaign_id,event_type) VALUES($1,'impression')",[candidate.id]);
+          delivered.push(updated.rows[0]);
+        }
       }
       res.set('Cache-Control','no-store');
-      res.json(found.rows);
+      res.json(delivered);
     } catch {
       res.status(503).json({error:'نمایش تبلیغات موقتاً ممکن نیست.'});
     }
@@ -130,14 +146,16 @@ function createAdvertisingRouter({pool, rateLimit}) {
     if (!id) return res.status(404).send('تبلیغ پیدا نشد.');
     try {
       const result = await pool.query(
-        `UPDATE advertising_campaigns c SET clicks=clicks+1,updated_at=NOW()
+        `UPDATE advertising_campaigns c SET clicks=c.clicks+1,updated_at=NOW()
          FROM advertising_requests r
          WHERE c.id=$1 AND r.id=c.request_id AND r.payment_status='paid'
            AND c.status IN ('active','scheduled') AND c.starts_at<=NOW() AND c.ends_at>NOW()
+           AND (r.target_impressions IS NULL OR c.impressions<=r.target_impressions)
+           AND (r.target_clicks IS NULL OR c.clicks<r.target_clicks)
          RETURNING c.target_url`,
         [id]
       );
-      if (!result.rowCount) return res.status(404).send('تبلیغ در دسترس نیست.');
+      if (!result.rowCount) return res.status(404).send('تبلیغ در دسترس نیست یا سقف توافق‌شده تکمیل شده است.');
       await pool.query("INSERT INTO advertising_events(campaign_id,event_type) VALUES($1,'click')",[id]);
       res.redirect(302,result.rows[0].target_url);
     } catch {
