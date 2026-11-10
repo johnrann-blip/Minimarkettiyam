@@ -58,8 +58,11 @@
       <h2>خدمات مشتریان</h2>
       <a href="#orderForm">ثبت سفارش</a>
       <a href="#accountDialog" id="footerAccountLink">ورود و عضویت</a>
+      <a href="#policy-terms" data-policy="terms">قوانین و مقررات خرید</a>
+      <a href="#policy-privacy" data-policy="privacy">حریم خصوصی</a>
+      <a href="#policy-shipping" data-policy="shipping">شرایط ارسال و تحویل</a>
+      <a href="#policy-returns" data-policy="returns">تعویض و مرجوعی</a>
       <span>پیگیری سفارش: از طریق پشتیبانی</span>
-      <span>قوانین خرید و مرجوعی: پیش از شروع فروش منتشر می‌شود</span>
     </section>
     <section class="footer-column footer-contact">
       <h2>ارتباط با ما</h2>
@@ -82,7 +85,14 @@
     <span>خرید آگاهانه، انتخاب ماندگار</span>
   </div>
 </footer>
-<script src="/app.js?v=20261110-footer-settings-1"></script>
+<dialog id="policyDialog" class="policy-dialog" aria-labelledby="policyDialogTitle">
+  <div class="policy-dialog-head">
+    <h2 id="policyDialogTitle">راهنمای AVELORA</h2>
+    <button type="button" id="policyDialogClose" aria-label="بستن">بستن</button>
+  </div>
+  <div id="policyDialogBody" class="policy-dialog-body">در حال دریافت متن...</div>
+</dialog>
+<script src="/app.js?v=20261110-policy-pages-1"></script>
 <script src="/account.js?v=20261110-manager-discounts-1"></script>
 <script src="/assistant.js?v=20261109-free-assistant-1"></script>
 </body></html>
