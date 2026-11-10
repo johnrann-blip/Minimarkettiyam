@@ -11,7 +11,7 @@ async function loadContact(){
   if(data.footer_support_phone)links.push('<a href="tel:'+encodeURIComponent(data.footer_support_phone)+'">تلفن '+escapeHtml(data.footer_support_phone)+'</a>');
   if(data.footer_support_email)links.push('<a href="mailto:'+encodeURIComponent(data.footer_support_email)+'">ایمیل '+escapeHtml(data.footer_support_email)+'</a>');
   for(const [key,label] of [['footer_instagram_url','اینستاگرام'],['footer_telegram_url','تلگرام'],['footer_bale_url','بله']]){
-   if(data[key]&&/^https:\\/\\//i.test(data[key]))links.push('<a href="'+escapeHtml(data[key])+'" target="_blank" rel="noopener noreferrer">'+label+'</a>');
+   if(data[key]){try{const url=new URL(data[key]);if(url.protocol==='https:'&&url.hostname)links.push('<a href="'+escapeHtml(url.toString())+'" target="_blank" rel="noopener noreferrer">'+label+'</a>');}catch{}}
   }
   target.innerHTML=links.length?'برای هماهنگی درباره درخواست، از راه‌های رسمی زیر استفاده کنید: '+links.join(' · '):'در حال حاضر فرم ثبت درخواست، راه اصلی ارسال پیشنهاد تبلیغاتی است. کد پیگیری را پس از ثبت نگه دارید.';
  }catch{target.textContent='برای شروع همکاری، فرم درخواست تبلیغات را تکمیل کنید.';}
