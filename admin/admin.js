@@ -82,6 +82,7 @@ async function loadAdminWorkspace(admin) {
   const customerAccess = can('customers.view') || can('customers.manage');
   // Store settings include bank/payment details; keep them owner-only.
   const settingsAccess = owner;
+  $('#advertisingAdminLink').hidden = !owner;
   $('#managerAdmin').hidden = !owner;
   $('#productAdmin').hidden = !(can('products.create') || can('products.update'));
   $('#productsAdmin').hidden = !productAccess;
