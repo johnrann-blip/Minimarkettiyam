@@ -4,7 +4,7 @@ const { promisify } = require('util');
 const scrypt = promisify(crypto.scrypt);
 const router = express.Router();
 const COOKIE = 'avelora_admin_session';
-const PERMISSIONS = ['products.view','products.create','products.update','products.archive','products.upload','orders.view','orders.update','customers.view','customers.manage','settings.view','settings.update','payments.view','payments.manage','accounting.view','accounting.manage','reports.view','audit.view'];
+const PERMISSIONS = ['products.view','products.create','products.update','products.archive','products.upload','orders.view','orders.update','customers.view','customers.manage','settings.view','settings.update','audit.view'];
 
 function cookieValue(header,name) {
  const entry=String(header||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='));
@@ -42,7 +42,7 @@ function requiredPermission(req) {
  if(/^\/orders\/[^/]+\/status$/.test(p)) return 'orders.update';
  if(p==='/customers') return 'customers.view';
  if(/^\/customers\/[^/]+\/status$/.test(p)) return 'customers.manage';
- if(p==='/store-settings') return m==='GET'?'payments.view':'payments.manage';
+ if(p==='/store-settings') return m==='GET'?'settings.view':'settings.update';
  if(p==='/accounting/expenses') return m==='GET'?'accounting.view':'accounting.manage';
  if(p.startsWith('/reports')) return 'reports.view';
  if(p.startsWith('/audit')) return 'audit.view';
@@ -160,7 +160,7 @@ function createAdminAuth({pool,rateLimit}) {
   authenticate(req,res,()=>{
    const needed=requiredPermission(req);
    const permissions=req.admin.permissions||[];
-   const implied=(needed.endsWith('.view')&&[needed.replace('.view','.update'),needed.replace('.view','.create'),needed.replace('.view','.archive')].some(x=>permissions.includes(x)))||(needed==='payments.view'&&permissions.includes('payments.manage'))||(needed==='customers.view'&&permissions.includes('customers.manage'))||(needed==='accounting.view'&&permissions.includes('accounting.manage'));
+   const implied=(needed.endsWith('.view')&&[needed.replace('.view','.update'),needed.replace('.view','.create'),needed.replace('.view','.archive')].some(x=>permissions.includes(x)))||(needed==='settings.view'&&permissions.includes('settings.update'))||(needed==='customers.view'&&permissions.includes('customers.manage'))||(needed==='accounting.view'&&permissions.includes('accounting.manage'));
    const uploadAllowed=needed==='products.upload'&&(permissions.includes('products.upload')||permissions.includes('products.create')||permissions.includes('products.update'));
    if(req.admin.role!=='owner'&&!permissions.includes(needed)&&!implied&&!uploadAllowed) return res.status(403).json({error:'برای این عملیات دسترسی لازم را نداری.'});
    res.on('finish',()=>{ if(req.method!=='GET') audit(pool,req.admin,req,'admin.'+(req.method==='POST'?'create':req.method==='DELETE'?'archive':'update'),needed.split('.')[0],res.statusCode,req.params?.id||null); });
