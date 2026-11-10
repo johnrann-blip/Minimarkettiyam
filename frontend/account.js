@@ -6,7 +6,7 @@ function showAccountState() {
   if (currentCustomer) {
     $account('#accountOpen').textContent = 'حساب من';
     welcome.hidden = false;
-    welcome.textContent = 'سلام ' + currentCustomer.full_name + '؛ تخفیف ۵٪ عضویت برای محصولات واجد شرایط فعال است.';
+    welcome.textContent = 'سلام ' + currentCustomer.full_name + '؛ به حساب کاربری AVELORA خوش آمدی.';
     const nameField=document.querySelector('#orderForm [name=name]');
     const phoneField=document.querySelector('#orderForm [name=phone]');
     if(nameField && !nameField.value) nameField.value=currentCustomer.full_name;
@@ -42,7 +42,7 @@ async function submitAccount(form, action) {
     if (!response.ok) throw new Error(data.error || 'عملیات انجام نشد.');
     currentCustomer = data.customer || null;
     showAccountState();
-    accountMessage(action === 'register' ? 'عضویت انجام شد؛ قیمت‌های ویژه اعضا فعال شدند.' : 'وارد حساب شدی؛ قیمت‌های ویژه اعضا فعال شدند.');
+    accountMessage(action === 'register' ? 'عضویت با موفقیت انجام شد.' : 'با موفقیت وارد حساب شدی.');
     form.reset();
     document.dispatchEvent(new CustomEvent('avelora:auth-changed'));
     setTimeout(() => $account('#accountDialog').close(), 900);
