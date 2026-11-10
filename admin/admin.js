@@ -161,7 +161,7 @@ function renderProductCard(p, archived = false) {
       <p>شناسه: ${escapeHtml(p.id)} | کد کالا: ${escapeHtml(p.sku || 'ندارد')}</p>
       <p>قیمت فروش: ${Number(p.price_toman).toLocaleString('fa-IR')} تومان</p>
       <p>قیمت خرید: ${p.cost_price_toman === null || p.cost_price_toman === undefined ? 'ثبت نشده' : Number(p.cost_price_toman).toLocaleString('fa-IR') + ' تومان'}</p>
-      <p>تخفیف: ${p.sale_price_toman === null ? 'ندارد' : Number(p.sale_price_toman).toLocaleString('fa-IR') + ' تومان'}</p>
+      <p>قیمت ویژه مدیر: ${p.sale_price_toman === null ? 'فعال نیست' : Number(p.sale_price_toman).toLocaleString('fa-IR') + ' تومان'}</p>
       <p>موجودی: ${Number(p.stock).toLocaleString('fa-IR')}</p>
       <p>دسته: ${escapeHtml(p.category_name || 'بدون دسته')}</p>
       <p>وضعیت: ${active ? 'فعال' : 'بایگانی‌شده'}</p>
