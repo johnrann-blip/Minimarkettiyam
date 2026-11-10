@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 
 function validId(value) {
-  return /^\\d{1,18}$/.test(String(value || ''));
+  return /^\d{1,18}$/.test(String(value || ''));
 }
 function visitorKey(req) {
   if (req.customer?.id) return 'customer:' + String(req.customer.id);
