@@ -496,7 +496,6 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
         throw new Error('موجودی ' + product.name + ' کافی نیست.');
       }
 
-      const regularPrice=Number(product.price_toman);
       const currentPrice=Number(product.sale_price_toman ?? product.price_toman);
       const price=currentPrice;
       const line = price * qty;
