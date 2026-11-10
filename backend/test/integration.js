@@ -311,20 +311,35 @@ async function run() {
       payment_instructions: 'اطلاعات صرفاً آزمایشی',
       payment_enabled: true,
       local_shipping_toman: 5000,
-      nationwide_shipping_toman: 10000
+      nationwide_shipping_toman: 10000,
+      footer_about: 'معرفی آزمایشی AVELORA',
+      footer_support_phone: '02112345678',
+      footer_support_email: 'support@example.com',
+      footer_instagram_url: 'https://instagram.com/avelora.test',
+      footer_whatsapp_phone: '989121234567',
+      footer_bale_url: 'https://ble.ir/avelora_test',
+      footer_telegram_url: 'https://t.me/avelora_test',
+      footer_address: 'نشانی آزمایشی',
+      footer_hours: 'شنبه تا پنجشنبه ۹ تا ۱۷'
     }
   });
   assert(r.status === 200 && r.data.success === true, 'ذخیره تنظیمات معتبر فروشگاه');
 
   r = await request('/api/store-settings');
   assert(r.status === 200 && r.data.payment_enabled === true &&
-    r.data.card_number === '1111222233334444', 'نمایش اطلاعات پرداخت فعال برای مشتری');
+    r.data.card_number === '1111222233334444' &&
+    r.data.footer_instagram_url === 'https://instagram.com/avelora.test' &&
+    r.data.footer_whatsapp_phone === '989121234567' &&
+    r.data.footer_bale_url === 'https://ble.ir/avelora_test' &&
+    r.data.footer_about === 'معرفی آزمایشی AVELORA', 'نمایش تنظیمات تماس و شبکه‌های اجتماعی در فوتر عمومی');
 
   r = await request('/api/admin/store-settings', { admin: true });
   assert(r.status === 200 &&
     Number(r.data.local_shipping_toman) === 5000 &&
-    Number(r.data.nationwide_shipping_toman) === 10000,
-    'دریافت تعرفه‌های ارسال در پنل مدیریت');
+    Number(r.data.nationwide_shipping_toman) === 10000 &&
+    r.data.footer_support_email === 'support@example.com' &&
+    r.data.footer_hours === 'شنبه تا پنجشنبه ۹ تا ۱۷',
+    'دریافت تنظیمات فوتر در پنل مدیریت');
 
   const memberOrderKey=crypto.randomUUID();
   const memberOrderPayload={
