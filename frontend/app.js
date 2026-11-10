@@ -1,5 +1,19 @@
 
 const $=s=>document.querySelector(s);let products=[],cart=JSON.parse(localStorage.getItem('mm_cart')||'[]'),category='',storeSettings=null,adCampaigns={home_banner:[],product_feed:[],category_banner:[]};
+function getVisitorId(){
+  const key='avelora_visitor_id';
+  let id=localStorage.getItem(key);
+  if(!/^[a-f0-9]{32,64}$/i.test(id||'')){
+    const bytes=new Uint8Array(24);
+    if(window.crypto?.getRandomValues)window.crypto.getRandomValues(bytes);
+    else for(let i=0;i<bytes.length;i++)bytes[i]=Math.floor(Math.random()*256);
+    id=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+    localStorage.setItem(key,id);
+  }
+  return id;
+}
+const visitorId=getVisitorId();
+const visitorHeaders={'X-Avelora-Visitor':visitorId};
 const toman=n=>new Intl.NumberFormat('fa-IR').format(Number(n))+' تومان';
 function selectCategory(value){
   category=value;
@@ -45,7 +59,7 @@ async function loadProducts(){
   if(category)p.set('category',category);
   if(q)p.set('q',q);
   try{
-    const response=await fetch('/api/products?'+p);
+    const response=await fetch('/api/products?'+p,{headers:visitorHeaders});
     const data=await response.json();
     if(!response.ok||!Array.isArray(data))throw new Error(data.error||'پاسخ محصولات معتبر نیست.');
     products=data;
@@ -68,12 +82,35 @@ function renderAdvertisingSlots(){
   if(home){home.innerHTML=adCampaigns.home_banner.map(renderAdBanner).join('');home.hidden=!adCampaigns.home_banner.length;}
   if(categorySlot){categorySlot.innerHTML=adCampaigns.category_banner.map(renderAdBanner).join('');categorySlot.hidden=!adCampaigns.category_banner.length;}
 }
+async function toggleProductLike(id,button){
+  if(button.disabled)return;
+  button.disabled=true;
+  try{
+    const response=await fetch('/api/engagement/products/'+encodeURIComponent(id)+'/like',{method:'POST',headers:visitorHeaders});
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||'ثبت لایک انجام نشد.');
+    const product=products.find(item=>String(item.id)===String(id));
+    if(product){product.liked=data.liked;product.likes_count=data.likes_count;}
+    button.classList.toggle('is-liked',data.liked);
+    button.setAttribute('aria-pressed',String(data.liked));
+    button.setAttribute('aria-label',data.liked?'حذف لایک':'لایک محصول');
+    button.querySelector('span').textContent=data.liked?'♥':'♡';
+    button.querySelector('b').textContent=new Intl.NumberFormat('fa-IR').format(data.likes_count);
+  }catch(error){alert(error.message)}
+  finally{button.disabled=false}
+}
+
 function renderProducts(){
   const cards=products.map(p=>`<article class="product">
     <button type="button" class="product-view" data-open-product="${escapeHtml(p.id)}" aria-label="مشاهده مشخصات ${escapeHtml(p.name)}">
       ${p.image_url?`<img class="product-image" src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy">`:'<div class="placeholder">👜</div>'}
       <div class="product-info"><h3>${escapeHtml(p.name)}</h3><div class="price">${toman(p.sale_price_toman??p.price_toman)}</div>${p.sale_price_toman? `<span class="old">${toman(p.price_toman)}</span>`:''}<div class="stock">${p.stock>0?'موجود در انبار':'ناموجود'}</div></div>
     </button>
+    <div class="product-engagement">
+      <button type="button" class="product-like ${p.liked?'is-liked':''}" data-like-product="${escapeHtml(p.id)}" aria-pressed="${p.liked?'true':'false'}" aria-label="${p.liked?'حذف لایک':'لایک محصول'}">
+        <span aria-hidden="true">${p.liked?'♥':'♡'}</span><b>${new Intl.NumberFormat('fa-IR').format(Number(p.likes_count)||0)}</b><small>پسند</small>
+      </button>
+    </div>
     <button class="add" type="button" ${p.stock<1?'disabled':''} data-add-cart="${escapeHtml(p.id)}">افزودن به سبد</button>
   </article>`);
   const sponsored=adCampaigns.product_feed[0];
@@ -93,6 +130,8 @@ async function loadAdvertising(){
   renderAdvertisingSlots();renderProducts();
 }
 $('#productGrid').addEventListener('click',event=>{
+  const likeButton=event.target.closest?.('[data-like-product]');
+  if(likeButton){toggleProductLike(likeButton.dataset.likeProduct,likeButton);return}
   const addButton=event.target.closest?.('[data-add-cart]');
   if(addButton){if(!addButton.disabled)addCart(addButton.dataset.addCart);return}
   const viewButton=event.target.closest?.('[data-open-product]');
@@ -187,6 +226,39 @@ function renderPaymentDetails(){
   box.innerHTML='<strong>اطلاعات پرداخت کارت‌به‌کارت</strong>'+rows.join('');
   box.hidden=rows.length===0;
 }
+
+async function loadCustomerFeedback(){
+  const box=document.getElementById('customerFeedbackList');
+  if(!box)return;
+  try{
+    const response=await fetch('/api/engagement/reviews');
+    const data=await response.json();
+    if(!response.ok||!Array.isArray(data))throw new Error();
+    box.innerHTML=data.length?data.map(item=>'<article class="customer-feedback-card">'+
+      '<div class="customer-feedback-meta"><strong>'+escapeHtml(item.display_name)+'</strong><span>'+
+      (item.feedback_type==='suggestion'?'پیشنهاد مشتری':'نظر مشتری')+'</span></div><p>'+
+      escapeHtml(item.message)+'</p><small>'+new Date(item.created_at).toLocaleDateString('fa-IR')+
+      '</small></article>').join(''):'<p class="feedback-empty">هنوز دیدگاه تأییدشده‌ای ثبت نشده است. اولین نفر باش و نظرت را با ما به اشتراک بگذار.</p>';
+  }catch{box.textContent='دریافت دیدگاه‌ها در حال حاضر ممکن نیست.';}
+}
+const feedbackForm=document.getElementById('customerFeedbackForm');
+if(feedbackForm){
+  feedbackForm.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const button=feedbackForm.querySelector('button[type=submit]');
+    const status=document.getElementById('feedbackMessage');
+    const body=Object.fromEntries(new FormData(feedbackForm).entries());
+    button.disabled=true;status.textContent='در حال ثبت دیدگاه...';
+    try{
+      const response=await fetch('/api/engagement/reviews',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'ثبت دیدگاه انجام نشد.');
+      feedbackForm.reset();status.textContent=data.message||'دیدگاهت پس از بررسی نمایش داده می‌شود.';
+    }catch(error){status.textContent=error.message;}
+    finally{button.disabled=false;}
+  });
+}
+
 function renderFooterSettings(data){
   const setLink=(id,url)=>{
     const node=document.getElementById(id);
@@ -321,7 +393,7 @@ $('#orderForm').onsubmit=async e=>{
   }
   updateCheckout();
 };
-loadCategories();loadProducts();loadAdvertising();saveCart();loadStoreSettings();loadStorePolicies();
+loadCategories();loadProducts();loadAdvertising();loadCustomerFeedback();saveCart();loadStoreSettings();loadStorePolicies();
 
 (function showPaymentResult(){
   const params=new URLSearchParams(location.search);
