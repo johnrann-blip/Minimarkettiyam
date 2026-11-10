@@ -80,7 +80,8 @@ async function loadAdminWorkspace(admin) {
   const productAccess = can('products.view') || can('products.create') || can('products.update') || can('products.archive');
   const orderAccess = can('orders.view') || can('orders.update');
   const customerAccess = can('customers.view') || can('customers.manage');
-  const settingsAccess = can('payments.view') || can('payments.manage');
+  // Store settings include bank/payment details; keep them owner-only.
+  const settingsAccess = owner;
   $('#managerAdmin').hidden = !owner;
   $('#productAdmin').hidden = !(can('products.create') || can('products.update'));
   $('#productsAdmin').hidden = !productAccess;
@@ -446,7 +447,7 @@ const managerPermissions = [
   ['products.archive','بایگانی محصول'],['products.upload','آپلود عکس محصول'],
   ['orders.view','مشاهده سفارش‌ها'],['orders.update','تغییر وضعیت سفارش'],
   ['customers.view','مشاهده مشتریان'],['customers.manage','مدیریت مشتریان'],
-  ['payments.view','مشاهده تنظیمات پرداخت'],['payments.manage','مدیریت پرداخت و تنظیمات فروشگاه'],
+  ['settings.view','مشاهده تنظیمات فروشگاه'],['settings.update','ویرایش تنظیمات فروشگاه'],
   ['audit.view','مشاهده گزارش فعالیت مدیران']
 ];
 
