@@ -10,10 +10,29 @@
 <body>
 <main>
   <h1>مدیریت فروشگاه AVELORA</h1>
-  <p>کلید مدیریت را وارد کن. این کلید را در اختیار دیگران قرار نده.</p>
-  <input id="key" type="password" placeholder="کلید مدیریت" autocomplete="current-password">
-  <button id="saveKey" type="button">ورود</button>
-
+  <section id="loginPanel">
+    <h2>ورود مدیر</h2>
+    <form id="loginForm">
+      <input name="username" autocomplete="username" placeholder="نام کاربری" required>
+      <input name="password" type="password" autocomplete="current-password" placeholder="رمز عبور" required>
+      <button type="submit">ورود امن</button>
+    </form>
+  </section>
+  <section id="bootstrapPanel" hidden>
+    <h2>راه‌اندازی اولیه حساب مالک</h2>
+    <p class="muted">این مرحله فقط یک‌بار و با کلید محرمانه تنظیم‌شده روی سرور انجام می‌شود. کلید را در سایت یا پیام برای کسی ارسال نکن.</p>
+    <form id="bootstrapForm">
+      <input name="admin_api_key" type="password" autocomplete="off" placeholder="کلید راه‌اندازی سرور" required>
+      <input name="username" value="owner" autocomplete="username" placeholder="نام کاربری" required>
+      <input name="display_name" value="مالک فروشگاه" placeholder="نام نمایشی" required>
+      <input name="password" type="password" autocomplete="new-password" minlength="12" placeholder="رمز عبور قوی (حداقل ۱۲ نویسه)" required>
+      <input name="password_confirm" type="password" autocomplete="new-password" minlength="12" placeholder="تکرار رمز عبور" required>
+      <button type="submit">ساخت حساب مالک</button>
+    </form>
+  </section>
+  <p id="authMessage" role="status"></p>
+  <div id="adminWorkspace" hidden>
+    <button id="logoutButton" type="button">خروج از حساب مدیریت</button>
   <section>
     <h2 id="formTitle">افزودن محصول</h2>
     <form id="productForm">
@@ -122,6 +141,7 @@
   </section>
 
   <p id="msg" role="status"></p>
+  </div>
 </main>
 <script src="/admin/admin.js?v=20261110-policy-settings-1"></script>
 </body>
