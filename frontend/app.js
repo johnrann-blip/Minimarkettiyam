@@ -211,6 +211,43 @@ async function loadStoreSettings(){
   }
   updateCheckout();
 }
+const policyTitles = {
+  terms: 'قوانین و مقررات خرید',
+  privacy: 'حریم خصوصی',
+  shipping: 'شرایط ارسال و تحویل',
+  returns: 'تعویض و مرجوعی'
+};
+let storePolicies = null;
+async function loadStorePolicies(){
+  try{
+    const response=await fetch('/api/store-policies');
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||'دریافت راهنمای فروشگاه ناموفق بود.');
+    storePolicies=data;
+  }catch{
+    storePolicies=null;
+  }
+}
+document.querySelectorAll('[data-policy]').forEach(link=>{
+  link.addEventListener('click',event=>{
+    event.preventDefault();
+    const key=link.dataset.policy;
+    const dialog=document.getElementById('policyDialog');
+    const title=document.getElementById('policyDialogTitle');
+    const body=document.getElementById('policyDialogBody');
+    if(!dialog||!title||!body||!policyTitles[key])return;
+    title.textContent=policyTitles[key];
+    const content=storePolicies&&String(storePolicies['policy_'+key]||'').trim();
+    body.textContent=content||'این بخش هنوز توسط مدیریت فروشگاه تکمیل و منتشر نشده است.';
+    if(!dialog.open)dialog.showModal();
+  });
+});
+document.getElementById('policyDialogClose')?.addEventListener('click',()=>{
+  document.getElementById('policyDialog')?.close();
+});
+document.getElementById('policyDialog')?.addEventListener('click',event=>{
+  if(event.target===event.currentTarget)event.currentTarget.close();
+});
 $('#orderForm').elements.delivery_method.addEventListener('change',updateCheckout);
 $('#orderForm').onsubmit=async e=>{
   e.preventDefault();
@@ -260,7 +297,7 @@ $('#orderForm').onsubmit=async e=>{
   }
   updateCheckout();
 };
-loadCategories();loadProducts();saveCart();loadStoreSettings();
+loadCategories();loadProducts();saveCart();loadStoreSettings();loadStorePolicies();
 
 (function showPaymentResult(){
   const params=new URLSearchParams(location.search);
