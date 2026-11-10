@@ -83,6 +83,8 @@ async function loadAdminWorkspace(admin) {
   // Store settings include bank/payment details; keep them owner-only.
   const settingsAccess = owner;
   $('#advertisingAdminLink').hidden = !owner;
+  $('#feedbackAdmin').hidden = !owner;
+  if(owner) loadFeedback();
   $('#managerAdmin').hidden = !owner;
   $('#productAdmin').hidden = !(can('products.create') || can('products.update'));
   $('#productsAdmin').hidden = !productAccess;
@@ -598,6 +600,35 @@ $('#archivedProducts').addEventListener('click', async event => {
   } catch (error) {
     message(error.message);
   }
+});
+
+
+async function loadFeedback(){
+  if($('#feedbackAdmin').hidden)return;
+  try{
+    const status=$('#feedbackStatus').value||'pending';
+    const data=await request('/api/admin/feedback?status='+encodeURIComponent(status));
+    if(!Array.isArray(data))throw new Error('پاسخ دیدگاه‌ها معتبر نیست.');
+    $('#feedbackList').innerHTML=data.map(item=>'<article class="order"><b>'+escapeHtml(item.display_name)+'</b> — '+
+      (item.feedback_type==='suggestion'?'پیشنهاد':'نظر')+'<p>'+escapeHtml(item.message)+'</p><p class="muted">وضعیت: '+
+      escapeHtml(item.status)+' | '+new Date(item.created_at).toLocaleString('fa-IR')+'</p>'+
+      (item.status==='pending'?'<div class="row"><button type="button" data-feedback-action="approved" data-feedback-id="'+escapeHtml(item.id)+'">تأیید و انتشار</button><button type="button" data-feedback-action="rejected" data-feedback-id="'+escapeHtml(item.id)+'">رد دیدگاه</button></div>':'')+
+      '</article>').join('')||'دیدگاهی در این فهرست وجود ندارد.';
+  }catch(error){$('#feedbackList').textContent=error.message;}
+}
+$('#refreshFeedback').addEventListener('click',loadFeedback);
+$('#feedbackStatus').addEventListener('change',loadFeedback);
+$('#feedbackList').addEventListener('click',async event=>{
+  const button=event.target.closest('[data-feedback-action]');
+  if(!button)return;
+  button.disabled=true;
+  try{
+    await request('/api/admin/feedback/'+encodeURIComponent(button.dataset.feedbackId),{
+      method:'PATCH',body:JSON.stringify({status:button.dataset.feedbackAction})
+    });
+    message(button.dataset.feedbackAction==='approved'?'دیدگاه تأیید و منتشر شد.':'دیدگاه رد شد.');
+    await loadFeedback();
+  }catch(error){message(error.message);button.disabled=false;}
 });
 
 checkAdminSession();
