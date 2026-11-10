@@ -89,6 +89,7 @@ async function loadAdminWorkspace(admin) {
   $('#customerAdmin').hidden = !customerAccess;
   $('#storeSettings').hidden = !settingsAccess;
   $('#loginPanel').hidden = true;
+  $('#bootstrapPanel').hidden = true;
   message('ورود موفق بود؛ در حال دریافت اطلاعات مجاز...');
   const tasks = [];
   if (productAccess) tasks.push(categories(), products());
