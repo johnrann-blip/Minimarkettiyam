@@ -193,6 +193,8 @@ async function run() {
   assert(r.status===200 && Array.isArray(r.data), 'دسترسی مدیر محدود به مشاهده سفارش‌ها');
   r = await request('/api/admin/products',{admin:true});
   assert(r.status===403, 'جلوگیری از دسترسی مدیر به محصولات بدون مجوز');
+  r = await request('/api/admin/advertising/packages',{admin:true});
+  assert(r.status===403, 'محدودماندن مدیریت قراردادها و درآمد تبلیغات به مالک فروشگاه');
   r = await request('/api/admin/store-settings',{admin:true});
   assert(r.status===403, 'جلوگیری از مشاهده اطلاعات بانکی و تنظیمات حساس توسط مدیر فاقد مجوز');
   adminSessionCookie = ownerSessionCookie;
