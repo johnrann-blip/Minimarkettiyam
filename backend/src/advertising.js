@@ -84,8 +84,8 @@ function createAdvertisingRouter({pool, rateLimit}) {
       const result = await pool.query(
         `INSERT INTO advertising_requests
          (request_code,advertiser_name,business_name,phone,email,website_url,industry,package_id,duration_days,
-          target_impressions,target_clicks,budget_toman,creative_url,target_url,message,quote_toman,status)
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+          target_impressions,target_clicks,budget_toman,creative_url,target_url,message,contact_consent_at,quote_toman,status)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW(),$16,$17)
          RETURNING id,request_code,status,quote_toman,created_at`,
         [code,advertiserName,businessName,phone,email,website,industry,packageId,duration,
          impressions,clicks,budget,creative,target,message,quote,quote===null?'pending':'quoted']
