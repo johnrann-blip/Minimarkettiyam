@@ -98,8 +98,18 @@ async function loadAdminWorkspace(admin) {
   if (orderAccess) tasks.push(orders());
   if (customerAccess) tasks.push(customers());
   if (settingsAccess) tasks.push(loadStoreSettings());
-  if (owner) tasks.push(loadManagers());
+  if (owner) tasks.push(loadManagers(), advertisingSummary());
   await Promise.all(tasks);
+}
+
+async function advertisingSummary() {
+  try {
+    const data=await request('/api/admin/advertising/summary');
+    const link=$('#advertisingAdminLink');
+    link.textContent=data.pending_requests
+      ? 'مدیریت تبلیغات — '+Number(data.pending_requests).toLocaleString('fa-IR')+' درخواست جدید'
+      : 'مدیریت تبلیغات و درخواست‌های همکاری';
+  } catch {}
 }
 
 async function checkAdminSession() {
