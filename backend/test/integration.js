@@ -35,6 +35,7 @@ let memberProductId = null;
 let memberSessionCookie = null;
 let memberOrderCode = null;
 let memberPhone = null;
+let adminSessionCookie = null;
 
 function assert(condition, message) {
   if (!condition) throw new Error('FAIL: ' + message);
@@ -42,15 +43,17 @@ function assert(condition, message) {
 }
 
 async function request(path, options = {}) {
-  const headers = { 'content-type': 'application/json', ...(options.headers || {}) };
-  if (options.admin) headers['x-admin-key'] = KEY;
-
+  const {admin, ...fetchOptions} = options;
+  const headers = { 'content-type': 'application/json', ...(fetchOptions.headers || {}) };
+  if (admin) {
+    headers['x-admin-request'] = '1';
+    if (adminSessionCookie) headers.cookie = adminSessionCookie;
+  }
   const response = await fetch(BASE + path, {
-    ...options,
+    ...fetchOptions,
     headers,
-    body: options.body ? JSON.stringify(options.body) : undefined
+    body: fetchOptions.body ? JSON.stringify(fetchOptions.body) : undefined
   });
-
   let data = {};
   try { data = await response.json(); } catch {}
   return { status: response.status, data, cookie: response.headers.get('set-cookie') };
@@ -70,6 +73,8 @@ async function waitForServer() {
 async function run() {
   const membershipMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/004_customer_membership.sql'), 'utf8');
   await db.query(membershipMigration);
+  const adminMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/008_admin_auth.sql'), 'utf8');
+  await db.query(adminMigration);
   await waitForServer();
 
   let staticResponse = await fetch(BASE + '/admin/');
@@ -87,11 +92,34 @@ async function run() {
   staticResponse = await fetch(BASE + '/admin/admin.css');
   assert(staticResponse.status === 200, 'بارگذاری CSS پنل مدیریت');
 
-  let r = await request('/api/admin/uploads/product', {
+  let r = await request('/api/admin/auth/status');
+  assert(r.status === 200 && r.data.setup_required === true, 'تشخیص نیاز به راه‌اندازی اولیه حساب مالک');
+  r = await request('/api/admin/auth/bootstrap', {
+    method:'POST',
+    headers:{'x-admin-request':'1'},
+    body:{admin_api_key:KEY,username:'owner',display_name:'مالک آزمایشی',password:'TestOwnerPassword123'}
+  });
+  assert(r.status === 201 && r.data.admin.role === 'owner' && !!r.cookie, 'ساخت حساب مالک و ایجاد نشست امن');
+  adminSessionCookie = r.cookie;
+  r = await request('/api/admin/auth/me');
+  assert(r.status === 200 && r.data.admin.username === 'owner', 'بازیابی حساب مالک از نشست کوکی');
+  r = await request('/api/admin/auth/login', {
+    method:'POST',headers:{'x-admin-request':'1'},
+    body:{username:'owner',password:'WrongOwnerPassword123'}
+  });
+  assert(r.status === 401, 'رد رمز عبور اشتباه مدیر');
+  r = await request('/api/admin/auth/login', {
+    method:'POST',headers:{'x-admin-request':'1'},
+    body:{username:'owner',password:'TestOwnerPassword123'}
+  });
+  assert(r.status === 200 && !!r.cookie, 'ورود مدیر با رمز صحیح و صدور نشست جدید');
+  adminSessionCookie = r.cookie;
+
+  r = await request('/api/admin/uploads/product', {
     method: 'POST',
     body: { mime_type: 'image/png', image_base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=' }
   });
-  assert(r.status === 401, 'جلوگیری از آپلود عکس بدون کلید مدیر');
+  assert(r.status === 401, 'جلوگیری از آپلود عکس بدون نشست مدیر');
 
   r = await request('/api/unknown-endpoint');
   assert(r.status === 404 && typeof r.data.error === 'string', 'پاسخ JSON استاندارد برای مسیر API ناشناخته');
@@ -159,7 +187,7 @@ async function run() {
   assert(!!bagsCategory && !!beautyCategory, 'وجود دسته‌های مستقل کیف و لوازم آرایشی');
 
   r = await request('/api/admin/products');
-  assert(r.status === 401, 'رد دسترسی مدیر بدون کلید');
+  assert(r.status === 401, 'رد دسترسی مدیر بدون نشست معتبر');
 
   r = await request('/api/admin/store-settings');
   assert(r.status === 401, 'رد دسترسی غیرمجاز به تنظیمات بانکی');
@@ -452,6 +480,11 @@ async function run() {
     body: { status: 'paid' }
   });
   assert(r.status === 409, 'جلوگیری از تغییر سفارش لغوشده به پرداخت‌شده');
+
+  r = await request('/api/admin/auth/logout', {method:'POST',admin:true,body:{}});
+  assert(r.status === 200, 'خروج مدیر و ابطال نشست');
+  r = await request('/api/admin/products');
+  assert(r.status === 401, 'رد درخواست پس از خروج مدیر');
 
   console.log('\nALL INTEGRATION TESTS PASSED');
 }
