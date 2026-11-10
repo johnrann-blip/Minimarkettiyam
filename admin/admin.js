@@ -367,7 +367,7 @@ async function orders() {
         <p>هزینه ارسال: ${Number(o.shipping_toman).toLocaleString('fa-IR')} تومان</p>
         <p><b>مبلغ نهایی: ${Number(o.total_toman).toLocaleString('fa-IR')} تومان</b></p>
         <p>وضعیت سفارش: ${escapeHtml(o.status)} | پرداخت: ${escapeHtml(o.payment_status || 'نامشخص')}</p>
-        <p>نوع مشتری: ${o.customer_id ? 'عضو AVELORA' : 'مهمان'} | تخفیف عضویت: ${Number(o.membership_discount_toman||0).toLocaleString('fa-IR')} تومان</p>
+        <p>نوع مشتری: ${o.customer_id ? 'عضو AVELORA' : 'مهمان'} | تخفیف ثبت‌شده: ${Number(o.membership_discount_toman||0).toLocaleString('fa-IR')} تومان</p>
         <p>روش پرداخت: ${escapeHtml(o.payment_method || 'نامشخص')} | کد پیگیری: ${escapeHtml(o.payment_reference || 'ثبت نشده')}</p>
         <p class="muted">${(o.items || []).map(i =>
           `${escapeHtml(i.name)} × ${escapeHtml(i.quantity)}`
