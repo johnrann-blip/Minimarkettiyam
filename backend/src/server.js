@@ -200,8 +200,8 @@ app.get('/api/products', async (req, res) => {
   try {
     const values = [visitorKey(req) || ''];
     let where = 'p.is_active=true';
-    if (req.query.category) { values.push(String(req.query.category)); where += ' AND c.slug= }
-    if (req.query.q) { values.push('%' + String(req.query.q).slice(0,80) + '%'); where += ' AND (p.name ILIKE  }
+    if (req.query.category) { values.push(String(req.query.category)); where += ' AND c.slug=$' + values.length; }
+    if (req.query.q) { values.push('%' + String(req.query.q).slice(0,80) + '%'); where += ' AND (p.name ILIKE $' + values.length + ' OR p.description ILIKE $' + values.length + ')'; }
     const r = await pool.query(
       `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,c.name AS category_name,c.slug AS category_slug,
               COALESCE(likes.likes_count,0)::int AS likes_count,
