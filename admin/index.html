@@ -37,7 +37,7 @@
   <p id="authMessage" role="status"></p>
   <div id="adminWorkspace" hidden>
     <button id="logoutButton" type="button">خروج از حساب مدیریت</button>
-  <section>
+  <section id="productAdmin">
     <h2 id="formTitle">افزودن محصول</h2>
     <form id="productForm">
       <input type="hidden" name="id">
@@ -60,7 +60,7 @@
     </form>
   </section>
 
-  <section>
+  <section id="productsAdmin">
     <h2>محصولات فروشگاه</h2>
     <button id="refreshProducts" type="button">به‌روزرسانی محصولات</button>
     <p class="muted">در این فهرست فقط محصولات فعال فروشگاه نمایش داده می‌شوند.</p>
@@ -163,14 +163,14 @@
     <div id="managerList"></div>
   </section>
 
-  <section>
+  <section id="customerAdmin">
     <h2>مشتریان عضو AVELORA</h2>
     <button id="refreshCustomers" type="button">دریافت فهرست مشتریان</button>
     <p class="muted">مشتریان ثبت‌نام‌شده و سابقه سفارش‌های مرتبط با حسابشان.</p>
     <div id="customers"></div>
   </section>
 
-  <section>
+  <section id="ordersAdmin">
     <h2>سفارش‌ها</h2>
     <button id="refresh" type="button">دریافت سفارش‌ها</button>
     <div id="orders"></div>
