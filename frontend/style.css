@@ -305,3 +305,28 @@ button:focus-visible,a:focus-visible{outline:2px solid #b68a4c;outline-offset:3p
 .hero-visual{height:clamp(320px,42vw,520px);overflow:hidden;border-radius:20px;background:#e2d4c4;box-shadow:0 18px 50px #3b281f20}
 .hero-visual img{width:100%;height:100%;display:block;object-fit:cover;object-position:center 36%}
 @media(max-width:700px){.hero-editorial{grid-template-columns:1fr;gap:18px;margin:12px;padding:16px;border-radius:18px}.hero-copy{padding:8px 6px 0}.hero-copy h1{font-size:42px}.hero-copy p{font-size:14px}.hero-visual{height:380px;order:-1}.hero-visual img{object-position:center 30%}}
+
+
+/* AVELORA contact and customer-service footer */
+.site-footer{margin-top:76px;padding:58px max(22px,calc((100% - 1240px)/2)) 0;background:#2f2019;color:#e8d9c8;text-align:right;letter-spacing:0}
+.footer-main{display:grid;grid-template-columns:1.25fr .8fr 1fr 1.25fr;gap:clamp(22px,4vw,54px);padding:0 24px 44px}
+.footer-brand{max-width:290px}
+.footer-logo{display:inline-block;color:#f7eee4;text-decoration:none;font-family:Georgia,serif;font-size:35px;font-weight:700;letter-spacing:3px}
+.footer-tagline{margin:12px 0 8px;color:#e7cba7;font-size:14px;font-weight:700}
+.footer-description,.footer-contact>p{margin:0;color:#c7b5a3;font-size:12px;line-height:2.1}
+.footer-note{display:inline-block;margin-top:22px;color:#a88a6c;font-size:9px;letter-spacing:2.2px}
+.footer-column{display:flex;flex-direction:column;align-items:flex-start;gap:13px}
+.footer-column h2{margin:4px 0 8px;color:#f3e7d9;font-size:14px;font-weight:700}
+.footer-column>a,.footer-column>span{color:#cbb9a7;text-decoration:none;font-size:11px;line-height:1.9;transition:color .2s}
+.footer-column>a:hover{color:#e7c18f}
+.footer-contact>p{margin-bottom:3px}
+.social-list{display:grid;gap:10px;width:100%;margin-top:2px}
+.social-item{display:flex;align-items:center;gap:12px;min-height:48px;padding:8px 11px;border:1px solid #594337;border-radius:5px;background:#39281f}
+.social-item>b{display:grid;place-items:center;width:29px;height:29px;border-radius:50%;background:#ead9c4;color:#39271e;font-size:17px}
+.social-item>span{display:grid;gap:2px}
+.social-item strong{color:#f2e7dc;font-size:11px}
+.social-item small{color:#bba894;font-size:10px}
+.footer-column .footer-contact-note{margin-top:3px;color:#a9937e;font-size:10px;line-height:1.9}
+.footer-bottom{display:flex;justify-content:space-between;gap:16px;padding:18px 24px;border-top:1px solid #594337;color:#bba894;font-size:10px}
+@media(max-width:850px){.footer-main{grid-template-columns:repeat(2,minmax(0,1fr));gap:32px}.footer-brand{max-width:none}}
+@media(max-width:520px){.site-footer{margin-top:52px;padding:38px 14px 0}.footer-main{grid-template-columns:1fr 1fr;gap:28px 18px;padding:0 4px 30px}.footer-brand,.footer-contact{grid-column:1/-1}.footer-logo{font-size:31px}.footer-column h2{font-size:13px}.footer-column>a,.footer-column>span{font-size:10px}.footer-bottom{flex-direction:column;align-items:center;text-align:center;padding:16px 4px;font-size:9px}}
