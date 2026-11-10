@@ -97,6 +97,10 @@ CREATE TABLE IF NOT EXISTS store_settings (
   footer_address VARCHAR(500) NOT NULL DEFAULT '',
   footer_hours VARCHAR(160) NOT NULL DEFAULT '',
   footer_about TEXT NOT NULL DEFAULT '',
+  policy_terms TEXT NOT NULL DEFAULT '',
+  policy_privacy TEXT NOT NULL DEFAULT '',
+  policy_shipping TEXT NOT NULL DEFAULT '',
+  policy_returns TEXT NOT NULL DEFAULT '',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 INSERT INTO store_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
