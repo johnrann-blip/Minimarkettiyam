@@ -163,6 +163,40 @@ function renderPaymentDetails(){
   box.innerHTML='<strong>اطلاعات پرداخت کارت‌به‌کارت</strong>'+rows.join('');
   box.hidden=rows.length===0;
 }
+function renderFooterSettings(data){
+  const setLink=(id,url)=>{
+    const node=document.getElementById(id);
+    if(!node)return false;
+    if(!url){node.hidden=true;node.removeAttribute('href');return false;}
+    node.href=url;node.hidden=false;return true;
+  };
+  const safeSocial=value=>{
+    try{const u=new URL(String(value||''));return u.protocol==='https:'?u.href:'';}catch{return '';}
+  };
+  const links=[];
+  links.push(setLink('footerInstagram',safeSocial(data.footer_instagram_url)));
+  const whatsapp=String(data.footer_whatsapp_phone||'').replace(/[^0-9]/g,'');
+  links.push(setLink('footerWhatsapp',whatsapp?('https://wa.me/'+whatsapp):''));
+  links.push(setLink('footerBale',safeSocial(data.footer_bale_url)));
+  links.push(setLink('footerTelegram',safeSocial(data.footer_telegram_url)));
+  const phone=String(data.footer_support_phone||'').trim();
+  const phoneLink=phone.replace(/[^0-9+]/g,'');
+  const phoneVisible=setLink('footerPhone',phoneLink?('tel:'+phoneLink):'');
+  const phoneText=document.getElementById('footerPhoneText');
+  if(phoneText)phoneText.textContent=phone;
+  const email=String(data.footer_support_email||'').trim();
+  const emailVisible=setLink('footerEmail',email?'mailto:'+email:'');
+  const emailText=document.getElementById('footerEmailText');
+  if(emailText)emailText.textContent=email;
+  const about=document.getElementById('footerAbout');
+  if(about&&data.footer_about)about.textContent=data.footer_about;
+  const address=document.getElementById('footerAddress');
+  if(address){address.textContent=data.footer_address?'نشانی: '+data.footer_address:'';address.hidden=!data.footer_address;}
+  const hours=document.getElementById('footerHours');
+  if(hours){hours.textContent=data.footer_hours?'ساعات پاسخ‌گویی: '+data.footer_hours:'';hours.hidden=!data.footer_hours;}
+  const fallback=document.getElementById('footerContactFallback');
+  if(fallback)fallback.hidden=links.some(Boolean)||phoneVisible||emailVisible||!!data.footer_address||!!data.footer_hours;
+}
 async function loadStoreSettings(){
   try{
     const r=await fetch('/api/store-settings');
@@ -170,6 +204,7 @@ async function loadStoreSettings(){
     if(!r.ok)throw new Error(data.error||'دریافت تنظیمات فروشگاه ناموفق بود.');
     storeSettings=data;
     renderPaymentDetails();
+    renderFooterSettings(data);
   }catch(error){
     storeSettings=null;
     $('#checkoutSummary').textContent=error.message||'دریافت تنظیمات فروشگاه ناموفق بود.';
