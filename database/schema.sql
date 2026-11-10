@@ -88,6 +88,15 @@ CREATE TABLE IF NOT EXISTS store_settings (
   payment_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   local_shipping_toman BIGINT CHECK (local_shipping_toman IS NULL OR local_shipping_toman >= 0),
   nationwide_shipping_toman BIGINT CHECK (nationwide_shipping_toman IS NULL OR nationwide_shipping_toman >= 0),
+  footer_support_phone VARCHAR(30) NOT NULL DEFAULT '',
+  footer_support_email VARCHAR(254) NOT NULL DEFAULT '',
+  footer_instagram_url VARCHAR(500) NOT NULL DEFAULT '',
+  footer_whatsapp_phone VARCHAR(30) NOT NULL DEFAULT '',
+  footer_bale_url VARCHAR(500) NOT NULL DEFAULT '',
+  footer_telegram_url VARCHAR(500) NOT NULL DEFAULT '',
+  footer_address VARCHAR(500) NOT NULL DEFAULT '',
+  footer_hours VARCHAR(160) NOT NULL DEFAULT '',
+  footer_about TEXT NOT NULL DEFAULT '',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 INSERT INTO store_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
