@@ -9,7 +9,7 @@
 <meta property="og:title" content="AVELORA | کیف، زیبایی و بیشتر">
 <meta property="og:description" content="کیف، اکسسوری و لوازم آرایشی؛ زیبایی، استایل و خرید جذاب.">
 <title>AVELORA | کیف، زیبایی و بیشتر</title>
-<link rel="stylesheet" href="/style.css?v=20261110-footer-1">
+<link rel="stylesheet" href="/style.css?v=20261110-footer-settings-1">
 </head>
 <body>
 <header class="top"><a class="brand" href="/">AVELORA <small>BAGS • BEAUTY • MORE</small></a><div class="top-actions"><button id="accountOpen" class="account-open" type="button">عضویت / ورود</button><button id="cartOpen" class="cart">سبد خرید <b id="cartCount">۰</b></button></div></header><dialog id="accountDialog" class="account-dialog"><div class="dialog-head"><span>حساب کاربری AVELORA</span><button id="accountClose" type="button">✕</button></div><div class="account-body"><div id="accountWelcome" class="hint" hidden></div><form id="registerForm"><h3>عضویت رایگان AVELORA</h3><input name="name" placeholder="نام و نام خانوادگی" maxlength="120" required><input name="phone" type="tel" inputmode="tel" placeholder="شماره موبایل" required><input name="password" type="password" minlength="10" placeholder="رمز عبور (حداقل ۱۰ نویسه)" required><button class="primary" type="submit">ساخت حساب</button></form><form id="loginForm"><h3>ورود اعضا</h3><input name="phone" type="tel" inputmode="tel" placeholder="شماره موبایل" required><input name="password" type="password" placeholder="رمز عبور" required><button class="primary" type="submit">ورود به حساب</button></form><button id="logoutButton" type="button" hidden>خروج از حساب</button><p id="accountMessage" role="status" class="hint">فعلاً کد پیامکی برای تأیید مالکیت شماره فعال نیست؛ شماره را با دقت وارد کن.</p></div></dialog>
@@ -44,7 +44,7 @@
     <section class="footer-brand">
       <a class="footer-logo" href="/" aria-label="صفحه اصلی AVELORA">AVELORA</a>
       <p class="footer-tagline">انتخابی برای استایل خاص تو</p>
-      <p class="footer-description">دنیایی از کیف، اکسسوری و زیبایی؛ با تجربه خریدی ساده و دلنشین.</p>
+      <p class="footer-description" id="footerAbout">دنیایی از کیف، اکسسوری و زیبایی؛ با تجربه خریدی ساده و دلنشین.</p>
       <span class="footer-note">BAGS · BEAUTY · MORE</span>
     </section>
     <nav class="footer-column" aria-label="دسترسی سریع">
@@ -65,11 +65,16 @@
       <h2>ارتباط با ما</h2>
       <p>برای پرسش درباره محصولات و سفارش‌ها، از راه‌های ارتباطی رسمی فروشگاه استفاده کن.</p>
       <div class="social-list" aria-label="شبکه‌های ارتباطی">
-        <span class="social-item"><b aria-hidden="true">◎</b><span><strong>اینستاگرام</strong><small>آدرس رسمی به‌زودی</small></span></span>
-        <span class="social-item"><b aria-hidden="true">◉</b><span><strong>واتساپ</strong><small>شماره پشتیبانی به‌زودی</small></span></span>
-        <span class="social-item"><b aria-hidden="true">ب</b><span><strong>بله</strong><small>شناسه رسمی به‌زودی</small></span></span>
+        <a class="social-item" id="footerInstagram" href="#" target="_blank" rel="noopener noreferrer" hidden><b aria-hidden="true">◎</b><span><strong>اینستاگرام</strong><small>صفحه رسمی AVELORA</small></span></a>
+        <a class="social-item" id="footerWhatsapp" href="#" target="_blank" rel="noopener noreferrer" hidden><b aria-hidden="true">◉</b><span><strong>واتساپ</strong><small>گفت‌وگو با پشتیبانی</small></span></a>
+        <a class="social-item" id="footerBale" href="#" target="_blank" rel="noopener noreferrer" hidden><b aria-hidden="true">ب</b><span><strong>بله</strong><small>کانال رسمی AVELORA</small></span></a>
+        <a class="social-item" id="footerTelegram" href="#" target="_blank" rel="noopener noreferrer" hidden><b aria-hidden="true">➤</b><span><strong>تلگرام</strong><small>کانال رسمی AVELORA</small></span></a>
+        <a class="social-item" id="footerPhone" href="#" hidden><b aria-hidden="true">☎</b><span><strong>تلفن پشتیبانی</strong><small id="footerPhoneText"></small></span></a>
+        <a class="social-item" id="footerEmail" href="#" hidden><b aria-hidden="true">✉</b><span><strong>ایمیل</strong><small id="footerEmailText"></small></span></a>
       </div>
-      <span class="footer-contact-note">اطلاعات تماس پس از ثبت و تأیید کانال‌های رسمی فعال خواهد شد.</span>
+      <p class="footer-contact-note" id="footerAddress" hidden></p>
+      <p class="footer-contact-note" id="footerHours" hidden></p>
+      <span class="footer-contact-note" id="footerContactFallback">راه‌های رسمی ارتباطی پس از ثبت توسط مدیریت نمایش داده می‌شوند.</span>
     </section>
   </div>
   <div class="footer-bottom">
@@ -77,7 +82,7 @@
     <span>خرید آگاهانه، انتخاب ماندگار</span>
   </div>
 </footer>
-<script src="/app.js?v=20261110-manager-discounts-1"></script>
+<script src="/app.js?v=20261110-footer-settings-1"></script>
 <script src="/account.js?v=20261110-manager-discounts-1"></script>
 <script src="/assistant.js?v=20261109-free-assistant-1"></script>
 </body></html>
