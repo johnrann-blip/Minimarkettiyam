@@ -92,6 +92,7 @@ async function run() {
   assert(staticResponse.status === 200 && adminHtml.includes('noindex,nofollow'), 'بارگذاری پنل مدیریت با جلوگیری از ایندکس موتورهای جست‌وجو');
   staticResponse = await fetch(BASE + '/');
   const storefrontHtml = await staticResponse.text();
+  assert(storefrontHtml.includes('homeAdSlot') && storefrontHtml.includes('categoryAdSlot') && storefrontHtml.includes('/advertising.html'), 'وجود جایگاه‌های تبلیغاتی و مسیر همکاری در صفحه اصلی');
   assert(staticResponse.status === 200 && storefrontHtml.includes('name="description"') &&
     staticResponse.headers.get('x-content-type-options') === 'nosniff',
     'بارگذاری فروشگاه همراه با توضیحات SEO و هدر امنیتی nosniff');
