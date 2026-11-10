@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS advertising_requests (
   creative_url VARCHAR(1000) NOT NULL DEFAULT '',
   target_url VARCHAR(1000) NOT NULL DEFAULT '',
   message TEXT NOT NULL DEFAULT '',
+  contact_consent_at TIMESTAMPTZ NOT NULL,
   status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','quoted','approved','rejected')),
   quote_toman BIGINT CHECK (quote_toman IS NULL OR quote_toman >= 0),
   payment_status VARCHAR(16) NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid','paid')),
