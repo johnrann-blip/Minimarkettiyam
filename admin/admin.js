@@ -74,10 +74,28 @@ $('#imageFile').addEventListener('change', () => {
 
 async function loadAdminWorkspace(admin) {
   $('#adminWorkspace').hidden = false;
-  $('#managerAdmin').hidden = !admin || admin.role !== 'owner';
+  const owner = admin?.role === 'owner';
+  const permissions = new Set(admin?.permissions || []);
+  const can = permission => owner || permissions.has(permission);
+  const productAccess = can('products.view') || can('products.create') || can('products.update') || can('products.archive');
+  const orderAccess = can('orders.view') || can('orders.update');
+  const customerAccess = can('customers.view') || can('customers.manage');
+  const settingsAccess = can('payments.view') || can('payments.manage');
+  $('#managerAdmin').hidden = !owner;
+  $('#productAdmin').hidden = !(can('products.create') || can('products.update'));
+  $('#productsAdmin').hidden = !productAccess;
+  $('#ordersAdmin').hidden = !orderAccess;
+  $('#customerAdmin').hidden = !customerAccess;
+  $('#storeSettings').hidden = !settingsAccess;
   $('#loginPanel').hidden = true;
-  message('ورود موفق بود؛ در حال دریافت اطلاعات فروشگاه...');
-  await Promise.all([categories(), products(), orders(), customers(), loadStoreSettings(), admin?.role === 'owner' ? loadManagers() : Promise.resolve()]);
+  message('ورود موفق بود؛ در حال دریافت اطلاعات مجاز...');
+  const tasks = [];
+  if (productAccess) tasks.push(categories(), products());
+  if (orderAccess) tasks.push(orders());
+  if (customerAccess) tasks.push(customers());
+  if (settingsAccess) tasks.push(loadStoreSettings());
+  if (owner) tasks.push(loadManagers());
+  await Promise.all(tasks);
 }
 
 async function checkAdminSession() {
