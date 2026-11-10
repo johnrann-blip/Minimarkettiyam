@@ -138,10 +138,10 @@ async function run() {
 
   memberPhone = '0912' + String(crypto.randomInt(1000000,9999999));
   r = await request('/api/auth/register', {method:'POST',body:{name:'عضو آزمایشی',phone:memberPhone,password:'TestMemberPass123'}});
-  assert(r.status === 201 && r.data.discount_percent === 5 && !!r.cookie, 'ثبت‌نام مشتری و ایجاد نشست عضویت با تخفیف ۵ درصد');
+  assert(r.status === 201 && r.data.discount_percent === 0 && !!r.cookie, 'ثبت‌نام مشتری بدون تخفیف خودکار');
   memberSessionCookie = r.cookie;
   r = await request('/api/auth/me', {headers:{cookie:memberSessionCookie}});
-  assert(r.status === 200 && r.data.customer && r.data.customer.phone === memberPhone, 'بازیابی امن وضعیت ورود مشتری');
+  assert(r.status === 200 && r.data.customer && r.data.customer.phone === memberPhone && r.data.discount_percent === 0, 'بازیابی نشست مشتری بدون تخفیف خودکار');
   r = await request('/api/admin/customers');
   assert(r.status===401, 'محافظت از فهرست مشتریان در برابر دسترسی غیرمجاز');
   r = await request('/api/admin/customers',{admin:true});
@@ -210,8 +210,8 @@ async function run() {
   secondProductId = r.data.id;
 
   r = await request('/api/admin/products', {method:'POST',admin:true,body:{
-    sku:SKU+'-MEMBER',name:'محصول واجد تخفیف عضویت',category_id:categoryId,
-    description:'آزمون تخفیف عضویت',price_toman:12000,sale_price_toman:null,
+    sku:SKU+'-MEMBER',name:'محصول آزمایشی بدون تخفیف خودکار',category_id:categoryId,
+    description:'آزمون عدم تخفیف خودکار',price_toman:12000,sale_price_toman:null,
     cost_price_toman:7000,stock:5,image_url:'',is_active:true
   }});
   assert(r.status===201 && r.data.id && Number(r.data.cost_price_toman)===7000, 'ثبت بهای تمام‌شده محصول برای کنترل حاشیه سود');
@@ -220,7 +220,7 @@ async function run() {
   assert(r.status===200 && Number(r.data.find(p=>String(p.id)===String(memberProductId)).sale_price_toman||12000)===12000, 'نمایش قیمت عادی برای مشتری مهمان');
   r=await request('/api/products',{headers:{cookie:memberSessionCookie}});
   const memberProduct=r.data.find(p=>String(p.id)===String(memberProductId));
-  assert(r.status===200 && Number(memberProduct.sale_price_toman)===11400 && Number(memberProduct.member_discount_toman)===600, 'اعمال تخفیف ۵ درصدی عضو فقط بالاتر از قیمت خرید');
+  assert(r.status===200 && memberProduct.sale_price_toman===null && memberProduct.member_discount_toman===undefined, 'عدم اعمال تخفیف خودکار حتی برای مشتری عضو');
 
 
   r = await request('/api/products');
@@ -331,11 +331,11 @@ async function run() {
     customer:{name:'عضو آزمایشی',phone:memberPhone,city:'اصفهان',province:'اصفهان',address:'نشانی عضو آزمایشی',postal_code:''},
     items:[{product_id:memberProductId,quantity:1}],
     delivery_method:'local',
-    note:'آزمون تخفیف عضویت'
+    note:'آزمون عدم تخفیف خودکار'
   };
   r=await request('/api/orders',{method:'POST',headers:{'Idempotency-Key':memberOrderKey,cookie:memberSessionCookie},body:memberOrderPayload});
-  assert(r.status===201 && Number(r.data.subtotal_toman)===11400 && Number(r.data.membership_discount_toman)===600 && Number(r.data.total_toman)===16400,
-    'محاسبه قطعی تخفیف ۵ درصدی در سمت سرور هنگام ثبت سفارش عضو');
+  assert(r.status===201 && Number(r.data.subtotal_toman)===12000 && Number(r.data.membership_discount_toman)===0 && Number(r.data.total_toman)===17000,
+    'ثبت سفارش مشتری عضو با قیمت عادی و بدون تخفیف خودکار');
   memberOrderCode=r.data.order_code;
 
 
