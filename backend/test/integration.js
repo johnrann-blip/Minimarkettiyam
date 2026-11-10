@@ -137,6 +137,8 @@ async function run() {
   assert(r.status===403, 'جلوگیری از دسترسی مدیر به محصولات بدون مجوز');
   r = await request('/api/admin/store-settings',{admin:true});
   assert(r.status===403, 'جلوگیری از مشاهده اطلاعات بانکی و تنظیمات حساس توسط مدیر فاقد مجوز');
+  r = await request('/api/admin/auth/managers',{method:'POST',admin:true,body:{username:'unsafe_settings',display_name:'مدیر نامعتبر',password:'TestManagerPassword123',permissions:['settings.view']}});
+  assert(r.status===400, 'جلوگیری از اعطای مجوز تنظیمات حساس به مدیر');
   adminSessionCookie = ownerSessionCookie;
 
   r = await request('/api/admin/uploads/product', {
