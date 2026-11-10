@@ -426,3 +426,31 @@ button:focus-visible,a:focus-visible{outline:2px solid #b68a4c;outline-offset:3p
 .assistant-form button{font-family:inherit;font-size:12px;min-width:60px}
 .assistant-disclaimer{line-height:1.8}
 @media(max-width:480px){.assistant-panel{left:7px;bottom:68px;width:calc(100vw - 14px);height:min(680px,calc(100dvh - 82px));border-radius:12px}.assistant-launcher{left:10px;bottom:10px;padding:12px 14px;font-size:12px}.assistant-product{grid-template-columns:66px minmax(0,1fr)}.assistant-product img,.assistant-product .assistant-no-image{width:66px;height:74px}}
+
+
+/* AVELORA authentic product likes and moderated customer feedback */
+.product-engagement{display:flex;align-items:center;justify-content:flex-start;padding:8px 12px 2px}
+.product-like{display:inline-flex;align-items:center;gap:6px;border:1px solid #ead8df;border-radius:999px;background:#fff;color:#795064;padding:6px 11px;cursor:pointer;font:inherit;transition:background .18s,border-color .18s,transform .18s}
+.product-like span{font-size:19px;line-height:1;color:#a14d70}
+.product-like b{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.product-like small{font-size:10px;color:#82727a}
+.product-like.is-liked{background:#fff0f4;border-color:#d98ba7;color:#8c3155}
+.product-like:disabled{opacity:.6;cursor:wait}
+.customer-feedback{max-width:1240px;margin:0 auto;padding:42px 20px 34px;border-bottom:1px solid #e9e0d9;display:grid;grid-template-columns:minmax(220px,.8fr) minmax(0,1.2fr);gap:22px}
+.feedback-intro h2{margin:7px 0;font-size:clamp(21px,3vw,29px)}
+.feedback-intro p{line-height:2;color:#776c64;font-size:13px}
+.customer-feedback-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start}
+.customer-feedback-card{border:1px solid #eee4e8;border-radius:13px;padding:13px;background:#fffdfc;min-width:0}
+.customer-feedback-meta{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.customer-feedback-meta strong{font-size:13px}
+.customer-feedback-meta span{font-size:10px;color:#8a6575;background:#f8edf2;border-radius:20px;padding:3px 8px}
+.customer-feedback-card p{font-size:12px;line-height:2;color:#5f565a;overflow-wrap:anywhere}
+.customer-feedback-card small{font-size:10px;color:#958a8f}
+.feedback-empty{grid-column:1/-1;color:#81777b;font-size:12px;line-height:2}
+.customer-feedback-form{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:760px;width:100%;margin-top:8px}
+.customer-feedback-form label{display:grid;gap:6px;font-size:12px;color:#655b60}
+.customer-feedback-form label:nth-child(3){grid-column:1/-1}
+.customer-feedback-form input,.customer-feedback-form select,.customer-feedback-form textarea{width:100%;box-sizing:border-box;border:1px solid #e2d8dd;border-radius:10px;padding:11px;background:#fff;font:inherit;font-size:13px}
+.customer-feedback-form button{justify-self:start}
+#feedbackMessage{grid-column:1/-1;font-size:12px;color:#6e5360;line-height:1.8}
+@media(max-width:680px){.customer-feedback{grid-template-columns:1fr;padding:30px 14px}.customer-feedback-list{grid-template-columns:1fr}.customer-feedback-form{grid-template-columns:1fr}.customer-feedback-form label:nth-child(3){grid-column:auto}}
