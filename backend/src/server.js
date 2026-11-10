@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const { Pool } = require('pg');
 const { createZarinpalRouter, getConfig } = require('./zarinpal');
 const { createCustomerAuth } = require('./customer-auth');
+const { createAdminAuth } = require('./admin-auth');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -90,15 +91,6 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { maxAge:
 app.use(express.static(path.join(__dirname, '../../frontend')));
 app.use('/admin', express.static(path.join(__dirname, '../../admin')));
 
-function adminOnly(req, res, next) {
-  const expected = process.env.ADMIN_API_KEY;
-  const supplied = req.get('x-admin-key') || '';
-  if (!expected || Buffer.byteLength(expected) < 32) return res.status(503).json({ error: 'کلید مدیریت در سرور تنظیم نشده است یا طول کافی ندارد.' });
-  const a = Buffer.from(expected), b = Buffer.from(supplied);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: 'دسترسی غیرمجاز' });
-  next();
-}
-
 function createRateLimiter({ windowMs, max, message }) {
   const buckets = new Map();
   let sweepCounter = 0;
@@ -149,6 +141,9 @@ const adminRateLimit = createRateLimiter({
   message: 'تعداد درخواست‌های مدیریتی بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
 });
 
+// Separate owner/manager accounts with database-backed sessions.
+const adminAuth = createAdminAuth({pool, rateLimit: adminRateLimit});
+
 const orderRateLimit = createRateLimiter({
   windowMs: 10 * 60 * 1000,
   max: 10,
@@ -166,6 +161,7 @@ const customerAuth = createCustomerAuth({pool,rateLimit:customerAuthRateLimit});
 app.use('/api',customerAuth.optionalCustomer);
 app.use('/api/auth',customerAuth.router);
 app.use('/api/admin', adminRateLimit);
+app.use('/api/admin/auth', adminAuth.router);
 app.use('/api/payments/zarinpal', createZarinpalRouter({ pool, paymentRateLimit }));
 
 pool.on('error', error => {
@@ -259,7 +255,7 @@ app.get('/api/store-policies', requireFooterSettingsMigration, async (_req, res)
   }
 });
 
-app.get('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly, async (_req, res) => {
+app.get('/api/admin/store-settings', requireFooterSettingsMigration, adminAuth.requireAdmin, async (_req, res) => {
   try {
     const r = await pool.query('SELECT * FROM store_settings WHERE id=1');
     if (!r.rowCount) return res.status(503).json({error:'تنظیمات فروشگاه ثبت نشده است.'});
@@ -292,7 +288,7 @@ app.get('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly, 
   }
 });
 
-app.patch('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly, async (req, res) => {
+app.patch('/api/admin/store-settings', requireFooterSettingsMigration, adminAuth.requireAdmin, async (req, res) => {
   let client;
   try {
     client = await pool.connect();
@@ -713,7 +709,7 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
   }
 });
 
-app.get('/api/admin/customers', adminOnly, async (_req,res) => {
+app.get('/api/admin/customers', adminAuth.requireAdmin, async (_req,res) => {
   try {
     const result=await pool.query(`
       SELECT c.id,c.full_name,c.phone,c.created_at,
@@ -728,7 +724,7 @@ app.get('/api/admin/customers', adminOnly, async (_req,res) => {
   }
 });
 
-app.get('/api/admin/orders', adminOnly, async (_req,res) => {
+app.get('/api/admin/orders', adminAuth.requireAdmin, async (_req,res) => {
   try {
     const r = await pool.query(`SELECT o.*, COALESCE(json_agg(json_build_object('name',i.product_name,'quantity',i.quantity,'unit_price_toman',i.unit_price_toman)) FILTER (WHERE i.id IS NOT NULL),'[]') items
       FROM orders o LEFT JOIN order_items i ON i.order_id=o.id GROUP BY o.id ORDER BY o.created_at DESC LIMIT 200`);
@@ -738,7 +734,7 @@ app.get('/api/admin/orders', adminOnly, async (_req,res) => {
   }
 });
 
-app.patch('/api/admin/orders/:id/status', adminOnly, async (req,res) => {
+app.patch('/api/admin/orders/:id/status', adminAuth.requireAdmin, async (req,res) => {
   const id = String(req.params.id || '');
   const next = req.body.status;
 
@@ -898,7 +894,7 @@ async function validateCategory(client, categoryId) {
   if (!result.rowCount) throw new Error('دسته‌بندی انتخاب‌شده معتبر یا فعال نیست.');
 }
 
-app.post('/api/admin/uploads/product', adminOnly, express.json({ limit: '9mb' }), async (req, res) => {
+app.post('/api/admin/uploads/product', adminAuth.requireAdmin, express.json({ limit: '9mb' }), async (req, res) => {
   try {
     const mime = String(req.body?.mime_type || '');
     const encoded = String(req.body?.image_base64 || '');
@@ -929,7 +925,7 @@ app.post('/api/admin/uploads/product', adminOnly, express.json({ limit: '9mb' })
   }
 });
 
-app.get('/api/admin/products', adminOnly, async (_req, res) => {
+app.get('/api/admin/products', adminAuth.requireAdmin, async (_req, res) => {
   try {
     const result = await pool.query(
       `SELECT p.id,p.sku,p.name,p.category_id,p.description,
@@ -947,7 +943,7 @@ app.get('/api/admin/products', adminOnly, async (_req, res) => {
   }
 });
 
-app.post('/api/admin/products', adminOnly, async (req, res) => {
+app.post('/api/admin/products', adminAuth.requireAdmin, async (req, res) => {
   let client;
   try {
     const p = validateProduct(req.body || {});
@@ -981,7 +977,7 @@ app.post('/api/admin/products', adminOnly, async (req, res) => {
   }
 });
 
-app.patch('/api/admin/products/:id', adminOnly, async (req, res) => {
+app.patch('/api/admin/products/:id', adminAuth.requireAdmin, async (req, res) => {
   const id = String(req.params.id || '');
   if (!/^[1-9][0-9]*$/.test(id)) {
     return res.status(400).json({error:'شناسه محصول معتبر نیست.'});
@@ -1047,7 +1043,7 @@ app.patch('/api/admin/products/:id', adminOnly, async (req, res) => {
   }
 });
 
-app.delete('/api/admin/products/:id', adminOnly, async (req, res) => {
+app.delete('/api/admin/products/:id', adminAuth.requireAdmin, async (req, res) => {
   const id = String(req.params.id || '');
   if (!/^[1-9][0-9]*$/.test(id)) {
     return res.status(400).json({error:'شناسه محصول معتبر نیست.'});
