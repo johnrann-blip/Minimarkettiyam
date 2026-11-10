@@ -34,6 +34,7 @@ document.getElementById('adRequestForm').addEventListener('submit',async event=>
  event.preventDefault();
  const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),message=document.getElementById('adRequestMessage');
  const data=Object.fromEntries(new FormData(form).entries());
+ data.privacy_consent=form.elements.privacy_consent.checked;
  for(const key of ['target_impressions','target_clicks','budget_toman'])if(data[key]==='')delete data[key];
  button.disabled=true;message.textContent='در حال ثبت درخواست...';
  try{
