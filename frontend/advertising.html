@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="تبلیغات و همکاری تجاری با AVELORA؛ معرفی برند و محصولات به مخاطبان فروشگاه.">
+<title>تبلیغات و همکاری با AVELORA</title>
+<link rel="stylesheet" href="/style.css?v=20261110-advertising-1">
+<style>
+.advertising-page{max-width:900px;margin:36px auto;padding:0 18px 60px;color:#242126}
+.advertising-hero{padding:36px 28px;border-radius:22px;background:linear-gradient(135deg,#f8eaf0,#f7f2ec);margin-bottom:24px}
+.advertising-hero h1{font-size:clamp(26px,5vw,42px);margin:8px 0}
+.advertising-copy{color:#665e64;line-height:2}
+.ad-packages{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:20px 0}
+.ad-package{border:1px solid #e9e1e5;border-radius:16px;padding:18px;background:#fff}
+.ad-package h3{margin:0 0 8px}.ad-package p{line-height:1.8;color:#716870}.ad-price{font-weight:700;color:#8d4165}
+.ad-form{background:#fff;border:1px solid #eee5ea;border-radius:18px;padding:22px;display:grid;gap:12px}
+.ad-form input,.ad-form select,.ad-form textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font:inherit;background:#fff}
+.ad-form label{display:grid;gap:6px;font-size:14px}.ad-form .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ad-form button{border:0;border-radius:10px;padding:13px;background:#803b5d;color:#fff;font:inherit;cursor:pointer}
+#adRequestMessage{line-height:1.9}.ad-back{display:inline-block;margin:16px 0;color:#803b5d}
+@media(max-width:560px){.advertising-hero{padding:24px 18px}.ad-form .two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="top"><a class="brand" href="/">AVELORA <small>BAGS • BEAUTY • MORE</small></a><a class="ad-back" href="/">بازگشت به فروشگاه</a></header>
+<main class="advertising-page">
+<section class="advertising-hero">
+<span class="eyebrow">همکاری تجاری با AVELORA</span>
+<h1>برندت را به مخاطبان AVELORA معرفی کن</h1>
+<p class="advertising-copy">اگر در حوزه مد، کیف، زیبایی، اکسسوری یا کسب‌وکارهای مرتبط فعالیت می‌کنی، درخواست تبلیغت را ثبت کن. درخواست بررسی می‌شود و پس از توافق درباره جایگاه، زمان و هزینه، کمپین منتشر خواهد شد.</p>
+</section>
+<section>
+<h2>جایگاه‌های تبلیغاتی</h2>
+<p class="advertising-copy">تعرفه‌ها با توجه به جایگاه و روش قیمت‌گذاری تعیین می‌شوند. اگر تعرفه‌ای هنوز اعلام نشده باشد، مبلغ پس از بررسی درخواست به شما اعلام می‌شود.</p>
+<div id="adPackages" class="ad-packages"><p>در حال دریافت جایگاه‌ها...</p></div>
+</section>
+<section>
+<h2>درخواست تبلیغات</h2>
+<form id="adRequestForm" class="ad-form">
+<label>نام و نام خانوادگی<input name="advertiser_name" maxlength="120" required></label>
+<label>نام برند یا کسب‌وکار<input name="business_name" maxlength="160" required></label>
+<div class="two">
+<label>شماره تماس<input name="phone" type="tel" inputmode="tel" maxlength="24" required></label>
+<label>ایمیل (اختیاری)<input name="email" type="email" maxlength="254"></label>
+</div>
+<div class="two">
+<label>حوزه فعالیت<input name="industry" maxlength="100" placeholder="مثلاً کیف، آرایشی، پوشاک"></label>
+<label>وب‌سایت یا صفحه رسمی (HTTPS)<input name="website_url" type="url" placeholder="https://..."></label>
+</div>
+<label>جایگاه موردنظر<select name="package_id" id="adPackageSelect" required><option value="">انتخاب جایگاه</option></select></label>
+<div class="two">
+<label>مدت کمپین (روز)<select name="duration_days"><option value="7">۷ روز</option><option value="15">۱۵ روز</option><option value="30">۳۰ روز</option></select></label>
+<label>بودجه مدنظر (تومان، اختیاری)<input name="budget_toman" type="number" min="0" step="1"></label>
+</div>
+<div class="two">
+<label>هدف نمایش (اختیاری)<input name="target_impressions" type="number" min="1" placeholder="مثلاً ۱۰۰۰۰"></label>
+<label>هدف کلیک (اختیاری)<input name="target_clicks" type="number" min="1" placeholder="مثلاً ۵۰۰"></label>
+</div>
+<label>لینک تصویر تبلیغ (HTTPS، اختیاری)<input name="creative_url" type="url" placeholder="https://..."></label>
+<label>لینک مقصد تبلیغ (HTTPS، اختیاری)<input name="target_url" type="url" placeholder="https://..."></label>
+<label>توضیحات تکمیلی<textarea name="message" rows="4" maxlength="3000" placeholder="محصول، زمان پیشنهادی یا توضیح کمپین..."></textarea></label>
+<button type="submit">ثبت درخواست همکاری تبلیغاتی</button>
+<p id="adRequestMessage" role="status"></p>
+</form>
+</section>
+<p class="advertising-copy">ثبت درخواست به معنی تأیید تبلیغ یا پرداخت نیست. پیش از انتشار، محتوای تبلیغ، قیمت و زمان اجرا با شما هماهنگ می‌شود. AVELORA حق بررسی و رد محتوای نامرتبط یا نامعتبر را دارد.</p>
+</main>
+<script src="/advertising.js?v=20261110-advertising-1"></script>
+</body></html>
