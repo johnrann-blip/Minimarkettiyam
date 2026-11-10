@@ -124,6 +124,8 @@ async function run() {
   assert(r.status===200 && r.data.length===3, 'نمایش سه جایگاه تبلیغاتی فعال برای عموم');
   const adPackage=r.data.find(x=>x.placement==='home_banner');
   assert(!!adPackage, 'وجود جایگاه بنر صفحه اصلی');
+  r = await request('/api/advertising/requests',{method:'POST',body:{advertiser_name:'بدون رضایت',business_name:'برند آزمایشی',phone:'09121234567',package_id:adPackage.id,duration_days:7}});
+  assert(r.status===400, 'الزام رضایت صریح برای استفاده از اطلاعات تماس تبلیغ‌دهنده');
   r = await request('/api/advertising/requests',{method:'POST',body:{
     advertiser_name:'آزمایش‌کننده تبلیغ',business_name:'برند آزمایشی',phone:'09121234567',privacy_consent:true,
     email:'ads@example.com',industry:'کیف و اکسسوری',package_id:adPackage.id,duration_days:7,
