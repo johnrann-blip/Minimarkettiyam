@@ -239,6 +239,8 @@ function createAdvertisingAdminRouter({pool}) {
 
   router.get('/campaigns', async (_req,res) => {
     try {
+      await pool.query("UPDATE advertising_campaigns SET status='completed',updated_at=NOW() WHERE status IN ('active','scheduled') AND ends_at<=NOW()");
+      await pool.query("UPDATE advertising_campaigns SET status='active',updated_at=NOW() WHERE status='scheduled' AND starts_at<=NOW() AND ends_at>NOW()");
       const r=await pool.query(
         `SELECT c.*,r.request_code,r.business_name,r.payment_status,p.title AS package_title,p.placement
          FROM advertising_campaigns c JOIN advertising_requests r ON r.id=c.request_id
@@ -252,8 +254,15 @@ function createAdvertisingAdminRouter({pool}) {
     const id=safeInteger(req.params.id,1), status=String(req.body?.status||'');
     if(!id||!CAMPAIGN_STATUSES.has(status))return res.status(400).json({error:'وضعیت کمپین معتبر نیست.'});
     try {
-      const r=await pool.query('UPDATE advertising_campaigns SET status=$1,updated_at=NOW() WHERE id=$2 RETURNING id,status',[status,id]);
-      if(!r.rowCount)return res.status(404).json({error:'کمپین پیدا نشد.'});
+      const r=await pool.query(
+        `UPDATE advertising_campaigns c SET status=$1,updated_at=NOW()
+         FROM advertising_requests a WHERE c.id=$2 AND a.id=c.request_id
+           AND ($1<>'active' OR a.payment_status='paid') RETURNING c.id,c.status`,[status,id]);
+      if(!r.rowCount){
+        const exists=await pool.query('SELECT id FROM advertising_campaigns WHERE id=$1',[id]);
+        if(!exists.rowCount)return res.status(404).json({error:'کمپین پیدا نشد.'});
+        return res.status(409).json({error:'کمپین بدون تأیید دریافت وجه قابل فعال‌سازی نیست.'});
+      }
       res.json(r.rows[0]);
     } catch { res.status(503).json({error:'به‌روزرسانی کمپین انجام نشد.'}); }
   });
