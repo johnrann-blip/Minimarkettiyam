@@ -30,9 +30,9 @@ function estimate(packageRow, days, impressions, clicks) {
   if (packageRow.rate_toman === null || packageRow.rate_toman === undefined) return null;
   const rate = Number(packageRow.rate_toman);
   if (!Number.isSafeInteger(rate) || rate < 0) return null;
-  if (packageRow.pricing_model === 'daily') return rate * days;
-  if (packageRow.pricing_model === 'cpm' && impressions) return rate * Math.ceil(impressions / 1000);
-  if (packageRow.pricing_model === 'cpc' && clicks) return rate * clicks;
+  if (packageRow.pricing_model === 'daily') { const value=rate*days; return Number.isSafeInteger(value)?value:null; }
+  if (packageRow.pricing_model === 'cpm' && impressions) { const value=rate*Math.ceil(impressions/1000); return Number.isSafeInteger(value)?value:null; }
+  if (packageRow.pricing_model === 'cpc' && clicks) { const value=rate*clicks; return Number.isSafeInteger(value)?value:null; }
   return null;
 }
 
