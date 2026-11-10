@@ -309,6 +309,10 @@ async function loadStoreSettings() {
     form.elements.footer_telegram_url.value = data.footer_telegram_url || '';
     form.elements.footer_address.value = data.footer_address || '';
     form.elements.footer_hours.value = data.footer_hours || '';
+    form.elements.policy_terms.value = data.policy_terms || '';
+    form.elements.policy_privacy.value = data.policy_privacy || '';
+    form.elements.policy_shipping.value = data.policy_shipping || '';
+    form.elements.policy_returns.value = data.policy_returns || '';
     await loadGatewayStatus();
     $('#settingsMessage').textContent = 'تنظیمات فعلی بارگذاری شد.';
   } catch (error) {
@@ -337,7 +341,11 @@ $('#settingsForm').onsubmit = async event => {
     footer_bale_url: form.elements.footer_bale_url.value.trim(),
     footer_telegram_url: form.elements.footer_telegram_url.value.trim(),
     footer_address: form.elements.footer_address.value.trim(),
-    footer_hours: form.elements.footer_hours.value.trim()
+    footer_hours: form.elements.footer_hours.value.trim(),
+    policy_terms: form.elements.policy_terms.value.trim(),
+    policy_privacy: form.elements.policy_privacy.value.trim(),
+    policy_shipping: form.elements.policy_shipping.value.trim(),
+    policy_returns: form.elements.policy_returns.value.trim()
   };
 
   $('#settingsMessage').textContent = 'در حال ذخیره تنظیمات...';
