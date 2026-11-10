@@ -329,6 +329,11 @@ app.patch('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly
       validationError = 'طول یکی از اطلاعات ارتباطی بیش از حد مجاز است.';
     }
     value.footer_whatsapp_phone = normalizeDigits(value.footer_whatsapp_phone).replace(/[^0-9]/g, '');
+    if (value.footer_whatsapp_phone.startsWith('0')) {
+      value.footer_whatsapp_phone = '98' + value.footer_whatsapp_phone.slice(1);
+    } else if (value.footer_whatsapp_phone.startsWith('9') && value.footer_whatsapp_phone.length === 10) {
+      value.footer_whatsapp_phone = '98' + value.footer_whatsapp_phone;
+    }
     value.footer_support_phone = normalizeDigits(value.footer_support_phone).replace(/[^0-9+]/g, '');
 
 
