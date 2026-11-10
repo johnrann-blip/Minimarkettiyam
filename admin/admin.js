@@ -84,6 +84,7 @@ async function loadAdminWorkspace(admin) {
   $('#managerAdmin').hidden = !owner;
   $('#productAdmin').hidden = !(can('products.create') || can('products.update'));
   $('#productsAdmin').hidden = !productAccess;
+  $('#archiveAdmin').hidden = !can('products.archive');
   $('#ordersAdmin').hidden = !orderAccess;
   $('#customerAdmin').hidden = !customerAccess;
   $('#storeSettings').hidden = !settingsAccess;
@@ -445,8 +446,7 @@ const managerPermissions = [
   ['orders.view','مشاهده سفارش‌ها'],['orders.update','تغییر وضعیت سفارش'],
   ['customers.view','مشاهده مشتریان'],['customers.manage','مدیریت مشتریان'],
   ['payments.view','مشاهده تنظیمات پرداخت'],['payments.manage','مدیریت پرداخت و تنظیمات فروشگاه'],
-  ['accounting.view','مشاهده حسابداری'],['accounting.manage','مدیریت حسابداری'],
-  ['reports.view','مشاهده گزارش‌ها'],['audit.view','مشاهده گزارش فعالیت مدیران']
+  ['audit.view','مشاهده گزارش فعالیت مدیران']
 ];
 
 async function loadManagers() {
