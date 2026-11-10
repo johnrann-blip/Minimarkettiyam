@@ -300,6 +300,15 @@ async function loadStoreSettings() {
     form.elements.payment_enabled.checked = data.payment_enabled === true;
     form.elements.local_shipping_toman.value = data.local_shipping_toman ?? '';
     form.elements.nationwide_shipping_toman.value = data.nationwide_shipping_toman ?? '';
+    form.elements.footer_about.value = data.footer_about || '';
+    form.elements.footer_support_phone.value = data.footer_support_phone || '';
+    form.elements.footer_support_email.value = data.footer_support_email || '';
+    form.elements.footer_instagram_url.value = data.footer_instagram_url || '';
+    form.elements.footer_whatsapp_phone.value = data.footer_whatsapp_phone || '';
+    form.elements.footer_bale_url.value = data.footer_bale_url || '';
+    form.elements.footer_telegram_url.value = data.footer_telegram_url || '';
+    form.elements.footer_address.value = data.footer_address || '';
+    form.elements.footer_hours.value = data.footer_hours || '';
     await loadGatewayStatus();
     $('#settingsMessage').textContent = 'تنظیمات فعلی بارگذاری شد.';
   } catch (error) {
@@ -319,7 +328,16 @@ $('#settingsForm').onsubmit = async event => {
     payment_instructions: form.elements.payment_instructions.value.trim(),
     payment_enabled: form.elements.payment_enabled.checked,
     local_shipping_toman: form.elements.local_shipping_toman.value,
-    nationwide_shipping_toman: form.elements.nationwide_shipping_toman.value
+    nationwide_shipping_toman: form.elements.nationwide_shipping_toman.value,
+    footer_about: form.elements.footer_about.value.trim(),
+    footer_support_phone: form.elements.footer_support_phone.value.trim(),
+    footer_support_email: form.elements.footer_support_email.value.trim(),
+    footer_instagram_url: form.elements.footer_instagram_url.value.trim(),
+    footer_whatsapp_phone: form.elements.footer_whatsapp_phone.value.trim(),
+    footer_bale_url: form.elements.footer_bale_url.value.trim(),
+    footer_telegram_url: form.elements.footer_telegram_url.value.trim(),
+    footer_address: form.elements.footer_address.value.trim(),
+    footer_hours: form.elements.footer_hours.value.trim()
   };
 
   $('#settingsMessage').textContent = 'در حال ذخیره تنظیمات...';
