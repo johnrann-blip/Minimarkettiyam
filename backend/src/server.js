@@ -12,6 +12,7 @@ const { createCustomerAuth } = require('./customer-auth');
 const { createAdminAuth } = require('./admin-auth');
 const { createAdvertisingRouter, createAdvertisingAdminRouter } = require('./advertising');
 const { createSeoRouter } = require('./seo');
+const { createEngagementRouter, createFeedbackAdminRouter, visitorKey } = require('./engagement');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -165,6 +166,8 @@ const paymentRateLimit = createRateLimiter({
 });
 
 const customerAuthRateLimit = createRateLimiter({windowMs:15*60*1000,max:10,message:'تعداد تلاش‌های ورود یا ثبت‌نام زیاد است. کمی بعد دوباره تلاش کن.'});
+const productLikeRateLimit = createRateLimiter({windowMs:60*1000,max:60,message:'تعداد لایک‌ها زیاد است. کمی بعد دوباره تلاش کن.'});
+const feedbackRateLimit = createRateLimiter({windowMs:60*60*1000,max:3,message:'تعداد دیدگاه‌های ثبت‌شده زیاد است. یک ساعت بعد دوباره تلاش کن.'});
 const advertisingRequestRateLimit = createRateLimiter({windowMs:15*60*1000,max:5,message:'تعداد درخواست‌های تبلیغاتی زیاد است. ۱۵ دقیقه بعد دوباره تلاش کنید.'});
 const customerAuth = createCustomerAuth({pool,rateLimit:customerAuthRateLimit});
 app.use('/api',customerAuth.optionalCustomer);
@@ -172,6 +175,8 @@ app.use('/api/auth',customerAuth.router);
 app.use('/api/admin', adminRateLimit);
 app.use('/api/admin/auth', adminAuth.router);
 app.use('/api/advertising', createAdvertisingRouter({pool,rateLimit:advertisingRequestRateLimit}));
+app.use('/api/engagement', createEngagementRouter({pool,likeRateLimit:productLikeRateLimit,feedbackRateLimit}));
+app.use('/api/admin/feedback', adminAuth.requireAdmin, createFeedbackAdminRouter({pool}));
 // Advertising contracts, pricing and campaign publishing are owner-only.
 app.use('/api/admin/advertising', adminAuth.requireAdmin, createAdvertisingAdminRouter({pool}));
 app.use('/api/payments/zarinpal', createZarinpalRouter({ pool, paymentRateLimit }));
@@ -193,13 +198,20 @@ app.get('/api/categories', async (_req, res) => {
 });
 app.get('/api/products', async (req, res) => {
   try {
-    const values = [];
+    const values = [visitorKey(req) || ''];
     let where = 'p.is_active=true';
-    if (req.query.category) { values.push(String(req.query.category)); where += ` AND c.slug=$${values.length}`; }
-    if (req.query.q) { values.push('%' + String(req.query.q).slice(0,80) + '%'); where += ` AND (p.name ILIKE $${values.length} OR p.description ILIKE $${values.length})`; }
+    if (req.query.category) { values.push(String(req.query.category)); where += ` AND c.slug=${values.length}`; }
+    if (req.query.q) { values.push('%' + String(req.query.q).slice(0,80) + '%'); where += ` AND (p.name ILIKE ${values.length} OR p.description ILIKE ${values.length})`; }
     const r = await pool.query(
-      `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,c.name AS category_name,c.slug AS category_slug
-       FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE ${where} ORDER BY p.created_at DESC LIMIT 100`, values);
+      `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,c.name AS category_name,c.slug AS category_slug,
+              COALESCE(likes.likes_count,0)::int AS likes_count,
+              COALESCE(likes.liked,false) AS liked
+       FROM products p LEFT JOIN categories c ON c.id=p.category_id
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS likes_count, BOOL_OR(voter_key=$1) AS liked
+         FROM product_likes WHERE product_id=p.id
+       ) likes ON true
+       WHERE ${where} ORDER BY p.created_at DESC LIMIT 100`, values);
     res.json(r.rows.map(p => {
       const {cost_price_toman,...publicProduct}=p;
       const regular=Number(p.price_toman), current=Number(p.sale_price_toman ?? p.price_toman);
