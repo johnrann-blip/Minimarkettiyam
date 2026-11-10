@@ -6,7 +6,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "check": "node --check src/server.js && node --check src/customer-auth.js && node --check ../admin/admin.js && node --check ../frontend/app.js && node --check ../frontend/account.js && node --check ../frontend/assistant.js && node --check src/zarinpal.js",
+    "check": "node --check src/server.js && node --check src/admin-auth.js && node --check src/customer-auth.js && node --check ../admin/admin.js && node --check ../frontend/app.js && node --check ../frontend/account.js && node --check ../frontend/assistant.js && node --check src/zarinpal.js",
     "test:integration": "node test/integration.js",
     "test:zarinpal": "node test/zarinpal.js"
   },
