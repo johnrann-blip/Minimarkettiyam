@@ -14,6 +14,27 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
+// Additive migration for persistent AVELORA footer contact settings.
+const footerSettingsMigration = pool.query(\`
+  ALTER TABLE store_settings
+    ADD COLUMN IF NOT EXISTS footer_support_phone VARCHAR(30) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS footer_support_email VARCHAR(254) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS footer_instagram_url VARCHAR(500) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS footer_whatsapp_phone VARCHAR(30) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS footer_bale_url VARCHAR(500) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS footer_telegram_url VARCHAR(500) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS footer_address VARCHAR(500) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS footer_hours VARCHAR(160) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS footer_about TEXT NOT NULL DEFAULT ''
+\`).catch(error => {
+  console.error('AVELORA footer settings migration failed:', error.message);
+  throw error;
+});
+async function requireFooterSettingsMigration(_req, res, next) {
+  try { await footerSettingsMigration; next(); }
+  catch { res.status(503).json({error:'به‌روزرسانی تنظیمات ارتباط با مشتری انجام نشد.'}); }
+}
+
 function validateRuntimeConfig() {
   const errors = [];
   if (!process.env.DATABASE_URL) errors.push('DATABASE_URL is required.');
@@ -178,12 +199,15 @@ app.get('/api/products', async (req, res) => {
 
 
 // تنظیمات عمومی فروشگاه؛ اطلاعات بانکی فقط در صورت فعال بودن پرداخت نمایش داده می‌شود.
-app.get('/api/store-settings', async (_req, res) => {
+app.get('/api/store-settings', requireFooterSettingsMigration, async (_req, res) => {
   try {
     const r = await pool.query(
       `SELECT bank_name,card_number,cardholder_name,iban,
               payment_instructions,payment_enabled,
-              local_shipping_toman,nationwide_shipping_toman
+              local_shipping_toman,nationwide_shipping_toman,
+              footer_support_phone,footer_support_email,footer_instagram_url,
+              footer_whatsapp_phone,footer_bale_url,footer_telegram_url,
+              footer_address,footer_hours,footer_about
        FROM store_settings WHERE id=1`
     );
     if (!r.rowCount) return res.status(503).json({error:'تنظیمات فروشگاه ثبت نشده است.'});
@@ -198,14 +222,23 @@ app.get('/api/store-settings', async (_req, res) => {
       iban: x.payment_enabled ? x.iban : '',
       payment_instructions: x.payment_enabled ? x.payment_instructions : '',
       local_shipping_toman: x.local_shipping_toman === null ? null : Number(x.local_shipping_toman),
-      nationwide_shipping_toman: x.nationwide_shipping_toman === null ? null : Number(x.nationwide_shipping_toman)
+      nationwide_shipping_toman: x.nationwide_shipping_toman === null ? null : Number(x.nationwide_shipping_toman),
+      footer_support_phone:x.footer_support_phone,
+      footer_support_email:x.footer_support_email,
+      footer_instagram_url:x.footer_instagram_url,
+      footer_whatsapp_phone:x.footer_whatsapp_phone,
+      footer_bale_url:x.footer_bale_url,
+      footer_telegram_url:x.footer_telegram_url,
+      footer_address:x.footer_address,
+      footer_hours:x.footer_hours,
+      footer_about:x.footer_about
     });
   } catch {
     res.status(500).json({error:'دریافت تنظیمات فروشگاه انجام نشد.'});
   }
 });
 
-app.get('/api/admin/store-settings', adminOnly, async (_req, res) => {
+app.get('/api/admin/store-settings', requireFooterSettingsMigration, adminOnly, async (_req, res) => {
   try {
     const r = await pool.query('SELECT * FROM store_settings WHERE id=1');
     if (!r.rowCount) return res.status(503).json({error:'تنظیمات فروشگاه ثبت نشده است.'});
@@ -218,7 +251,16 @@ app.get('/api/admin/store-settings', adminOnly, async (_req, res) => {
       payment_instructions: x.payment_instructions,
       payment_enabled: x.payment_enabled,
       local_shipping_toman: x.local_shipping_toman === null ? '' : Number(x.local_shipping_toman),
-      nationwide_shipping_toman: x.nationwide_shipping_toman === null ? '' : Number(x.nationwide_shipping_toman)
+      nationwide_shipping_toman: x.nationwide_shipping_toman === null ? '' : Number(x.nationwide_shipping_toman),
+      footer_support_phone:x.footer_support_phone,
+      footer_support_email:x.footer_support_email,
+      footer_instagram_url:x.footer_instagram_url,
+      footer_whatsapp_phone:x.footer_whatsapp_phone,
+      footer_bale_url:x.footer_bale_url,
+      footer_telegram_url:x.footer_telegram_url,
+      footer_address:x.footer_address,
+      footer_hours:x.footer_hours,
+      footer_about:x.footer_about
     });
   } catch {
     res.status(500).json({error:'دریافت تنظیمات مدیریت انجام نشد.'});
@@ -245,7 +287,10 @@ app.patch('/api/admin/store-settings', adminOnly, async (req, res) => {
     const fields = [
       'bank_name','card_number','cardholder_name','iban',
       'payment_instructions','payment_enabled',
-      'local_shipping_toman','nationwide_shipping_toman'
+      'local_shipping_toman','nationwide_shipping_toman',
+      'footer_support_phone','footer_support_email','footer_instagram_url',
+      'footer_whatsapp_phone','footer_bale_url','footer_telegram_url',
+      'footer_address','footer_hours','footer_about'
     ];
 
     const value = {};
@@ -261,6 +306,31 @@ app.patch('/api/admin/store-settings', adminOnly, async (req, res) => {
     value.payment_instructions = String(value.payment_instructions ?? '').trim();
 
     let validationError = null;
+    for (const field of ['footer_support_phone','footer_support_email','footer_instagram_url',
+      'footer_whatsapp_phone','footer_bale_url','footer_telegram_url','footer_address','footer_hours','footer_about']) {
+      value[field] = String(value[field] ?? '').trim();
+    }
+    for (const field of ['footer_instagram_url','footer_bale_url','footer_telegram_url']) {
+      if (value[field]) {
+        try {
+          const url = new URL(value[field]);
+          if (url.protocol !== 'https:' || !url.hostname || url.username || url.password) throw new Error();
+        } catch { validationError = 'لینک شبکه‌های اجتماعی باید یک نشانی معتبر HTTPS باشد.'; break; }
+      }
+    }
+    if (!validationError && value.footer_support_email &&
+        !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value.footer_support_email)) {
+      validationError = 'ایمیل پشتیبانی معتبر نیست.';
+    }
+    if (!validationError && (value.footer_support_phone.length > 30 ||
+        value.footer_whatsapp_phone.length > 30 || value.footer_support_email.length > 254 ||
+        value.footer_address.length > 500 || value.footer_hours.length > 160 ||
+        value.footer_about.length > 1000)) {
+      validationError = 'طول یکی از اطلاعات ارتباطی بیش از حد مجاز است.';
+    }
+    value.footer_whatsapp_phone = value.footer_whatsapp_phone.replace(/[^0-9]/g, '');
+    value.footer_support_phone = value.footer_support_phone.replace(/[^0-9+]/g, '');
+
 
     if (
       value.bank_name.length > 100 ||
@@ -304,15 +374,24 @@ app.patch('/api/admin/store-settings', adminOnly, async (req, res) => {
        bank_name=$1,card_number=$2,cardholder_name=$3,iban=$4,
        payment_instructions=$5,payment_enabled=$6,
        local_shipping_toman=$7,nationwide_shipping_toman=$8,
+       footer_support_phone=$9,footer_support_email=$10,footer_instagram_url=$11,
+       footer_whatsapp_phone=$12,footer_bale_url=$13,footer_telegram_url=$14,
+       footer_address=$15,footer_hours=$16,footer_about=$17,
        updated_at=NOW()
        WHERE id=1
        RETURNING bank_name,card_number,cardholder_name,iban,
                  payment_instructions,payment_enabled,
-                 local_shipping_toman,nationwide_shipping_toman`,
+                 local_shipping_toman,nationwide_shipping_toman,
+                 footer_support_phone,footer_support_email,footer_instagram_url,
+                 footer_whatsapp_phone,footer_bale_url,footer_telegram_url,
+                 footer_address,footer_hours,footer_about`,
       [
         value.bank_name,value.card_number,value.cardholder_name,value.iban,
         value.payment_instructions,value.payment_enabled,
-        value.local_shipping_toman,value.nationwide_shipping_toman
+        value.local_shipping_toman,value.nationwide_shipping_toman,
+        value.footer_support_phone,value.footer_support_email,value.footer_instagram_url,
+        value.footer_whatsapp_phone,value.footer_bale_url,value.footer_telegram_url,
+        value.footer_address,value.footer_hours,value.footer_about
       ]
     );
 
@@ -329,7 +408,16 @@ app.patch('/api/admin/store-settings', adminOnly, async (req, res) => {
         payment_instructions:x.payment_instructions,
         payment_enabled:x.payment_enabled,
         local_shipping_toman:x.local_shipping_toman === null ? null : Number(x.local_shipping_toman),
-        nationwide_shipping_toman:x.nationwide_shipping_toman === null ? null : Number(x.nationwide_shipping_toman)
+        nationwide_shipping_toman:x.nationwide_shipping_toman === null ? null : Number(x.nationwide_shipping_toman),
+      footer_support_phone:x.footer_support_phone,
+      footer_support_email:x.footer_support_email,
+      footer_instagram_url:x.footer_instagram_url,
+      footer_whatsapp_phone:x.footer_whatsapp_phone,
+      footer_bale_url:x.footer_bale_url,
+      footer_telegram_url:x.footer_telegram_url,
+      footer_address:x.footer_address,
+      footer_hours:x.footer_hours,
+      footer_about:x.footer_about
       }
     });
   } catch (error) {
