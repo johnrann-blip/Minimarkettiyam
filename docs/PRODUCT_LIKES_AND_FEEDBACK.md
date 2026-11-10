@@ -15,6 +15,8 @@ Migration: `database/migrations/010_product_likes_customer_feedback.sql`
 - The admin moderation screen is owner-only.
 
 ## Authenticity
+
+The store owner should periodically review pending submissions and remove spam or personal information before approval.
 Do not seed sample likes, fabricated customer names, or invented testimonials. The UI starts at zero and only shows database-backed activity. If the store needs launch content, invite real customers to share honest feedback and label any incentives clearly.
 
 ## Deployment
