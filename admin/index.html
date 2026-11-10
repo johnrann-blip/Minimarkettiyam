@@ -166,6 +166,16 @@
     <div id="customers"></div>
   </section>
 
+  <section id="feedbackAdmin" hidden>
+    <h2>نظرات و پیشنهادهای مشتریان</h2>
+    <p class="muted">فقط دیدگاه‌های تأییدشده در پایین فروشگاه نمایش داده می‌شوند.</p>
+    <div class="row">
+      <select id="feedbackStatus"><option value="pending">در انتظار بررسی</option><option value="approved">تأییدشده‌ها</option><option value="rejected">ردشده‌ها</option><option value="all">همه</option></select>
+      <button id="refreshFeedback" type="button">به‌روزرسانی دیدگاه‌ها</button>
+    </div>
+    <div id="feedbackList"></div>
+  </section>
+
   <section id="ordersAdmin">
     <h2>سفارش‌ها</h2>
     <button id="refresh" type="button">دریافت سفارش‌ها</button>
@@ -175,6 +185,6 @@
   <p id="msg" role="status"></p>
   </div>
 </main>
-<script src="/admin/admin.js?v=20261110-admin-ads-1"></script>
+<script src="/admin/admin.js?v=20261110-feedback-1"></script>
 </body>
 </html>
