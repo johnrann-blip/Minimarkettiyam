@@ -35,6 +35,8 @@ let memberProductId = null;
 let memberSessionCookie = null;
 let memberOrderCode = null;
 let memberPhone = null;
+let adminSessionCookie = null;
+let managerUsername = null;
 
 function assert(condition, message) {
   if (!condition) throw new Error('FAIL: ' + message);
@@ -42,15 +44,17 @@ function assert(condition, message) {
 }
 
 async function request(path, options = {}) {
-  const headers = { 'content-type': 'application/json', ...(options.headers || {}) };
-  if (options.admin) headers['x-admin-key'] = KEY;
-
+  const {admin, ...fetchOptions} = options;
+  const headers = { 'content-type': 'application/json', ...(fetchOptions.headers || {}) };
+  if (admin) {
+    headers['x-admin-request'] = '1';
+    if (adminSessionCookie) headers.cookie = adminSessionCookie;
+  }
   const response = await fetch(BASE + path, {
-    ...options,
+    ...fetchOptions,
     headers,
-    body: options.body ? JSON.stringify(options.body) : undefined
+    body: fetchOptions.body ? JSON.stringify(fetchOptions.body) : undefined
   });
-
   let data = {};
   try { data = await response.json(); } catch {}
   return { status: response.status, data, cookie: response.headers.get('set-cookie') };
@@ -70,6 +74,17 @@ async function waitForServer() {
 async function run() {
   const membershipMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/004_customer_membership.sql'), 'utf8');
   await db.query(membershipMigration);
+  const adminMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/008_admin_auth.sql'), 'utf8');
+  await db.query(adminMigration);
+  const advertisingMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/009_advertising.sql'), 'utf8');
+  await db.query(advertisingMigration);
+  await db.query('DELETE FROM advertising_events');
+  await db.query('DELETE FROM advertising_campaigns');
+  await db.query('DELETE FROM advertising_requests');
+  await db.query("UPDATE advertising_packages SET pricing_model='custom',rate_toman=NULL,is_active=TRUE");
+  await db.query('DELETE FROM admin_sessions');
+  await db.query('DELETE FROM admin_audit_logs');
+  await db.query('DELETE FROM admin_users');
   await waitForServer();
 
   let staticResponse = await fetch(BASE + '/admin/');
@@ -77,21 +92,137 @@ async function run() {
   assert(staticResponse.status === 200 && adminHtml.includes('noindex,nofollow'), 'بارگذاری پنل مدیریت با جلوگیری از ایندکس موتورهای جست‌وجو');
   staticResponse = await fetch(BASE + '/');
   const storefrontHtml = await staticResponse.text();
+  assert(storefrontHtml.includes('homeAdSlot') && storefrontHtml.includes('categoryAdSlot') && storefrontHtml.includes('/advertising.html'), 'وجود جایگاه‌های تبلیغاتی و مسیر همکاری در صفحه اصلی');
   assert(staticResponse.status === 200 && storefrontHtml.includes('name="description"') &&
     staticResponse.headers.get('x-content-type-options') === 'nosniff',
     'بارگذاری فروشگاه همراه با توضیحات SEO و هدر امنیتی nosniff');
   staticResponse = await fetch(BASE + '/assistant.js');
   assert(staticResponse.status === 200 && (await staticResponse.text()).includes('راهنمای خرید AVELORA'), 'بارگذاری دستیار رایگان راهنمای خرید');
+  staticResponse = await fetch(BASE + '/advertising.html');
+  assert(staticResponse.status === 200 && (await staticResponse.text()).includes('درخواست تبلیغات'), 'بارگذاری صفحه عمومی معرفی و ثبت درخواست تبلیغات');
+  staticResponse = await fetch(BASE + '/advertising.js');
+  assert(staticResponse.status === 200, 'بارگذاری فرم ثبت درخواست تبلیغات');
+  staticResponse = await fetch(BASE + '/admin/advertising.html');
+  assert(staticResponse.status === 200 && (await staticResponse.text()).includes('noindex,nofollow'), 'بارگذاری صفحه مدیریت تبلیغات بدون ایندکس موتور جست‌وجو');
+  staticResponse = await fetch(BASE + '/admin/advertising.js');
+  assert(staticResponse.status === 200, 'بارگذاری ابزار مدیریت کمپین‌های تبلیغاتی');
   staticResponse = await fetch(BASE + '/admin/admin.js');
   assert(staticResponse.status === 200, 'بارگذاری JavaScript پنل مدیریت');
   staticResponse = await fetch(BASE + '/admin/admin.css');
   assert(staticResponse.status === 200, 'بارگذاری CSS پنل مدیریت');
 
-  let r = await request('/api/admin/uploads/product', {
+  let r = await request('/api/admin/auth/status');
+  assert(r.status === 200 && r.data.setup_required === true, 'تشخیص نیاز به راه‌اندازی اولیه حساب مالک');
+  r = await request('/api/admin/auth/bootstrap', {
+    method:'POST',
+    headers:{'x-admin-request':'1'},
+    body:{admin_api_key:KEY,username:'owner',display_name:'مالک آزمایشی',password:'TestOwnerPassword123'}
+  });
+  assert(r.status === 201 && r.data.admin.role === 'owner' && !!r.cookie, 'ساخت حساب مالک و ایجاد نشست امن');
+  adminSessionCookie = r.cookie;
+  r = await request('/api/advertising/packages');
+  assert(r.status===200 && r.data.length===3, 'نمایش سه جایگاه تبلیغاتی فعال برای عموم');
+  const adPackage=r.data.find(x=>x.placement==='home_banner');
+  assert(!!adPackage, 'وجود جایگاه بنر صفحه اصلی');
+  r = await request('/api/advertising/requests',{method:'POST',body:{advertiser_name:'بدون رضایت',business_name:'برند آزمایشی',phone:'09121234567',package_id:adPackage.id,duration_days:7}});
+  assert(r.status===400, 'الزام رضایت صریح برای استفاده از اطلاعات تماس تبلیغ‌دهنده');
+  r = await request('/api/advertising/requests',{method:'POST',body:{
+    advertiser_name:'آزمایش‌کننده تبلیغ',business_name:'برند آزمایشی',phone:'09121234567',privacy_consent:true,
+    email:'ads@example.com',industry:'کیف و اکسسوری',package_id:adPackage.id,duration_days:7,
+    creative_url:'https://example.com/ad.jpg',target_url:'https://example.com/',message:'درخواست آزمایشی'
+  }});
+  assert(r.status===201 && r.data.success && r.data.request.status==='pending' && !!r.data.request.request_code, 'ثبت عمومی درخواست تبلیغات بدون انتشار خودکار');
+  const adRequestId=r.data.request.id;
+  r = await request('/api/admin/advertising/requests');
+  assert(r.status===401, 'محافظت از درخواست‌های تبلیغاتی در برابر دسترسی غیرمجاز');
+  r = await request('/api/admin/advertising/packages',{admin:true});
+  assert(r.status===200 && r.data.some(x=>x.id===adPackage.id), 'دسترسی مالک به مدیریت تعرفه‌ها');
+  r = await request('/api/admin/advertising/summary',{admin:true});
+  assert(r.status===200 && Number(r.data.pending_requests)===1, 'نمایش تعداد درخواست‌های جدید تبلیغ به مالک');
+  r = await request('/api/admin/advertising/packages/'+adPackage.id,{method:'PATCH',admin:true,body:{pricing_model:'daily',rate_toman:50000,is_active:true}});
+  assert(r.status===200 && Number(r.data.rate_toman)===50000, 'تنظیم تعرفه روزانه جایگاه توسط مالک');
+  r = await request('/api/advertising/requests',{method:'POST',body:{
+    advertiser_name:'مشتری دوم',business_name:'برند قیمت‌دار',phone:'09121111111',privacy_consent:true,
+    package_id:adPackage.id,duration_days:7
+  }});
+  assert(r.status===201 && Number(r.data.request.quote_toman)===350000 && r.data.request.status==='quoted', 'محاسبه خودکار قیمت بر اساس تعرفه روزانه و مدت کمپین');
+  r = await request('/api/admin/advertising/packages/'+adPackage.id,{method:'PATCH',admin:true,body:{pricing_model:'cpm',rate_toman:20000,is_active:true}});
+  assert(r.status===200, 'تنظیم مدل قیمت‌گذاری بر اساس هزار نمایش');
+  r = await request('/api/advertising/requests',{method:'POST',body:{advertiser_name:'مشتری CPM',business_name:'برند نمایش‌محور',phone:'09123333333',privacy_consent:true,package_id:adPackage.id,duration_days:7,target_impressions:2500}});
+  assert(r.status===201 && Number(r.data.request.quote_toman)===60000, 'محاسبه تعرفه CPM با گرد کردن تعداد هزار نمایش به بالا');
+  r = await request('/api/admin/advertising/packages/'+adPackage.id,{method:'PATCH',admin:true,body:{pricing_model:'cpc',rate_toman:1000,is_active:true}});
+  assert(r.status===200, 'تنظیم مدل قیمت‌گذاری بر اساس کلیک');
+  r = await request('/api/advertising/requests',{method:'POST',body:{advertiser_name:'مشتری CPC',business_name:'برند کلیک‌محور',phone:'09124444444',privacy_consent:true,package_id:adPackage.id,duration_days:7,target_clicks:25}});
+  assert(r.status===201 && Number(r.data.request.quote_toman)===25000, 'محاسبه تعرفه CPC بر اساس تعداد کلیک هدف');
+  const quotedRequestId=r.data.request.id;
+  r = await request('/api/admin/advertising/requests/'+quotedRequestId,{method:'PATCH',admin:true,body:{status:'approved',payment_status:'unpaid',quote_toman:350000,admin_notes:'تأیید آزمایشی'}});
+  assert(r.status===200 && r.data.status==='approved', 'تأیید درخواست و ثبت مبلغ نهایی');
+  await db.query('UPDATE advertising_requests SET target_clicks=1 WHERE id=$1',[quotedRequestId]);
+  r = await request('/api/admin/advertising/requests/'+quotedRequestId+'/campaign',{method:'POST',admin:true,body:{
+    title:'تبلیغ برند آزمایشی',image_url:'https://example.com/ad.jpg',target_url:'https://example.com/',
+    starts_at:new Date(Date.now()-60000).toISOString(),ends_at:new Date(Date.now()+7*86400000).toISOString()
+  }});
+  assert(r.status===409, 'جلوگیری از انتشار کمپین پیش از تأیید دریافت وجه');
+  r = await request('/api/admin/advertising/requests/'+quotedRequestId,{method:'PATCH',admin:true,body:{status:'approved',payment_status:'paid',quote_toman:350000,admin_notes:'وجه در آزمون تأیید شد'}});
+  assert(r.status===200 && r.data.payment_status==='paid', 'ثبت پرداخت پس از بررسی مدیر');
+  r = await request('/api/admin/advertising/requests/'+quotedRequestId+'/campaign',{method:'POST',admin:true,body:{
+    title:'تبلیغ برند آزمایشی',image_url:'https://example.com/ad.jpg',target_url:'https://example.com/',
+    starts_at:new Date(Date.now()-60000).toISOString(),ends_at:new Date(Date.now()+7*86400000).toISOString()
+  }});
+  assert(r.status===201 && !!r.data.id, 'انتشار کمپین فقط پس از تأیید و پرداخت');
+  const adCampaignId=r.data.id;
+  r = await request('/api/advertising/campaigns/home_banner');
+  assert(r.status===200 && r.data.some(x=>x.id===adCampaignId), 'نمایش کمپین پرداخت‌شده در جایگاه عمومی');
+  const adClick=await fetch(BASE+'/api/advertising/click/'+adCampaignId,{redirect:'manual'});
+  assert(adClick.status===302 && adClick.headers.get('location')==='https://example.com/', 'ثبت کلیک و هدایت به مقصد امن تبلیغ');
+  r = await request('/api/advertising/campaigns/home_banner');
+  assert(r.status===200 && !r.data.some(x=>x.id===adCampaignId), 'توقف نمایش تبلیغ پس از تکمیل سقف کلیک توافق‌شده');
+  r = await request('/api/admin/advertising/campaigns',{admin:true});
+  const trackedAd = Array.isArray(r.data) ? r.data.find(x=>String(x.id)===String(adCampaignId)) : null;
+  assert(r.status===200 && !!trackedAd && Number(trackedAd.impressions)>=1 && Number(trackedAd.clicks)>=1, 'ثبت آمار نمایش و کلیک کمپین');
+  r = await request('/api/admin/auth/me', {headers:{cookie:adminSessionCookie}});
+  assert(r.status === 200 && r.data.admin.username === 'owner', 'بازیابی حساب مالک از نشست کوکی');
+  r = await request('/api/admin/auth/login', {
+    method:'POST',headers:{'x-admin-request':'1'},
+    body:{username:'owner',password:'WrongOwnerPassword123'}
+  });
+  assert(r.status === 401, 'رد رمز عبور اشتباه مدیر');
+  r = await request('/api/admin/auth/login', {
+    method:'POST',headers:{'x-admin-request':'1'},
+    body:{username:'owner',password:'TestOwnerPassword123'}
+  });
+  assert(r.status === 200 && !!r.cookie, 'ورود مدیر با رمز صحیح و صدور نشست جدید');
+  adminSessionCookie = r.cookie;
+
+  managerUsername = 'manager_' + crypto.randomBytes(4).toString('hex');
+  r = await request('/api/admin/auth/managers', {method:'POST',admin:true,body:{
+    username:managerUsername,display_name:'مدیر آزمایشی',password:'TestManagerPassword123',
+    permissions:['orders.view']
+  }});
+  assert(r.status===201 && r.data.username===managerUsername, 'ساخت حساب مدیر با مجوزهای محدود');
+  r = await request('/api/admin/auth/login', {method:'POST',headers:{'x-admin-request':'1'},body:{
+    username:managerUsername,password:'TestManagerPassword123'
+  }});
+  assert(r.status===200 && r.data.admin.role==='manager' && !!r.cookie, 'ورود مدیر دوم با حساب مستقل');
+  const ownerSessionCookie = adminSessionCookie;
+  adminSessionCookie = r.cookie;
+  r = await request('/api/admin/orders',{admin:true});
+  assert(r.status===200 && Array.isArray(r.data), 'دسترسی مدیر محدود به مشاهده سفارش‌ها');
+  r = await request('/api/admin/products',{admin:true});
+  assert(r.status===403, 'جلوگیری از دسترسی مدیر به محصولات بدون مجوز');
+  r = await request('/api/admin/advertising/packages',{admin:true});
+  assert(r.status===403, 'محدودماندن مدیریت قراردادها و درآمد تبلیغات به مالک فروشگاه');
+  r = await request('/api/admin/store-settings',{admin:true});
+  assert(r.status===403, 'جلوگیری از مشاهده اطلاعات بانکی و تنظیمات حساس توسط مدیر فاقد مجوز');
+  adminSessionCookie = ownerSessionCookie;
+  r = await request('/api/admin/auth/managers',{method:'POST',admin:true,body:{username:'unsafe_settings',display_name:'مدیر نامعتبر',password:'TestManagerPassword123',permissions:['settings.view']}});
+  assert(r.status===400, 'جلوگیری از اعطای مجوز تنظیمات حساس به مدیر');
+
+  r = await request('/api/admin/uploads/product', {
     method: 'POST',
     body: { mime_type: 'image/png', image_base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=' }
   });
-  assert(r.status === 401, 'جلوگیری از آپلود عکس بدون کلید مدیر');
+  assert(r.status === 403, 'رد آپلود بدون سربرگ معتبر درخواست پنل مدیریت');
 
   r = await request('/api/unknown-endpoint');
   assert(r.status === 404 && typeof r.data.error === 'string', 'پاسخ JSON استاندارد برای مسیر API ناشناخته');
@@ -159,7 +290,7 @@ async function run() {
   assert(!!bagsCategory && !!beautyCategory, 'وجود دسته‌های مستقل کیف و لوازم آرایشی');
 
   r = await request('/api/admin/products');
-  assert(r.status === 401, 'رد دسترسی مدیر بدون کلید');
+  assert(r.status === 401, 'رد دسترسی مدیر بدون نشست معتبر');
 
   r = await request('/api/admin/store-settings');
   assert(r.status === 401, 'رد دسترسی غیرمجاز به تنظیمات بانکی');
@@ -453,6 +584,11 @@ async function run() {
   });
   assert(r.status === 409, 'جلوگیری از تغییر سفارش لغوشده به پرداخت‌شده');
 
+  r = await request('/api/admin/auth/logout', {method:'POST',admin:true,body:{}});
+  assert(r.status === 200, 'خروج مدیر و ابطال نشست');
+  r = await request('/api/admin/products');
+  assert(r.status === 401, 'رد درخواست پس از خروج مدیر');
+
   console.log('\nALL INTEGRATION TESTS PASSED');
 }
 
@@ -477,6 +613,13 @@ async function run() {
         if(token) await db.query('DELETE FROM customer_sessions WHERE token_hash=$1',[crypto.createHash('sha256').update(decodeURIComponent(token)).digest('hex')]);
       }
       if (memberPhone) await db.query('DELETE FROM customers WHERE phone=$1',[memberPhone]);
+      await db.query('DELETE FROM advertising_events');
+      await db.query('DELETE FROM advertising_campaigns');
+      await db.query('DELETE FROM advertising_requests');
+      await db.query("UPDATE advertising_packages SET pricing_model='custom',rate_toman=NULL,is_active=TRUE");
+      await db.query('DELETE FROM admin_sessions');
+      await db.query('DELETE FROM admin_audit_logs');
+      await db.query('DELETE FROM admin_users');
     } catch (error) {
       console.error('Test cleanup warning:', error.message);
       process.exitCode = 1;

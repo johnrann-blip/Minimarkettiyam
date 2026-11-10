@@ -1,5 +1,5 @@
 
-const $=s=>document.querySelector(s);let products=[],cart=JSON.parse(localStorage.getItem('mm_cart')||'[]'),category='',storeSettings=null;
+const $=s=>document.querySelector(s);let products=[],cart=JSON.parse(localStorage.getItem('mm_cart')||'[]'),category='',storeSettings=null,adCampaigns={home_banner:[],product_feed:[],category_banner:[]};
 const toman=n=>new Intl.NumberFormat('fa-IR').format(Number(n))+' تومان';
 function selectCategory(value){
   category=value;
@@ -59,14 +59,38 @@ async function loadProducts(){
     $('#productGrid').innerHTML='<p>دریافت محصولات با مشکل روبه‌رو شد. اتصال اینترنت را بررسی و دوباره تلاش کن.</p>';
   }
 }
+function renderAdBanner(campaign){
+  return '<a class="advertising-banner" href="/api/advertising/click/'+encodeURIComponent(campaign.id)+'" target="_blank" rel="sponsored noopener noreferrer"><span class="advertising-label">تبلیغ</span><img src="'+escapeHtml(campaign.image_url)+'" alt="'+escapeHtml(campaign.title)+'" loading="lazy"><span class="advertising-title">'+escapeHtml(campaign.title)+'</span></a>';
+ }
+function renderAdvertisingSlots(){
+  const home=document.getElementById('homeAdSlot');
+  const categorySlot=document.getElementById('categoryAdSlot');
+  if(home){home.innerHTML=adCampaigns.home_banner.map(renderAdBanner).join('');home.hidden=!adCampaigns.home_banner.length;}
+  if(categorySlot){categorySlot.innerHTML=adCampaigns.category_banner.map(renderAdBanner).join('');categorySlot.hidden=!adCampaigns.category_banner.length;}
+}
 function renderProducts(){
-  $('#productGrid').innerHTML=products.length?products.map(p=>`<article class="product">
+  const cards=products.map(p=>`<article class="product">
     <button type="button" class="product-view" data-open-product="${escapeHtml(p.id)}" aria-label="مشاهده مشخصات ${escapeHtml(p.name)}">
       ${p.image_url?`<img class="product-image" src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy">`:'<div class="placeholder">👜</div>'}
       <div class="product-info"><h3>${escapeHtml(p.name)}</h3><div class="price">${toman(p.sale_price_toman??p.price_toman)}</div>${p.sale_price_toman? `<span class="old">${toman(p.price_toman)}</span>`:''}<div class="stock">${p.stock>0?'موجود در انبار':'ناموجود'}</div></div>
     </button>
     <button class="add" type="button" ${p.stock<1?'disabled':''} data-add-cart="${escapeHtml(p.id)}">افزودن به سبد</button>
-  </article>`).join(''):'<p>هنوز محصولی برای نمایش ثبت نشده است.</p>';
+  </article>`);
+  const sponsored=adCampaigns.product_feed[0];
+  if(sponsored){
+    const card='<article class="product sponsored-product"><a class="sponsored-product-link" href="/api/advertising/click/'+encodeURIComponent(sponsored.id)+'" target="_blank" rel="sponsored noopener noreferrer"><span class="advertising-label">تبلیغ</span><img class="product-image" src="'+escapeHtml(sponsored.image_url)+'" alt="'+escapeHtml(sponsored.title)+'" loading="lazy"><div class="product-info"><h3>'+escapeHtml(sponsored.title)+'</h3><span>مشاهده معرفی</span></div></a></article>';
+    cards.splice(Math.min(3,cards.length),0,card);
+  }
+  $('#productGrid').innerHTML=cards.length?cards.join(''):'<p>هنوز محصولی برای نمایش ثبت نشده است.</p>';
+}
+async function loadAdvertising(){
+  const placements=['home_banner','product_feed','category_banner'];
+  const results=await Promise.all(placements.map(async placement=>{
+    try{const response=await fetch('/api/advertising/campaigns/'+placement);if(!response.ok)return [placement,[]];const data=await response.json();return [placement,Array.isArray(data)?data:[]];}
+    catch{return [placement,[]];}
+  }));
+  for(const [placement,campaigns] of results)adCampaigns[placement]=campaigns;
+  renderAdvertisingSlots();renderProducts();
 }
 $('#productGrid').addEventListener('click',event=>{
   const addButton=event.target.closest?.('[data-add-cart]');
@@ -297,7 +321,7 @@ $('#orderForm').onsubmit=async e=>{
   }
   updateCheckout();
 };
-loadCategories();loadProducts();saveCart();loadStoreSettings();loadStorePolicies();
+loadCategories();loadProducts();loadAdvertising();saveCart();loadStoreSettings();loadStorePolicies();
 
 (function showPaymentResult(){
   const params=new URLSearchParams(location.search);

@@ -6,18 +6,16 @@ function escapeHtml(value) {
   })[c]);
 }
 
-let key = sessionStorage.getItem('mm_admin_key') || '';
-$('#key').value = key;
-
 function headers() {
   return {
     'Content-Type':'application/json',
-    'x-admin-key':key
+    'x-admin-request':'1'
   };
 }
 
 async function request(url, options = {}) {
   const response = await fetch(url, {
+    credentials:'same-origin',
     ...options,
     headers: {...headers(), ...(options.headers || {})}
   });
@@ -74,15 +72,108 @@ $('#imageFile').addEventListener('change', () => {
   message('عکس انتخاب شد و پیش‌نمایش آن آماده است. برای آپلود و ذخیره عکس، دکمه «ذخیره تغییرات» را بزن.');
 });
 
-$('#saveKey').onclick = async () => {
-  key = $('#key').value.trim();
-  if (!key) {
-    message('کلید مدیریت را وارد کن.');
+async function loadAdminWorkspace(admin) {
+  $('#adminWorkspace').hidden = false;
+  const owner = admin?.role === 'owner';
+  const permissions = new Set(admin?.permissions || []);
+  const can = permission => owner || permissions.has(permission);
+  const productAccess = can('products.view') || can('products.create') || can('products.update') || can('products.archive');
+  const orderAccess = can('orders.view') || can('orders.update');
+  const customerAccess = can('customers.view') || can('customers.manage');
+  // Store settings include bank/payment details; keep them owner-only.
+  const settingsAccess = owner;
+  $('#advertisingAdminLink').hidden = !owner;
+  $('#managerAdmin').hidden = !owner;
+  $('#productAdmin').hidden = !(can('products.create') || can('products.update'));
+  $('#productsAdmin').hidden = !productAccess;
+  $('#archiveAdmin').hidden = !can('products.archive');
+  $('#ordersAdmin').hidden = !orderAccess;
+  $('#customerAdmin').hidden = !customerAccess;
+  $('#storeSettings').hidden = !settingsAccess;
+  $('#loginPanel').hidden = true;
+  $('#bootstrapPanel').hidden = true;
+  message('ورود موفق بود؛ در حال دریافت اطلاعات مجاز...');
+  const tasks = [];
+  if (productAccess) tasks.push(categories(), products());
+  if (orderAccess) tasks.push(orders());
+  if (customerAccess) tasks.push(customers());
+  if (settingsAccess) tasks.push(loadStoreSettings());
+  if (owner) tasks.push(loadManagers(), advertisingSummary());
+  await Promise.all(tasks);
+}
+
+async function advertisingSummary() {
+  try {
+    const data=await request('/api/admin/advertising/summary');
+    const link=$('#advertisingAdminLink');
+    link.textContent=data.pending_requests
+      ? 'مدیریت تبلیغات — '+Number(data.pending_requests).toLocaleString('fa-IR')+' درخواست جدید'
+      : 'مدیریت تبلیغات و درخواست‌های همکاری';
+  } catch {}
+}
+
+async function checkAdminSession() {
+  try {
+    const data = await request('/api/admin/auth/me');
+    if (!data.admin) throw new Error('نشست مدیریت معتبر نیست.');
+    await loadAdminWorkspace(data.admin);
+  } catch {
+    $('#adminWorkspace').hidden = true;
+    $('#loginPanel').hidden = false;
+    await refreshSetupStatus();
+  }
+}
+
+async function refreshSetupStatus() {
+  try {
+    const data = await fetch('/api/admin/auth/status').then(r => r.json());
+    $('#bootstrapPanel').hidden = !data.setup_required;
+    $('#loginPanel').hidden = Boolean(data.setup_required);
+  } catch {
+    $('#authMessage').textContent = 'وضعیت ورود مدیریت دریافت نشد. اتصال سرور را بررسی کن.';
+  }
+}
+
+$('#loginForm').onsubmit = async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  $('#authMessage').textContent = 'در حال بررسی اطلاعات ورود...';
+  try {
+    const data = await request('/api/admin/auth/login', {method:'POST', body:JSON.stringify({
+      username:form.elements.username.value.trim(),
+      password:form.elements.password.value
+    })});
+    form.reset();
+    await loadAdminWorkspace(data.admin);
+  } catch(error) { $('#authMessage').textContent = error.message; }
+};
+
+$('#bootstrapForm').onsubmit = async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (form.elements.password.value !== form.elements.password_confirm.value) {
+    $('#authMessage').textContent = 'تکرار رمز عبور با رمز اصلی یکسان نیست.';
     return;
   }
-  sessionStorage.setItem('mm_admin_key', key);
-  message('کلید ذخیره شد؛ در حال دریافت اطلاعات...');
-  await Promise.all([products(), orders(), customers(), loadStoreSettings()]);
+  $('#authMessage').textContent = 'در حال ساخت حساب مالک...';
+  try {
+    const data = await request('/api/admin/auth/bootstrap', {method:'POST', body:JSON.stringify({
+      admin_api_key:form.elements.admin_api_key.value,
+      username:form.elements.username.value.trim(),
+      display_name:form.elements.display_name.value.trim(),
+      password:form.elements.password.value
+    })});
+    form.reset();
+    await loadAdminWorkspace(data.admin);
+  } catch(error) { $('#authMessage').textContent = error.message; }
+};
+
+$('#logoutButton').onclick = async () => {
+  try { await request('/api/admin/auth/logout', {method:'POST',body:'{}'}); }
+  catch(error) { message(error.message); }
+  $('#adminWorkspace').hidden = true;
+  $('#loginPanel').hidden = false;
+  await refreshSetupStatus();
 };
 
 $('#productForm').onsubmit = async event => {
@@ -362,6 +453,59 @@ $('#settingsForm').onsubmit = async event => {
   }
 };
 
+const managerPermissions = [
+  ['products.view','مشاهده محصولات'],['products.create','ثبت محصول'],['products.update','ویرایش محصول'],
+  ['products.archive','بایگانی محصول'],['products.upload','آپلود عکس محصول'],
+  ['orders.view','مشاهده سفارش‌ها'],['orders.update','تغییر وضعیت سفارش'],
+  ['customers.view','مشاهده مشتریان'],['customers.manage','مدیریت مشتریان'],
+  
+  ['audit.view','مشاهده گزارش فعالیت مدیران']
+];
+
+async function loadManagers() {
+  try {
+    const data = await request('/api/admin/auth/managers');
+    $('#managerList').innerHTML = data.map(manager => `
+      <div class="order">
+        <b>${escapeHtml(manager.display_name)} (@${escapeHtml(manager.username)})</b>
+        <p>وضعیت: ${manager.is_active ? 'فعال' : 'غیرفعال'}</p>
+        <p>مجوزها: ${(manager.permissions || []).map(p => escapeHtml(managerPermissions.find(x => x[0] === p)?.[1] || p)).join('، ') || 'بدون مجوز'}</p>
+        <p class="muted">آخرین ورود: ${manager.last_login_at ? new Date(manager.last_login_at).toLocaleString('fa-IR') : 'هنوز وارد نشده'}</p>
+        <button type="button" data-manager-toggle="${escapeHtml(manager.id)}" data-active="${manager.is_active ? '1' : '0'}">${manager.is_active ? 'غیرفعال‌کردن حساب' : 'فعال‌کردن حساب'}</button>
+      </div>
+    `).join('') || 'هنوز حساب مدیریتی دیگری ساخته نشده است.';
+  } catch(error) { $('#managerList').textContent = error.message; }
+}
+
+$('#managerForm').onsubmit = async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const permissions = [...form.querySelectorAll('[name="permissions"]:checked')].map(x => x.value);
+  try {
+    await request('/api/admin/auth/managers', {method:'POST',body:JSON.stringify({
+      username:form.elements.username.value.trim(),
+      display_name:form.elements.display_name.value.trim(),
+      password:form.elements.password.value,
+      permissions
+    })});
+    form.reset();
+    $('#managerMessage').textContent = 'حساب مدیر با موفقیت ساخته شد.';
+    await loadManagers();
+  } catch(error) { $('#managerMessage').textContent = error.message; }
+};
+
+$('#managerList').addEventListener('click', async event => {
+  const button = event.target.closest('[data-manager-toggle]');
+  if (!button) return;
+  const active = button.dataset.active === '1';
+  try {
+    await request('/api/admin/auth/managers/' + encodeURIComponent(button.dataset.managerToggle), {
+      method:'PATCH',body:JSON.stringify({is_active:!active})
+    });
+    await loadManagers();
+  } catch(error) { $('#managerMessage').textContent = error.message; }
+});
+
 async function customers() {
   try {
     const data=await request('/api/admin/customers');
@@ -434,6 +578,7 @@ $('#orders').addEventListener('click', async event => {
   }
 });
 
+$('#refreshManagers').onclick = loadManagers;
 $('#refresh').onclick = orders;
 $('#refreshCustomers').onclick = customers;
 $('#refreshProducts').onclick = products;
@@ -455,5 +600,4 @@ $('#archivedProducts').addEventListener('click', async event => {
   }
 });
 
-categories();
-customers();
+checkAdminSession();

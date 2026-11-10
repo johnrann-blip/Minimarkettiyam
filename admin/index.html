@@ -5,16 +5,40 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>مدیریت AVELORA</title>
-  <link rel="stylesheet" href="/admin/admin.css?v=20261110-policy-settings-1">
+  <link rel="stylesheet" href="/admin/admin.css?v=20261110-admin-security-2">
+<style>
+.manager-permissions { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; margin:12px 0; }
+.manager-permissions label { display:flex; align-items:center; gap:8px; }
+</style>
 </head>
 <body>
 <main>
   <h1>مدیریت فروشگاه AVELORA</h1>
-  <p>کلید مدیریت را وارد کن. این کلید را در اختیار دیگران قرار نده.</p>
-  <input id="key" type="password" placeholder="کلید مدیریت" autocomplete="current-password">
-  <button id="saveKey" type="button">ورود</button>
-
-  <section>
+  <section id="loginPanel">
+    <h2>ورود مدیر</h2>
+    <form id="loginForm">
+      <input name="username" autocomplete="username" placeholder="نام کاربری" required>
+      <input name="password" type="password" autocomplete="current-password" placeholder="رمز عبور" required>
+      <button type="submit">ورود امن</button>
+    </form>
+  </section>
+  <section id="bootstrapPanel" hidden>
+    <h2>راه‌اندازی اولیه حساب مالک</h2>
+    <p class="muted">این مرحله فقط یک‌بار و با کلید محرمانه تنظیم‌شده روی سرور انجام می‌شود. کلید را در سایت یا پیام برای کسی ارسال نکن.</p>
+    <form id="bootstrapForm">
+      <input name="admin_api_key" type="password" autocomplete="off" placeholder="کلید راه‌اندازی سرور" required>
+      <input name="username" value="owner" autocomplete="username" placeholder="نام کاربری" required>
+      <input name="display_name" value="مالک فروشگاه" placeholder="نام نمایشی" required>
+      <input name="password" type="password" autocomplete="new-password" minlength="12" placeholder="رمز عبور قوی (حداقل ۱۲ نویسه)" required>
+      <input name="password_confirm" type="password" autocomplete="new-password" minlength="12" placeholder="تکرار رمز عبور" required>
+      <button type="submit">ساخت حساب مالک</button>
+    </form>
+  </section>
+  <p id="authMessage" role="status"></p>
+  <div id="adminWorkspace" hidden>
+    <button id="logoutButton" type="button">خروج از حساب مدیریت</button>
+    <p><a id="advertisingAdminLink" href="/admin/advertising.html" hidden>مدیریت تبلیغات و درخواست‌های همکاری</a></p>
+  <section id="productAdmin">
     <h2 id="formTitle">افزودن محصول</h2>
     <form id="productForm">
       <input type="hidden" name="id">
@@ -37,14 +61,14 @@
     </form>
   </section>
 
-  <section>
+  <section id="productsAdmin">
     <h2>محصولات فروشگاه</h2>
     <button id="refreshProducts" type="button">به‌روزرسانی محصولات</button>
     <p class="muted">در این فهرست فقط محصولات فعال فروشگاه نمایش داده می‌شوند.</p>
     <div id="products"></div>
   </section>
 
-  <section>
+  <section id="archiveAdmin">
     <details id="productArchive">
       <summary>بایگانی محصولات <span id="archivedProductsCount">(۰)</span></summary>
       <p class="muted">محصولات این بخش در فروشگاه نمایش داده نمی‌شوند. برای بازگرداندن هر محصول، «فعال‌سازی مجدد» را بزنید. سوابق سفارش‌ها محفوظ می‌ماند.</p>
@@ -108,21 +132,49 @@
     <p id="settingsMessage" role="status"></p>
   </section>
 
-  <section>
+  <section id="managerAdmin" hidden>
+    <h2>حساب‌های مدیران فروشگاه</h2>
+    <p class="muted">برای هر همکار یک حساب جدا بساز. فقط دسترسی‌های موردنیاز او را انتخاب کن؛ حساب مالک و تنظیمات حساس فقط در اختیار مالک می‌ماند.</p>
+    <form id="managerForm">
+      <input name="username" minlength="3" maxlength="60" pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{2,59}" placeholder="نام کاربری انگلیسی" required>
+      <input name="display_name" maxlength="120" placeholder="نام نمایشی مدیر" required>
+      <input name="password" type="password" minlength="12" maxlength="200" autocomplete="new-password" placeholder="رمز عبور موقت (حداقل ۱۲ نویسه)" required>
+      <h3>مجوزهای مدیر</h3>
+      <div class="manager-permissions">
+        <label><input type="checkbox" name="permissions" value="products.view"> مشاهده محصولات</label>
+        <label><input type="checkbox" name="permissions" value="products.create"> ثبت محصول</label>
+        <label><input type="checkbox" name="permissions" value="products.update"> ویرایش محصول</label>
+        <label><input type="checkbox" name="permissions" value="products.archive"> بایگانی محصول</label>
+        <label><input type="checkbox" name="permissions" value="products.upload"> آپلود عکس محصول</label>
+        <label><input type="checkbox" name="permissions" value="orders.view"> مشاهده سفارش‌ها</label>
+        <label><input type="checkbox" name="permissions" value="orders.update"> تغییر وضعیت سفارش</label>
+        <label><input type="checkbox" name="permissions" value="customers.view"> مشاهده مشتریان</label>
+        <label><input type="checkbox" name="permissions" value="customers.manage"> مدیریت مشتریان</label>
+        <label><label><input type="checkbox" name="permissions" value="audit.view"> مشاهده گزارش فعالیت مدیران</label>
+      </div>
+      <button type="submit">ساخت حساب مدیر</button>
+    </form>
+    <p id="managerMessage" role="status"></p>
+    <button id="refreshManagers" type="button">به‌روزرسانی فهرست مدیران</button>
+    <div id="managerList"></div>
+  </section>
+
+  <section id="customerAdmin">
     <h2>مشتریان عضو AVELORA</h2>
     <button id="refreshCustomers" type="button">دریافت فهرست مشتریان</button>
     <p class="muted">مشتریان ثبت‌نام‌شده و سابقه سفارش‌های مرتبط با حسابشان.</p>
     <div id="customers"></div>
   </section>
 
-  <section>
+  <section id="ordersAdmin">
     <h2>سفارش‌ها</h2>
     <button id="refresh" type="button">دریافت سفارش‌ها</button>
     <div id="orders"></div>
   </section>
 
   <p id="msg" role="status"></p>
+  </div>
 </main>
-<script src="/admin/admin.js?v=20261110-policy-settings-1"></script>
+<script src="/admin/admin.js?v=20261110-admin-ads-1"></script>
 </body>
 </html>
