@@ -434,15 +434,15 @@ const managerPermissions = [
 async function loadManagers() {
   try {
     const data = await request('/api/admin/auth/managers');
-    $('#managerList').innerHTML = data.map(manager => \`
+    $('#managerList').innerHTML = data.map(manager => `
       <div class="order">
-        <b>\${escapeHtml(manager.display_name)} (@\${escapeHtml(manager.username)})</b>
-        <p>وضعیت: \${manager.is_active ? 'فعال' : 'غیرفعال'}</p>
-        <p>مجوزها: \${(manager.permissions || []).map(p => escapeHtml(managerPermissions.find(x => x[0] === p)?.[1] || p)).join('، ') || 'بدون مجوز'}</p>
-        <p class="muted">آخرین ورود: \${manager.last_login_at ? new Date(manager.last_login_at).toLocaleString('fa-IR') : 'هنوز وارد نشده'}</p>
-        <button type="button" data-manager-toggle="\${escapeHtml(manager.id)}" data-active="\${manager.is_active ? '1' : '0'}">\${manager.is_active ? 'غیرفعال‌کردن حساب' : 'فعال‌کردن حساب'}</button>
+        <b>${escapeHtml(manager.display_name)} (@${escapeHtml(manager.username)})</b>
+        <p>وضعیت: ${manager.is_active ? 'فعال' : 'غیرفعال'}</p>
+        <p>مجوزها: ${(manager.permissions || []).map(p => escapeHtml(managerPermissions.find(x => x[0] === p)?.[1] || p)).join('، ') || 'بدون مجوز'}</p>
+        <p class="muted">آخرین ورود: ${manager.last_login_at ? new Date(manager.last_login_at).toLocaleString('fa-IR') : 'هنوز وارد نشده'}</p>
+        <button type="button" data-manager-toggle="${escapeHtml(manager.id)}" data-active="${manager.is_active ? '1' : '0'}">${manager.is_active ? 'غیرفعال‌کردن حساب' : 'فعال‌کردن حساب'}</button>
       </div>
-    \`).join('') || 'هنوز حساب مدیریتی دیگری ساخته نشده است.';
+    `).join('') || 'هنوز حساب مدیریتی دیگری ساخته نشده است.';
   } catch(error) { $('#managerList').textContent = error.message; }
 }
 
