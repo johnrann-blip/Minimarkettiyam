@@ -170,13 +170,7 @@ app.get('/api/products', async (req, res) => {
     res.json(r.rows.map(p => {
       const {cost_price_toman,...publicProduct}=p;
       const regular=Number(p.price_toman), current=Number(p.sale_price_toman ?? p.price_toman);
-      let effective=current, discount=0;
-      if(req.customer && p.cost_price_toman!==null){
-        const candidate=Math.floor(regular*95/100);
-        if(candidate>=Number(p.cost_price_toman)){effective=Math.min(current,candidate);discount=Math.max(0,current-effective);}
-      }
-      return {...publicProduct,price_toman:regular,sale_price_toman:effective<regular?effective:null,
-        member_discount_toman:discount,member_price_eligible:Boolean(req.customer&&discount>0)};
+      return {...publicProduct,price_toman:regular,sale_price_toman:current<regular?current:null};
     }));
   } catch { res.status(500).json({ error: 'خطا در دریافت محصولات' }); }
 });
@@ -487,7 +481,6 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
     }
 
     let subtotal = 0;
-    let membershipDiscount = 0;
     const normalized = [];
 
     for (const [id, qty] of quantities) {
@@ -505,12 +498,7 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
 
       const regularPrice=Number(product.price_toman);
       const currentPrice=Number(product.sale_price_toman ?? product.price_toman);
-      let price=currentPrice;
-      if(req.customer && product.cost_price_toman!==null){
-        const candidate=Math.floor(regularPrice*95/100);
-        if(candidate>=Number(product.cost_price_toman)) price=Math.min(currentPrice,candidate);
-      }
-      const discountPerUnit=Math.max(0,currentPrice-price);
+      const price=currentPrice;
       const line = price * qty;
 
       if (!Number.isSafeInteger(price) || price < 0 ||
@@ -520,7 +508,6 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
       }
 
       subtotal += line;
-      membershipDiscount += discountPerUnit*qty;
       normalized.push({product,qty,price,line});
     }
 
@@ -535,7 +522,7 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING id,order_code,total_toman,status`,
       [code,customerId,name,phone,city,province,address,postal,delivery_method,
-       subtotal,shipping,total,customerNote,membershipDiscount,membershipDiscount>0?5:0,idempotencyKey,requestHash]
+       subtotal,shipping,total,customerNote,0,0,idempotencyKey,requestHash]
     );
 
     const order = inserted.rows[0];
@@ -559,8 +546,8 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
     res.status(201).json({
       order_code:order.order_code,
       subtotal_toman:subtotal,
-      membership_discount_toman:membershipDiscount,
-      membership_discount_percent:membershipDiscount>0?5:0,
+      membership_discount_toman:0,
+      membership_discount_percent:0,
       shipping_toman:shipping,
       total_toman:Number(order.total_toman),
       status:order.status,
