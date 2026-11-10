@@ -140,9 +140,14 @@ const adminRateLimit = createRateLimiter({
   max: 120,
   message: 'تعداد درخواست‌های مدیریتی بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.'
 });
+const adminAuthRateLimit = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'تعداد تلاش‌های ورود مدیریت بیش از حد مجاز است. ۱۵ دقیقه بعد دوباره تلاش کن.'
+});
 
 // Separate owner/manager accounts with database-backed sessions.
-const adminAuth = createAdminAuth({pool, rateLimit: adminRateLimit});
+const adminAuth = createAdminAuth({pool, rateLimit: adminAuthRateLimit});
 
 const orderRateLimit = createRateLimiter({
   windowMs: 10 * 60 * 1000,
