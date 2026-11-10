@@ -7,7 +7,7 @@ const CATEGORY_COPY = {
   more: {title:'سایر محصولات فروشگاه AVELORA',description:'سایر محصولات فروشگاه AVELORA را همراه با مشخصات، قیمت و وضعیت موجودی مشاهده کنید.',intro:'محصولات دیگر فروشگاه AVELORA در این صفحه معرفی می‌شوند.'}
 };
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function imageUrl(v){try{const u=new URL(String(v||''),SITE);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}}
+function imageUrl(v){try{const u=new URL(String(v||''),SITE);return u.protocol==='https:'?u.href:'';}catch{return '';}}
 function json(v){return JSON.stringify(v).replace(/</g,'\\u003c');}
 function renderPage(o){
  const img=o.image?'<meta property="og:image" content="'+esc(o.image)+'"><meta name="twitter:card" content="summary_large_image">':'<meta name="twitter:card" content="summary">';
