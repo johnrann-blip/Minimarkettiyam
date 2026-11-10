@@ -447,7 +447,7 @@ const managerPermissions = [
   ['products.archive','بایگانی محصول'],['products.upload','آپلود عکس محصول'],
   ['orders.view','مشاهده سفارش‌ها'],['orders.update','تغییر وضعیت سفارش'],
   ['customers.view','مشاهده مشتریان'],['customers.manage','مدیریت مشتریان'],
-  ['settings.view','مشاهده تنظیمات فروشگاه'],['settings.update','ویرایش تنظیمات فروشگاه'],
+  
   ['audit.view','مشاهده گزارش فعالیت مدیران']
 ];
 
