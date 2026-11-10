@@ -78,6 +78,10 @@ async function run() {
   await db.query(adminMigration);
   const advertisingMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/009_advertising.sql'), 'utf8');
   await db.query(advertisingMigration);
+  const engagementMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/010_product_likes_customer_feedback.sql'), 'utf8');
+  await db.query(engagementMigration);
+  await db.query('DELETE FROM customer_feedback');
+  await db.query('DELETE FROM product_likes');
   await db.query('DELETE FROM advertising_events');
   await db.query('DELETE FROM advertising_campaigns');
   await db.query('DELETE FROM advertising_requests');
@@ -93,7 +97,7 @@ async function run() {
   staticResponse = await fetch(BASE + '/');
   const storefrontHtml = await staticResponse.text();
   assert(storefrontHtml.includes('homeAdSlot') && storefrontHtml.includes('categoryAdSlot') && storefrontHtml.includes('/advertising.html'), 'وجود جایگاه‌های تبلیغاتی و مسیر همکاری در صفحه اصلی');
-  assert(staticResponse.status === 200 && storefrontHtml.includes('name="description"') &&
+  assert(staticResponse.status === 200 && storefrontHtml.includes('customerFeedbackForm') && storefrontHtml.includes('customerFeedbackList') && storefrontHtml.includes('name="description"') &&
     staticResponse.headers.get('x-content-type-options') === 'nosniff',
     'بارگذاری فروشگاه همراه با توضیحات SEO و هدر امنیتی nosniff');
   staticResponse = await fetch(BASE + '/assistant.js');
@@ -193,6 +197,20 @@ async function run() {
   });
   assert(r.status === 200 && !!r.cookie, 'ورود مدیر با رمز صحیح و صدور نشست جدید');
   adminSessionCookie = r.cookie;
+
+  r = await request('/api/engagement/reviews');
+  assert(r.status===200 && Array.isArray(r.data) && r.data.length===0, 'عدم نمایش دیدگاه‌های تأییدنشده به بازدیدکنندگان');
+  r = await request('/api/engagement/reviews',{method:'POST',body:{display_name:'مشتری آزمایشی',feedback_type:'comment',message:'تجربه خرید آزمایشی برای آزمون سامانه.'}});
+  assert(r.status===201 && r.data.feedback.status==='pending', 'ثبت دیدگاه مشتری با وضعیت انتظار بررسی');
+  const feedbackId=r.data.feedback.id;
+  r = await request('/api/engagement/reviews');
+  assert(r.status===200 && r.data.length===0, 'پنهان‌ماندن دیدگاه تا زمان تأیید مدیر');
+  r = await request('/api/admin/feedback?status=pending',{admin:true});
+  assert(r.status===200 && r.data.some(x=>String(x.id)===String(feedbackId)), 'نمایش دیدگاه در صف مدیریت مالک');
+  r = await request('/api/admin/feedback/'+feedbackId,{method:'PATCH',admin:true,body:{status:'approved'}});
+  assert(r.status===200 && r.data.feedback.status==='approved', 'تأیید و انتشار دیدگاه توسط مالک');
+  r = await request('/api/engagement/reviews');
+  assert(r.status===200 && r.data.some(x=>String(x.id)===String(feedbackId)), 'نمایش عمومی فقط دیدگاه تأییدشده');
 
   managerUsername = 'manager_' + crypto.randomBytes(4).toString('hex');
   r = await request('/api/admin/auth/managers', {method:'POST',admin:true,body:{
@@ -321,6 +339,15 @@ async function run() {
   });
   assert(r.status === 201 && r.data.id && r.data.image_url === uploadedImageUrl, 'ثبت محصول همراه با تصویر آپلودشده');
   productId = r.data.id;
+  const likeHeaders={'X-Avelora-Visitor':'0123456789abcdef0123456789abcdef0123456789abcdef'};
+  r = await request('/api/engagement/products/'+productId+'/like',{method:'POST',headers:likeHeaders});
+  assert(r.status===200 && r.data.liked===true && r.data.likes_count===1, 'ثبت اولین لایک محصول برای بازدیدکننده');
+  r = await request('/api/engagement/products/'+productId+'/like',{method:'POST',headers:likeHeaders});
+  assert(r.status===200 && r.data.liked===false && r.data.likes_count===0, 'امکان برداشتن لایک بدون شمارش تکراری');
+  r = await request('/api/engagement/products/'+productId+'/like',{method:'POST',headers:likeHeaders});
+  assert(r.status===200 && r.data.liked===true && r.data.likes_count===1, 'ثبت مجدد لایک پس از برداشتن آن');
+  r = await request('/api/products',{headers:likeHeaders});
+  assert(r.status===200 && r.data.some(p=>String(p.id)===String(productId)&&Number(p.likes_count)===1&&p.liked===true), 'نمایش تعداد واقعی لایک و وضعیت لایک شخصی در کاتالوگ');
 
   r = await request('/api/admin/products', {
     method: 'POST',

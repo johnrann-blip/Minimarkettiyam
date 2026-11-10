@@ -14,7 +14,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"OnlineStore","name":"AVELORA","url":"https://avelorashop.ir/","description":"فروشگاه اینترنتی کیف، اکسسوری و لوازم آرایشی","inLanguage":"fa-IR"}</script>
 <title>AVELORA | کیف، زیبایی و بیشتر</title>
-<link rel="stylesheet" href="/style.css?v=20261110-advertising-1">
+<link rel="stylesheet" href="/style.css?v=20261110-feedback-1">
 </head>
 <body>
 <header class="top"><a class="brand" href="/">AVELORA <small>BAGS • BEAUTY • MORE</small></a><div class="top-actions"><button id="accountOpen" class="account-open" type="button">عضویت / ورود</button><button id="cartOpen" class="cart">سبد خرید <b id="cartCount">۰</b></button></div></header><dialog id="accountDialog" class="account-dialog"><div class="dialog-head"><span>حساب کاربری AVELORA</span><button id="accountClose" type="button">✕</button></div><div class="account-body"><div id="accountWelcome" class="hint" hidden></div><form id="registerForm"><h3>عضویت رایگان AVELORA</h3><input name="name" placeholder="نام و نام خانوادگی" maxlength="120" required><input name="phone" type="tel" inputmode="tel" placeholder="شماره موبایل" required><input name="password" type="password" minlength="10" placeholder="رمز عبور (حداقل ۱۰ نویسه)" required><button class="primary" type="submit">ساخت حساب</button></form><form id="loginForm"><h3>ورود اعضا</h3><input name="phone" type="tel" inputmode="tel" placeholder="شماره موبایل" required><input name="password" type="password" placeholder="رمز عبور" required><button class="primary" type="submit">ورود به حساب</button></form><button id="logoutButton" type="button" hidden>خروج از حساب</button><p id="accountMessage" role="status" class="hint">فعلاً کد پیامکی برای تأیید مالکیت شماره فعال نیست؛ شماره را با دقت وارد کن.</p></div></dialog>
@@ -48,6 +48,16 @@
 <button id="submitOrder" class="primary" type="submit" disabled>ثبت سفارش</button><p id="orderMessage" role="status"></p>
 </form></aside><div id="scrim" class="scrim hidden"></div>
 <footer class="site-footer" id="contact">
+<section class="customer-feedback" id="customer-feedback" aria-labelledby="customerFeedbackTitle">
+    <div class="feedback-intro"><span class="eyebrow">صدای مشتریان</span><h2 id="customerFeedbackTitle">نظرت برای ما ارزشمنده</h2><p>پیشنهادها و تجربه‌ات به بهترشدن AVELORA کمک می‌کند. دیدگاه‌ها پس از بررسی منتشر می‌شوند.</p></div>
+    <div id="customerFeedbackList" class="customer-feedback-list" aria-live="polite"><p class="feedback-empty">در حال دریافت دیدگاه‌ها...</p></div>
+    <form id="customerFeedbackForm" class="customer-feedback-form">
+      <label>نام نمایشی<input name="display_name" maxlength="80" minlength="2" placeholder="نامی که دوست داری نمایش داده شود" required></label>
+      <label>نوع پیام<select name="feedback_type"><option value="comment">نظر من</option><option value="suggestion">پیشنهاد من</option></select></label>
+      <label>متن دیدگاه<textarea name="message" minlength="10" maxlength="1200" rows="4" placeholder="نظرت یا پیشنهادت را اینجا بنویس..." required></textarea></label>
+      <button type="submit" class="primary">ارسال برای بررسی</button><p id="feedbackMessage" role="status"></p>
+    </form>
+  </section>
   <div class="footer-main">
     <section class="footer-brand">
       <a class="footer-logo" href="/" aria-label="صفحه اصلی AVELORA">AVELORA</a>
@@ -102,6 +112,6 @@
   <div id="policyDialogBody" class="policy-dialog-body">در حال دریافت متن...</div>
 </dialog>
 <script src="/app.js?v=20261110-advertising-1"></script>
-<script src="/account.js?v=20261110-manager-discounts-1"></script>
+<script src="/account.js?v=20261110-feedback-1"></script>
 <script src="/assistant.js?v=20261109-free-assistant-1"></script>
 </body></html>
