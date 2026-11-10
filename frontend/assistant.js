@@ -38,7 +38,7 @@
 
   const panel = document.createElement('section');
   panel.id = 'aveloraAssistant'; panel.className = 'assistant-panel';
-  panel.setAttribute('aria-label', 'مشاور هوشمند خرید AVELORA');
+  panel.setAttribute('aria-label', 'راهنمای خرید AVELORA؛ مشاور هوشمند');
   panel.innerHTML = `
     <header class="assistant-head">
       <div class="assistant-brand"><span class="assistant-mark">A</span><div><strong>مشاور خرید AVELORA</strong><small>همراه انتخاب هوشمندانه تو</small></div></div>
