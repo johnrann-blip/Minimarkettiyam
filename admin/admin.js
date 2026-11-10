@@ -6,18 +6,16 @@ function escapeHtml(value) {
   })[c]);
 }
 
-let key = sessionStorage.getItem('mm_admin_key') || '';
-$('#key').value = key;
-
 function headers() {
   return {
     'Content-Type':'application/json',
-    'x-admin-key':key
+    'x-admin-request':'1'
   };
 }
 
 async function request(url, options = {}) {
   const response = await fetch(url, {
+    credentials:'same-origin',
     ...options,
     headers: {...headers(), ...(options.headers || {})}
   });
@@ -74,15 +72,75 @@ $('#imageFile').addEventListener('change', () => {
   message('عکس انتخاب شد و پیش‌نمایش آن آماده است. برای آپلود و ذخیره عکس، دکمه «ذخیره تغییرات» را بزن.');
 });
 
-$('#saveKey').onclick = async () => {
-  key = $('#key').value.trim();
-  if (!key) {
-    message('کلید مدیریت را وارد کن.');
+async function loadAdminWorkspace() {
+  $('#adminWorkspace').hidden = false;
+  $('#loginPanel').hidden = true;
+  message('ورود موفق بود؛ در حال دریافت اطلاعات فروشگاه...');
+  await Promise.all([categories(), products(), orders(), customers(), loadStoreSettings()]);
+}
+
+async function checkAdminSession() {
+  try {
+    const data = await request('/api/admin/auth/me');
+    if (!data.admin) throw new Error('نشست مدیریت معتبر نیست.');
+    await loadAdminWorkspace();
+  } catch {
+    $('#adminWorkspace').hidden = true;
+    $('#loginPanel').hidden = false;
+    await refreshSetupStatus();
+  }
+}
+
+async function refreshSetupStatus() {
+  try {
+    const data = await fetch('/api/admin/auth/status').then(r => r.json());
+    $('#bootstrapPanel').hidden = !data.setup_required;
+    $('#loginPanel').hidden = Boolean(data.setup_required);
+  } catch {
+    $('#authMessage').textContent = 'وضعیت ورود مدیریت دریافت نشد. اتصال سرور را بررسی کن.';
+  }
+}
+
+$('#loginForm').onsubmit = async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  $('#authMessage').textContent = 'در حال بررسی اطلاعات ورود...';
+  try {
+    await request('/api/admin/auth/login', {method:'POST', body:JSON.stringify({
+      username:form.elements.username.value.trim(),
+      password:form.elements.password.value
+    })});
+    form.reset();
+    await loadAdminWorkspace();
+  } catch(error) { $('#authMessage').textContent = error.message; }
+};
+
+$('#bootstrapForm').onsubmit = async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (form.elements.password.value !== form.elements.password_confirm.value) {
+    $('#authMessage').textContent = 'تکرار رمز عبور با رمز اصلی یکسان نیست.';
     return;
   }
-  sessionStorage.setItem('mm_admin_key', key);
-  message('کلید ذخیره شد؛ در حال دریافت اطلاعات...');
-  await Promise.all([products(), orders(), customers(), loadStoreSettings()]);
+  $('#authMessage').textContent = 'در حال ساخت حساب مالک...';
+  try {
+    await request('/api/admin/auth/bootstrap', {method:'POST', body:JSON.stringify({
+      admin_api_key:form.elements.admin_api_key.value,
+      username:form.elements.username.value.trim(),
+      display_name:form.elements.display_name.value.trim(),
+      password:form.elements.password.value
+    })});
+    form.reset();
+    await loadAdminWorkspace();
+  } catch(error) { $('#authMessage').textContent = error.message; }
+};
+
+$('#logoutButton').onclick = async () => {
+  try { await request('/api/admin/auth/logout', {method:'POST',body:'{}'}); }
+  catch(error) { message(error.message); }
+  $('#adminWorkspace').hidden = true;
+  $('#loginPanel').hidden = false;
+  await refreshSetupStatus();
 };
 
 $('#productForm').onsubmit = async event => {
@@ -455,5 +513,4 @@ $('#archivedProducts').addEventListener('click', async event => {
   }
 });
 
-categories();
-customers();
+checkAdminSession();
