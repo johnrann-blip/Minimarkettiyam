@@ -10,6 +10,7 @@ const { Pool } = require('pg');
 const { createZarinpalRouter, getConfig } = require('./zarinpal');
 const { createCustomerAuth } = require('./customer-auth');
 const { createAdminAuth } = require('./admin-auth');
+const { createAdvertisingRouter, createAdvertisingAdminRouter } = require('./advertising');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -162,11 +163,15 @@ const paymentRateLimit = createRateLimiter({
 });
 
 const customerAuthRateLimit = createRateLimiter({windowMs:15*60*1000,max:10,message:'تعداد تلاش‌های ورود یا ثبت‌نام زیاد است. کمی بعد دوباره تلاش کن.'});
+const advertisingRequestRateLimit = createRateLimiter({windowMs:15*60*1000,max:5,message:'تعداد درخواست‌های تبلیغاتی زیاد است. ۱۵ دقیقه بعد دوباره تلاش کنید.'});
 const customerAuth = createCustomerAuth({pool,rateLimit:customerAuthRateLimit});
 app.use('/api',customerAuth.optionalCustomer);
 app.use('/api/auth',customerAuth.router);
 app.use('/api/admin', adminRateLimit);
 app.use('/api/admin/auth', adminAuth.router);
+app.use('/api/advertising', createAdvertisingRouter({pool,rateLimit:advertisingRequestRateLimit}));
+// Advertising contracts, pricing and campaign publishing are owner-only.
+app.use('/api/admin/advertising', adminAuth.requireAdmin, createAdvertisingAdminRouter({pool}));
 app.use('/api/payments/zarinpal', createZarinpalRouter({ pool, paymentRateLimit }));
 
 pool.on('error', error => {
