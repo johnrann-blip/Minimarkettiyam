@@ -260,7 +260,7 @@ function createAdvertisingAdminRouter({pool}) {
       await pool.query("UPDATE advertising_campaigns SET status='completed',updated_at=NOW() WHERE status IN ('active','scheduled') AND ends_at<=NOW()");
       await pool.query("UPDATE advertising_campaigns SET status='active',updated_at=NOW() WHERE status='scheduled' AND starts_at<=NOW() AND ends_at>NOW()");
       const r=await pool.query(
-        `SELECT c.*,r.request_code,r.business_name,r.payment_status,p.title AS package_title,p.placement
+        `SELECT c.*,r.request_code,r.business_name,r.payment_status,r.target_impressions,r.target_clicks,p.title AS package_title,p.placement
          FROM advertising_campaigns c JOIN advertising_requests r ON r.id=c.request_id
          JOIN advertising_packages p ON p.id=c.package_id ORDER BY c.created_at DESC LIMIT 300`
       );
