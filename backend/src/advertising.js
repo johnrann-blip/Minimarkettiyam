@@ -69,7 +69,7 @@ function createAdvertisingRouter({pool, rateLimit}) {
     const impressions = safeInteger(body.target_impressions,1,100000000);
     const clicks = safeInteger(body.target_clicks,1,10000000);
     const budget = safeInteger(body.budget_toman,0);
-    if (!advertiserName || !businessName || !/^\+?[0-9۰-۹٠-٩]{8,20}$/.test(phone) ||
+    if (!advertiserName || !businessName || body.privacy_consent !== true || !/^\+?[0-9۰-۹٠-٩]{8,20}$/.test(phone) ||
         !packageId || !duration || website === null || creative === null || target === null ||
         impressions === undefined || clicks === undefined || budget === undefined ||
         (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
