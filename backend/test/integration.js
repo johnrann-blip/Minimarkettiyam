@@ -125,7 +125,7 @@ async function run() {
   const adPackage=r.data.find(x=>x.placement==='home_banner');
   assert(!!adPackage, 'وجود جایگاه بنر صفحه اصلی');
   r = await request('/api/advertising/requests',{method:'POST',body:{
-    advertiser_name:'آزمایش‌کننده تبلیغ',business_name:'برند آزمایشی',phone:'09121234567',
+    advertiser_name:'آزمایش‌کننده تبلیغ',business_name:'برند آزمایشی',phone:'09121234567',privacy_consent:true,
     email:'ads@example.com',industry:'کیف و اکسسوری',package_id:adPackage.id,duration_days:7,
     creative_url:'https://example.com/ad.jpg',target_url:'https://example.com/',message:'درخواست آزمایشی'
   }});
@@ -138,17 +138,17 @@ async function run() {
   r = await request('/api/admin/advertising/packages/'+adPackage.id,{method:'PATCH',admin:true,body:{pricing_model:'daily',rate_toman:50000,is_active:true}});
   assert(r.status===200 && Number(r.data.rate_toman)===50000, 'تنظیم تعرفه روزانه جایگاه توسط مالک');
   r = await request('/api/advertising/requests',{method:'POST',body:{
-    advertiser_name:'مشتری دوم',business_name:'برند قیمت‌دار',phone:'09121111111',
+    advertiser_name:'مشتری دوم',business_name:'برند قیمت‌دار',phone:'09121111111',privacy_consent:true,
     package_id:adPackage.id,duration_days:7
   }});
   assert(r.status===201 && Number(r.data.request.quote_toman)===350000 && r.data.request.status==='quoted', 'محاسبه خودکار قیمت بر اساس تعرفه روزانه و مدت کمپین');
   r = await request('/api/admin/advertising/packages/'+adPackage.id,{method:'PATCH',admin:true,body:{pricing_model:'cpm',rate_toman:20000,is_active:true}});
   assert(r.status===200, 'تنظیم مدل قیمت‌گذاری بر اساس هزار نمایش');
-  r = await request('/api/advertising/requests',{method:'POST',body:{advertiser_name:'مشتری CPM',business_name:'برند نمایش‌محور',phone:'09123333333',package_id:adPackage.id,duration_days:7,target_impressions:2500}});
+  r = await request('/api/advertising/requests',{method:'POST',body:{advertiser_name:'مشتری CPM',business_name:'برند نمایش‌محور',phone:'09123333333',privacy_consent:true,package_id:adPackage.id,duration_days:7,target_impressions:2500}});
   assert(r.status===201 && Number(r.data.request.quote_toman)===60000, 'محاسبه تعرفه CPM با گرد کردن تعداد هزار نمایش به بالا');
   r = await request('/api/admin/advertising/packages/'+adPackage.id,{method:'PATCH',admin:true,body:{pricing_model:'cpc',rate_toman:1000,is_active:true}});
   assert(r.status===200, 'تنظیم مدل قیمت‌گذاری بر اساس کلیک');
-  r = await request('/api/advertising/requests',{method:'POST',body:{advertiser_name:'مشتری CPC',business_name:'برند کلیک‌محور',phone:'09124444444',package_id:adPackage.id,duration_days:7,target_clicks:25}});
+  r = await request('/api/advertising/requests',{method:'POST',body:{advertiser_name:'مشتری CPC',business_name:'برند کلیک‌محور',phone:'09124444444',privacy_consent:true,package_id:adPackage.id,duration_days:7,target_clicks:25}});
   assert(r.status===201 && Number(r.data.request.quote_toman)===25000, 'محاسبه تعرفه CPC بر اساس تعداد کلیک هدف');
   const quotedRequestId=r.data.request.id;
   r = await request('/api/admin/advertising/requests/'+quotedRequestId,{method:'PATCH',admin:true,body:{status:'approved',payment_status:'unpaid',quote_toman:350000,admin_notes:'تأیید آزمایشی'}});
