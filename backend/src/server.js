@@ -18,8 +18,9 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// Additive migration for persistent AVELORA footer and policy settings.
-const footerSettingsMigration = pool.query(`
+// Apply additive core schema migrations before accepting requests.
+const { ensureCoreSchema } = require('./migrations');
+const footerSettingsMigration = ensureCoreSchema(pool).then(() => pool.query(`
   ALTER TABLE store_settings
     ADD COLUMN IF NOT EXISTS footer_support_phone VARCHAR(30) NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS footer_support_email VARCHAR(254) NOT NULL DEFAULT '',
@@ -34,8 +35,8 @@ const footerSettingsMigration = pool.query(`
     ADD COLUMN IF NOT EXISTS policy_privacy TEXT NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS policy_shipping TEXT NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS policy_returns TEXT NOT NULL DEFAULT ''
-`).catch(error => {
-  console.error('AVELORA footer settings migration failed:', error.message);
+`)).then(() => true).catch(error => {
+  console.error('AVELORA database migration failed:', error.message);
   return false;
 });
 async function requireFooterSettingsMigration(_req, res, next) {
@@ -1094,12 +1095,16 @@ app.use((error, req, res, next) => {
 
 app.get('*', (_req,res) => res.sendFile(path.join(__dirname,'../../frontend/index.html')));
 
-const server = app.listen(port, '0.0.0.0', () => console.log(`AVELORA running on ${port}`));
+let server;
+footerSettingsMigration.then(() => {
+  server = app.listen(port, '0.0.0.0', () => console.log(`AVELORA running on ${port}`));
+});
 let shuttingDown = false;
 async function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log(`Received ${signal}; shutting down AVELORA gracefully...`);
+  if (!server) { await pool.end().catch(() => {}); process.exit(0); return; }
   server.close(async () => {
     try {
       await pool.end();
