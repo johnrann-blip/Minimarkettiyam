@@ -127,13 +127,11 @@ async function checkAdminSession() {
 }
 
 async function refreshSetupStatus() {
-  try {
-    const data = await fetch('/api/admin/auth/status').then(r => r.json());
-    $('#bootstrapPanel').hidden = !data.setup_required;
-    $('#loginPanel').hidden = Boolean(data.setup_required);
-  } catch {
-    $('#authMessage').textContent = 'وضعیت ورود مدیریت دریافت نشد. اتصال سرور را بررسی کن.';
-  }
+  // Existing administrator accounts must always be able to use the login form.
+  // Setup status must never redirect an existing owner to account creation.
+  $('#bootstrapPanel').hidden = true;
+  $('#loginPanel').hidden = false;
+  $('#authMessage').textContent = 'با نام کاربری و رمز عبور فعلی وارد شو.';
 }
 
 $('#loginForm').onsubmit = async event => {
