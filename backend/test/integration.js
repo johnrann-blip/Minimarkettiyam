@@ -116,7 +116,10 @@ async function run() {
   staticResponse = await fetch(BASE + '/admin/advertising.js');
   assert(staticResponse.status === 200, 'بارگذاری ابزار مدیریت کمپین‌های تبلیغاتی');
   staticResponse = await fetch(BASE + '/admin/admin.js');
-  assert(staticResponse.status === 200, 'بارگذاری JavaScript پنل مدیریت');
+  const adminJs = await staticResponse.text();
+  assert(staticResponse.status === 200 && adminJs.includes("request('/api/admin/auth/status')") &&
+    adminJs.includes('status.setup_required === true'),
+    'بارگذاری JavaScript پنل و بررسی نمایش راه‌اندازی اولیه مالک');
   staticResponse = await fetch(BASE + '/admin/admin.css');
   assert(staticResponse.status === 200, 'بارگذاری CSS پنل مدیریت');
 
