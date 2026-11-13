@@ -84,7 +84,12 @@ function createAdminAuth({pool,rateLimit}) {
    const salt=crypto.randomBytes(16),hash=await scrypt(password,salt,64);
    const r=await client.query("INSERT INTO admin_users(username,display_name,password_hash,password_salt,role,permissions) VALUES($1,$2,$3,$4,'owner',$5::jsonb) RETURNING id,username,display_name,role",
     [username,display,hash.toString('hex'),salt.toString('hex'),JSON.stringify(PERMISSIONS)]);
-   await client.query('COMMIT'); const admin=r.rows[0]; await createSession(admin.id,req,res);
+   const admin=r.rows[0];
+   const token=crypto.randomBytes(32).toString('hex');
+   await client.query("INSERT INTO admin_sessions(admin_id,token_hash,expires_at,ip_address,user_agent) VALUES($1,$2,NOW()+INTERVAL '1 day',$3,$4)",
+    [admin.id,hashToken(token),String(req.ip||'').slice(0,64),String(req.get('user-agent')||'').slice(0,300)]);
+   await client.query('COMMIT');
+   setCookie(res,token);
    await audit(pool,admin,req,'owner.bootstrap','administrators',201); res.status(201).json({admin,permissions:PERMISSIONS});
   } catch(error) { try { await client.query('ROLLBACK'); } catch {} console.error('Admin bootstrap failed:',error.message); res.status(503).json({error:'راه‌اندازی حساب مالک انجام نشد.'}); }
   finally { client.release(); }
