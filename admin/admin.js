@@ -173,8 +173,14 @@ $('#bootstrapForm').onsubmit = async event => {
       display_name:form.elements.display_name.value.trim(),
       password:form.elements.password.value
     })});
+    const createdUsername = data.admin?.username || form.elements.username.value.trim();
     form.reset();
-    await loadAdminWorkspace(data.admin);
+    $('#bootstrapPanel').hidden = true;
+    $('#loginPanel').hidden = false;
+    $('#loginForm').elements.username.value = createdUsername;
+    $('#loginForm').elements.password.value = '';
+    $('#authMessage').textContent = 'حساب مالک با موفقیت ساخته شد. اکنون با نام کاربری و رمز عبوری که تعیین کردی وارد شو.';
+    $('#loginForm').elements.password.focus();
   } catch(error) { $('#authMessage').textContent = error.message; }
 };
 
