@@ -84,14 +84,8 @@ async function waitForServer() {
 }
 
 async function run() {
-  const membershipMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/004_customer_membership.sql'), 'utf8');
-  await db.query(membershipMigration);
-  const adminMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/008_admin_auth.sql'), 'utf8');
-  await db.query(adminMigration);
-  const advertisingMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/009_advertising.sql'), 'utf8');
-  await db.query(advertisingMigration);
-  const engagementMigration = await fs.readFile(path.join(__dirname, '../../database/migrations/010_product_likes_customer_feedback.sql'), 'utf8');
-  await db.query(engagementMigration);
+  // The application must complete all versioned migrations before /api/health becomes ready.
+  await waitForServer();
   await db.query('DELETE FROM customer_feedback');
   await db.query('DELETE FROM product_likes');
   await db.query('DELETE FROM advertising_events');
@@ -101,7 +95,6 @@ async function run() {
   await db.query('DELETE FROM admin_sessions');
   await db.query('DELETE FROM admin_audit_logs');
   await db.query('DELETE FROM admin_users');
-  await waitForServer();
 
   let staticResponse = await fetch(BASE + '/admin/');
   const adminHtml = await staticResponse.text();

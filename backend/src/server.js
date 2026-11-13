@@ -26,8 +26,10 @@ const pool = new Pool({
 });
 
 // Apply additive core schema migrations before accepting requests.
-const { ensureCoreSchema } = require('./migrations');
-const footerSettingsMigration = ensureCoreSchema(pool).then(() => pool.query(`
+const { ensureCoreSchema, runApplicationMigrations } = require('./migrations');
+const footerSettingsMigration = ensureCoreSchema(pool)
+  .then(() => runApplicationMigrations(pool))
+  .then(() => pool.query(`
   ALTER TABLE store_settings
     ADD COLUMN IF NOT EXISTS footer_support_phone VARCHAR(30) NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS footer_support_email VARCHAR(254) NOT NULL DEFAULT '',
