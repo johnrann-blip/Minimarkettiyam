@@ -1,7 +1,10 @@
 'use strict';
 
-// Safe, additive bootstrap for the tables required by admin authentication
-// and store settings. Existing rows and tables are never dropped or replaced.
+const fs = require('fs/promises');
+const path = require('path');
+
+// Safe, additive bootstrap for administrator authentication and store settings.
+// Existing tables and rows are preserved.
 async function ensureCoreSchema(pool) {
   const client = await pool.connect();
   try {
@@ -95,4 +98,49 @@ async function ensureCoreSchema(pool) {
   }
 }
 
-module.exports = { ensureCoreSchema };
+// Run only the additive migrations used by the current main application.
+// The advisory lock prevents two cPanel/Passenger workers from racing on startup.
+async function runApplicationMigrations(pool) {
+  const client = await pool.connect();
+  const migrationsDir = path.resolve(__dirname, '../../database/migrations');
+  const migrations = [
+    '001_store_settings.sql',
+    '002_order_idempotency.sql',
+    '003_zarinpal_payments.sql',
+    '004_customer_membership.sql',
+    '008_admin_auth.sql',
+    '009_advertising.sql',
+    '010_product_likes_customer_feedback.sql'
+  ];
+
+  try {
+    await client.query('SELECT pg_advisory_lock(741029110)');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS app_schema_migrations (
+        migration_name VARCHAR(160) PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    for (const migration of migrations) {
+      const found = await client.query(
+        'SELECT 1 FROM app_schema_migrations WHERE migration_name=$1',
+        [migration]
+      );
+      if (found.rowCount) continue;
+
+      const sql = await fs.readFile(path.join(migrationsDir, migration), 'utf8');
+      await client.query(sql);
+      await client.query(
+        'INSERT INTO app_schema_migrations (migration_name) VALUES ($1) ON CONFLICT DO NOTHING',
+        [migration]
+      );
+      console.log('AVELORA database migration applied:', migration);
+    }
+  } finally {
+    await client.query('SELECT pg_advisory_unlock(741029110)').catch(() => {});
+    client.release();
+  }
+}
+
+module.exports = { ensureCoreSchema, runApplicationMigrations };
