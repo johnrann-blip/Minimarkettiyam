@@ -127,11 +127,19 @@ async function checkAdminSession() {
 }
 
 async function refreshSetupStatus() {
-  // Existing administrator accounts must always be able to use the login form.
-  // Setup status must never redirect an existing owner to account creation.
-  $('#bootstrapPanel').hidden = true;
-  $('#loginPanel').hidden = false;
-  $('#authMessage').textContent = 'با نام کاربری و رمز عبور فعلی وارد شو.';
+  try {
+    const status = await request('/api/admin/auth/status');
+    const setupRequired = status.setup_required === true;
+    $('#bootstrapPanel').hidden = !setupRequired;
+    $('#loginPanel').hidden = setupRequired;
+    $('#authMessage').textContent = setupRequired
+      ? 'هنوز حساب مالک ساخته نشده است. ابتدا حساب مالک را با کلید محرمانه سرور راه‌اندازی کن.'
+      : 'با نام کاربری و رمز عبور فعلی وارد شو.';
+  } catch (error) {
+    $('#bootstrapPanel').hidden = true;
+    $('#loginPanel').hidden = false;
+    $('#authMessage').textContent = 'وضعیت راه‌اندازی مدیریت دریافت نشد؛ اتصال سرور را بررسی کن. ' + error.message;
+  }
 }
 
 $('#loginForm').onsubmit = async event => {
