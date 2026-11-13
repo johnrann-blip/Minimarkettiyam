@@ -19,12 +19,12 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_USER: u0_a289
-          POSTGRES_DB: minimarkettiyam_test
+          POSTGRES_DB: avelora_integration_test
           POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U u0_a289 -d minimarkettiyam_test"
+          --health-cmd "pg_isready -U u0_a289 -d avelora_integration_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -39,12 +39,9 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - name: Install backend dependencies
         run: npm --prefix backend ci
-      - name: Initialize isolated test database
-        env:
-          PGPASSWORD: ""
+      - name: Initialize isolated integration test database
         run: |
-          psql "postgresql://u0_a289@127.0.0.1:5432/minimarkettiyam_test" -v ON_ERROR_STOP=1 -f database/schema.sql
-          psql "postgresql://u0_a289@127.0.0.1:5432/minimarkettiyam_test" -v ON_ERROR_STOP=1 -f database/migrations/004_customer_membership.sql
+          psql "postgresql://u0_a289@127.0.0.1:5432/avelora_integration_test" -v ON_ERROR_STOP=1 -f database/schema.sql
       - name: Check JavaScript syntax
         run: npm --prefix backend run check
       - name: Run ZarinPal configuration tests
