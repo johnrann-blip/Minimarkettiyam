@@ -130,7 +130,10 @@ async function run() {
     headers:{'x-admin-request':'1'},
     body:{admin_api_key:KEY,username:'owner',display_name:'مالک آزمایشی',password:'TestOwnerPassword123'}
   });
-  assert(r.status === 201 && r.data.admin.role === 'owner' && r.data.login_required === true && /Max-Age=0/i.test(r.cookie || '') && (await db.query('SELECT COUNT(*)::int AS count FROM admin_sessions WHERE admin_id=$1',[r.data.admin.id])).rows[0].count === 0, 'ساخت حساب مالک بدون ورود خودکار و پاک‌کردن نشست قبلی');
+  assert(r.status === 201 && r.data.admin.role === 'owner', 'ساخت حساب مالک');
+  assert(r.data.login_required === true, 'الزام ورود دستی پس از راه‌اندازی');
+  assert(/Max-Age=0/i.test(r.cookie || ''), 'پاک‌کردن کوکی نشست قبلی پس از راه‌اندازی');
+  assert((await db.query('SELECT COUNT(*)::int AS count FROM admin_sessions WHERE admin_id=$1',[r.data.admin.id])).rows[0].count === 0, 'عدم ایجاد نشست خودکار برای مالک');
   r = await request('/api/admin/auth/login', {
     method:'POST',headers:{'x-admin-request':'1'},
     body:{username:'owner',password:'TestOwnerPassword123'}
