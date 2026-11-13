@@ -136,9 +136,11 @@ async function refreshSetupStatus() {
       ? 'هنوز حساب مالک ساخته نشده است. ابتدا حساب مالک را با کلید محرمانه سرور راه‌اندازی کن.'
       : 'با نام کاربری و رمز عبور فعلی وارد شو.';
   } catch (error) {
+    // Do not show the ordinary login form when setup status is unknown.
+    // This prevents a failed/stale status request from misleading the owner.
     $('#bootstrapPanel').hidden = true;
-    $('#loginPanel').hidden = false;
-    $('#authMessage').textContent = 'وضعیت راه‌اندازی مدیریت دریافت نشد؛ اتصال سرور را بررسی کن. ' + error.message;
+    $('#loginPanel').hidden = true;
+    $('#authMessage').textContent = 'وضعیت راه‌اندازی مدیریت دریافت نشد؛ ورود را حدس نزن. اتصال سرور را بررسی کن. ' + error.message;
   }
 }
 
