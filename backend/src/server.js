@@ -1,5 +1,5 @@
 
-require('dotenv').config();
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -16,7 +16,14 @@ const { createEngagementRouter, createFeedbackAdminRouter, visitorKey } = requir
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const databaseUrl = new URL(process.env.DATABASE_URL);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  host: databaseUrl.hostname === 'localhost' ? '127.0.0.1' : databaseUrl.hostname,
+  ssl: databaseUrl.searchParams.get('sslmode') === 'require'
+    ? { rejectUnauthorized: false }
+    : undefined
+});
 
 // Apply additive core schema migrations before accepting requests.
 const { ensureCoreSchema } = require('./migrations');
