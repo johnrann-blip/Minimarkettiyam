@@ -1105,7 +1105,11 @@ app.use((error, req, res, next) => {
 app.get('*', (_req,res) => res.sendFile(path.join(__dirname,'../../frontend/index.html')));
 
 let server;
-footerSettingsMigration.then(() => {
+footerSettingsMigration.then(ready => {
+  if (!ready) {
+    console.error('AVELORA startup aborted: required database migrations did not complete.');
+    process.exit(1);
+  }
   server = app.listen(port, '0.0.0.0', () => console.log(`AVELORA running on ${port}`));
 });
 let shuttingDown = false;
