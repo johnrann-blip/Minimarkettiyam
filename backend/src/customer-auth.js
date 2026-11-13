@@ -31,14 +31,14 @@ function clearSessionCookie(res) {
   const secure=process.env.NODE_ENV==='production' ? '; Secure' : '';
   res.setHeader('Set-Cookie', COOKIE+'=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'+secure);
 }
-async function createSession(pool, customerId, res) {
+async function createSession(queryable, customerId) {
   const token=crypto.randomBytes(32).toString('hex');
   const hash=crypto.createHash('sha256').update(token).digest('hex');
-  await pool.query(
+  await queryable.query(
     'INSERT INTO customer_sessions (customer_id,token_hash,expires_at) VALUES ($1,$2,NOW()+INTERVAL \'30 days\')',
     [customerId,hash]
   );
-  setSessionCookie(res,token);
+  return token;
 }
 function createCustomerAuth({pool, rateLimit}) {
   router.post('/register', rateLimit, async (req,res) => {
@@ -48,19 +48,29 @@ function createCustomerAuth({pool, rateLimit}) {
     if(!name || !phone || password.length<10 || password.length>200) {
       return res.status(400).json({error:'نام، شماره موبایل معتبر و رمز عبور حداقل ۱۰ نویسه‌ای لازم است.'});
     }
+    let client;
     try {
       const salt=crypto.randomBytes(16);
       const hash=await scrypt(password,salt,64);
-      const result=await pool.query(
+      client=await pool.connect();
+      await client.query('BEGIN');
+      const result=await client.query(
         'INSERT INTO customers (full_name,phone,password_hash,password_salt) VALUES ($1,$2,$3,$4) RETURNING id,full_name,phone',
         [name,phone,hash.toString('hex'),salt.toString('hex')]
       );
-      await createSession(pool,result.rows[0].id,res);
+      const token=await createSession(client,result.rows[0].id);
+      await client.query('COMMIT');
+      setSessionCookie(res,token);
       res.status(201).json({customer:result.rows[0],discount_percent:0,message:'حساب عضویت AVELORA ساخته شد.'});
     } catch(error) {
+      if(client) {
+        try { await client.query('ROLLBACK'); } catch {}
+      }
       if(error.code==='23505') return res.status(409).json({error:'این شماره موبایل قبلاً ثبت‌نام کرده است. وارد حساب شو.'});
       console.error('Customer registration failed:',error.message);
       res.status(503).json({error:'ثبت‌نام موقتاً انجام نشد. دوباره تلاش کن.'});
+    } finally {
+      if(client) client.release();
     }
   });
   router.post('/login', rateLimit, async (req,res) => {
@@ -75,7 +85,8 @@ function createCustomerAuth({pool, rateLimit}) {
       const expected=Buffer.from(customer.password_hash,'hex');
       if(candidate.length!==expected.length || !crypto.timingSafeEqual(candidate,expected))
         return res.status(401).json({error:'شماره موبایل یا رمز عبور درست نیست.'});
-      await createSession(pool,customer.id,res);
+      const token=await createSession(pool,customer.id);
+      setSessionCookie(res,token);
       res.json({customer:{id:customer.id,full_name:customer.full_name,phone:customer.phone},discount_percent:0});
     } catch(error) {
       console.error('Customer login failed:',error.message);
