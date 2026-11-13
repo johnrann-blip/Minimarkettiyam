@@ -97,7 +97,7 @@ async function run() {
   assert(registered.status === 201 && !!registered.cookie,
     'successful registration returns a session cookie only after commit');
 
-  const tokenMatch = /(?:^|;\\s*)avelora_session=([^;]+)/.exec(registered.cookie);
+  const tokenMatch = /(?:^|;\s*)avelora_session=([^;]+)/.exec(registered.cookie);
   assert(!!tokenMatch, 'registration cookie contains the customer session token');
   const token = decodeURIComponent(tokenMatch[1]);
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
