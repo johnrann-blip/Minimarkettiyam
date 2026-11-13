@@ -130,7 +130,12 @@ async function run() {
     headers:{'x-admin-request':'1'},
     body:{admin_api_key:KEY,username:'owner',display_name:'مالک آزمایشی',password:'TestOwnerPassword123'}
   });
-  assert(r.status === 201 && r.data.admin.role === 'owner' && !!r.cookie, 'ساخت حساب مالک و ایجاد نشست امن');
+  assert(r.status === 201 && r.data.admin.role === 'owner' && r.data.login_required === true && !r.cookie, 'ساخت حساب مالک بدون ورود خودکار');
+  r = await request('/api/admin/auth/login', {
+    method:'POST',headers:{'x-admin-request':'1'},
+    body:{username:'owner',password:'TestOwnerPassword123'}
+  });
+  assert(r.status === 200 && r.data.admin.role === 'owner' && !!r.cookie, 'ورود صریح مالک پس از راه‌اندازی اولیه');
   adminSessionCookie = r.cookie;
   r = await request('/api/advertising/packages');
   assert(r.status===200 && r.data.length===3, 'نمایش سه جایگاه تبلیغاتی فعال برای عموم');
