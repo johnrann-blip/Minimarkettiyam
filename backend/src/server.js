@@ -17,9 +17,13 @@ const { createEngagementRouter, createFeedbackAdminRouter, visitorKey } = requir
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const databaseUrl = new URL(process.env.DATABASE_URL);
+// PGHOST can override the URL hostname with a PostgreSQL Unix-socket directory,
+// when the hosting provider explicitly supports local socket connections.
+const databaseHost = process.env.PGHOST ||
+  (databaseUrl.hostname === 'localhost' ? '127.0.0.1' : databaseUrl.hostname);
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  host: databaseUrl.hostname === 'localhost' ? '127.0.0.1' : databaseUrl.hostname,
+  host: databaseHost,
   ssl: databaseUrl.searchParams.get('sslmode') === 'require'
     ? { rejectUnauthorized: false }
     : undefined
