@@ -128,15 +128,38 @@ async function runApplicationMigrations(pool) {
         'SELECT 1 FROM app_schema_migrations WHERE migration_name=$1',
         [migration]
       );
-      if (found.rowCount) continue;
+
+      // Repair an incomplete legacy bootstrap: an old migration ledger may
+      // claim 000 was applied even though the core tables are missing.
+      let coreSchemaMissing = false;
+      if (migration === '000_core_store_tables.sql') {
+        const core = await client.query(`
+          SELECT
+            to_regclass('categories') IS NOT NULL AS categories,
+            to_regclass('products') IS NOT NULL AS products,
+            to_regclass('orders') IS NOT NULL AS orders,
+            to_regclass('order_items') IS NOT NULL AS order_items
+        `);
+        const state = core.rows[0];
+        coreSchemaMissing = !state.categories || !state.products || !state.orders || !state.order_items;
+      }
+
+      if (found.rowCount && !coreSchemaMissing) continue;
 
       const sql = await fs.readFile(path.join(migrationsDir, migration), 'utf8');
-      await client.query(sql);
-      await client.query(
-        'INSERT INTO app_schema_migrations (migration_name) VALUES ($1) ON CONFLICT DO NOTHING',
-        [migration]
-      );
-      console.log('AVELORA database migration applied:', migration);
+      await client.query('BEGIN');
+      try {
+        await client.query(sql);
+        await client.query(
+          'INSERT INTO app_schema_migrations (migration_name) VALUES ($1) ON CONFLICT (migration_name) DO UPDATE SET applied_at=NOW()',
+          [migration]
+        );
+        await client.query('COMMIT');
+        console.log('AVELORA database migration applied:', migration);
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw error;
+      }
     }
   } finally {
     await client.query('SELECT pg_advisory_unlock(741029110)').catch(() => {});
