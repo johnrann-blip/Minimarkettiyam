@@ -104,6 +104,7 @@ async function runApplicationMigrations(pool) {
   const client = await pool.connect();
   const migrationsDir = path.resolve(__dirname, '../../database/migrations');
   const migrations = [
+    '000_core_store_tables.sql',
     '001_store_settings.sql',
     '002_order_idempotency.sql',
     '003_zarinpal_payments.sql',
