@@ -16,11 +16,16 @@ const { createEngagementRouter, createFeedbackAdminRouter, visitorKey } = requir
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
-const databaseUrl = new URL(process.env.DATABASE_URL);
+const databaseUrlText = String(process.env.DATABASE_URL || '').trim();
+let databaseUrl = null;
+if (databaseUrlText) {
+  try { databaseUrl = new URL(databaseUrlText); }
+  catch { /* validateRuntimeConfig reports a safe configuration error below. */ }
+}
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  host: databaseUrl.hostname === 'localhost' ? '127.0.0.1' : databaseUrl.hostname,
-  ssl: databaseUrl.searchParams.get('sslmode') === 'require'
+  connectionString: databaseUrlText || undefined,
+  host: databaseUrl && databaseUrl.hostname === 'localhost' ? '127.0.0.1' : undefined,
+  ssl: databaseUrl && databaseUrl.searchParams.get('sslmode') === 'require'
     ? { rejectUnauthorized: false }
     : undefined
 });
@@ -55,7 +60,10 @@ async function requireFooterSettingsMigration(_req, res, next) {
 
 function validateRuntimeConfig() {
   const errors = [];
-  if (!process.env.DATABASE_URL) errors.push('DATABASE_URL is required.');
+  if (!databaseUrlText) errors.push('DATABASE_URL is required.');
+  else if (!databaseUrl || !['postgres:', 'postgresql:'].includes(databaseUrl.protocol)) {
+    errors.push('DATABASE_URL must be a valid PostgreSQL URL.');
+  }
   if (!Number.isInteger(port) || port < 1 || port > 65535) errors.push('PORT must be an integer from 1 to 65535.');
 
   if (process.env.NODE_ENV === 'production') {
