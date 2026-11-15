@@ -12,15 +12,22 @@ const { createCustomerAuth } = require('./customer-auth');
 const { createAdminAuth } = require('./admin-auth');
 const { createAdvertisingRouter, createAdvertisingAdminRouter } = require('./advertising');
 const { createSeoRouter } = require('./seo');
+const { createCloudinaryStorage } = require('./cloudinary-storage');
 const { createEngagementRouter, createFeedbackAdminRouter, visitorKey } = require('./engagement');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
-const databaseUrl = new URL(process.env.DATABASE_URL);
+const cloudinaryStorage = createCloudinaryStorage();
+const databaseUrlText = String(process.env.DATABASE_URL || '').trim();
+let databaseUrl = null;
+if (databaseUrlText) {
+  try { databaseUrl = new URL(databaseUrlText); }
+  catch { /* validateRuntimeConfig reports a safe configuration error below. */ }
+}
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  host: databaseUrl.hostname === 'localhost' ? '127.0.0.1' : databaseUrl.hostname,
-  ssl: databaseUrl.searchParams.get('sslmode') === 'require'
+  connectionString: databaseUrlText || undefined,
+  host: databaseUrl && databaseUrl.hostname === 'localhost' ? '127.0.0.1' : undefined,
+  ssl: databaseUrl && databaseUrl.searchParams.get('sslmode') === 'require'
     ? { rejectUnauthorized: false }
     : undefined
 });
@@ -55,12 +62,22 @@ async function requireFooterSettingsMigration(_req, res, next) {
 
 function validateRuntimeConfig() {
   const errors = [];
-  if (!process.env.DATABASE_URL) errors.push('DATABASE_URL is required.');
+  if (!databaseUrlText) errors.push('DATABASE_URL is required.');
+  else if (!databaseUrl || !['postgres:', 'postgresql:'].includes(databaseUrl.protocol)) {
+    errors.push('DATABASE_URL must be a valid PostgreSQL URL.');
+  }
   if (!Number.isInteger(port) || port < 1 || port > 65535) errors.push('PORT must be an integer from 1 to 65535.');
 
   if (process.env.NODE_ENV === 'production') {
-    // ADMIN_API_KEY protects the one-time owner bootstrap endpoint only.
-    // Normal application startup and subsequent owner logins must not depend on it.
+    const localUploadStorage = String(process.env.UPLOAD_STORAGE || '').trim().toLowerCase() === 'local';
+    if (!cloudinaryStorage.isConfigured && !localUploadStorage) {
+      errors.push('Configure Cloudinary or explicitly enable UPLOAD_STORAGE=local on a host with persistent disk storage.');
+    }
+    // Keep the bootstrap secret configured so the first owner can always be created safely.
+    // It is used only by the one-time bootstrap endpoint; normal logins use owner credentials.
+    if (Buffer.byteLength(String(process.env.ADMIN_API_KEY || ''), 'utf8') < 32) {
+      errors.push('ADMIN_API_KEY must contain at least 32 bytes for secure owner bootstrap.');
+    }
     const paymentEnabled = String(process.env.ZARINPAL_ENABLED || 'false').trim().toLowerCase() === 'true';
     if (paymentEnabled) {
       if (String(process.env.ZARINPAL_MODE || '').trim().toLowerCase() !== 'production') {
@@ -941,6 +958,8 @@ app.post('/api/admin/uploads/product', adminAuth.requireAdmin, express.json({ li
     if (!signatures[mime]) return res.status(400).json({error:'محتوای فایل با نوع تصویر اعلام‌شده مطابقت ندارد.'});
     const extension = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[mime];
     const filename = crypto.randomBytes(16).toString('hex') + '.' + extension;
+    const remoteImageUrl = await cloudinaryStorage.upload({buffer,mime,filename});
+    if (remoteImageUrl) return res.status(201).json({image_url:remoteImageUrl});
     const directory = path.join(__dirname, '../uploads/products');
     await fs.mkdir(directory, {recursive:true});
     await fs.writeFile(path.join(directory, filename), buffer, {flag:'wx'});

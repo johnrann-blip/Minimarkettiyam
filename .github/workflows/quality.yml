@@ -46,5 +46,7 @@ jobs:
         run: npm --prefix backend run check
       - name: Run ZarinPal configuration tests
         run: npm --prefix backend run test:zarinpal
+      - name: Run Cloudinary upload signing tests
+        run: npm --prefix backend run test:cloudinary
       - name: Run PostgreSQL integration tests
         run: npm --prefix backend run test:integration
