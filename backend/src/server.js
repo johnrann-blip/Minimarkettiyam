@@ -12,10 +12,12 @@ const { createCustomerAuth } = require('./customer-auth');
 const { createAdminAuth } = require('./admin-auth');
 const { createAdvertisingRouter, createAdvertisingAdminRouter } = require('./advertising');
 const { createSeoRouter } = require('./seo');
+const { createCloudinaryStorage } = require('./cloudinary-storage');
 const { createEngagementRouter, createFeedbackAdminRouter, visitorKey } = require('./engagement');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
+const cloudinaryStorage = createCloudinaryStorage();
 const databaseUrlText = String(process.env.DATABASE_URL || '').trim();
 let databaseUrl = null;
 if (databaseUrlText) {
@@ -67,6 +69,7 @@ function validateRuntimeConfig() {
   if (!Number.isInteger(port) || port < 1 || port > 65535) errors.push('PORT must be an integer from 1 to 65535.');
 
   if (process.env.NODE_ENV === 'production') {
+    if (!cloudinaryStorage.isConfigured) errors.push('Cloudinary image storage must be configured for persistent production uploads.');
     // ADMIN_API_KEY protects the one-time owner bootstrap endpoint only.
     // Normal application startup and subsequent owner logins must not depend on it.
     const paymentEnabled = String(process.env.ZARINPAL_ENABLED || 'false').trim().toLowerCase() === 'true';
@@ -949,6 +952,8 @@ app.post('/api/admin/uploads/product', adminAuth.requireAdmin, express.json({ li
     if (!signatures[mime]) return res.status(400).json({error:'محتوای فایل با نوع تصویر اعلام‌شده مطابقت ندارد.'});
     const extension = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[mime];
     const filename = crypto.randomBytes(16).toString('hex') + '.' + extension;
+    const remoteImageUrl = await cloudinaryStorage.upload({buffer,mime,filename});
+    if (remoteImageUrl) return res.status(201).json({image_url:remoteImageUrl});
     const directory = path.join(__dirname, '../uploads/products');
     await fs.mkdir(directory, {recursive:true});
     await fs.writeFile(path.join(directory, filename), buffer, {flag:'wx'});
