@@ -69,7 +69,10 @@ function validateRuntimeConfig() {
   if (!Number.isInteger(port) || port < 1 || port > 65535) errors.push('PORT must be an integer from 1 to 65535.');
 
   if (process.env.NODE_ENV === 'production') {
-    if (!cloudinaryStorage.isConfigured) errors.push('Cloudinary image storage must be configured for persistent production uploads.');
+    const localUploadStorage = String(process.env.UPLOAD_STORAGE || '').trim().toLowerCase() === 'local';
+    if (!cloudinaryStorage.isConfigured && !localUploadStorage) {
+      errors.push('Configure Cloudinary or explicitly enable UPLOAD_STORAGE=local on a host with persistent disk storage.');
+    }
     // Keep the bootstrap secret configured so the first owner can always be created safely.
     // It is used only by the one-time bootstrap endpoint; normal logins use owner credentials.
     if (Buffer.byteLength(String(process.env.ADMIN_API_KEY || ''), 'utf8') < 32) {
