@@ -37,6 +37,16 @@
   <p id="authMessage" role="status"></p>
   <div id="adminWorkspace" hidden>
     <button id="logoutButton" type="button">خروج از حساب مدیریت</button>
+    <details id="changePasswordPanel">
+      <summary>تغییر رمز عبور مدیریت</summary>
+      <form id="changePasswordForm">
+        <input name="current_password" type="password" autocomplete="current-password" placeholder="رمز فعلی" required>
+        <input name="new_password" type="password" autocomplete="new-password" minlength="12" maxlength="200" placeholder="رمز جدید (حداقل ۱۲ نویسه)" required>
+        <input name="new_password_confirm" type="password" autocomplete="new-password" minlength="12" maxlength="200" placeholder="تکرار رمز جدید" required>
+        <button type="submit">تغییر رمز عبور</button>
+      </form>
+      <p id="passwordMessage" role="status"></p>
+    </details>
     <p><a id="advertisingAdminLink" href="/admin/advertising.html" hidden>مدیریت تبلیغات و درخواست‌های همکاری</a></p>
   <section id="productAdmin">
     <h2 id="formTitle">افزودن محصول</h2>
