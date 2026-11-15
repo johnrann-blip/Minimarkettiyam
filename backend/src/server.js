@@ -59,11 +59,8 @@ function validateRuntimeConfig() {
   if (!Number.isInteger(port) || port < 1 || port > 65535) errors.push('PORT must be an integer from 1 to 65535.');
 
   if (process.env.NODE_ENV === 'production') {
-    if (!process.env.ADMIN_API_KEY || Buffer.byteLength(process.env.ADMIN_API_KEY) < 32 ||
-        process.env.ADMIN_API_KEY.startsWith('REPLACE_WITH_')) {
-      errors.push('ADMIN_API_KEY must contain at least 32 bytes in production.');
-    }
-
+    // ADMIN_API_KEY protects the one-time owner bootstrap endpoint only.
+    // Normal application startup and subsequent owner logins must not depend on it.
     const paymentEnabled = String(process.env.ZARINPAL_ENABLED || 'false').trim().toLowerCase() === 'true';
     if (paymentEnabled) {
       if (String(process.env.ZARINPAL_MODE || '').trim().toLowerCase() !== 'production') {
