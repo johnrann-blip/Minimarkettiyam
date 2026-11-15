@@ -70,8 +70,11 @@ function validateRuntimeConfig() {
 
   if (process.env.NODE_ENV === 'production') {
     if (!cloudinaryStorage.isConfigured) errors.push('Cloudinary image storage must be configured for persistent production uploads.');
-    // ADMIN_API_KEY protects the one-time owner bootstrap endpoint only.
-    // Normal application startup and subsequent owner logins must not depend on it.
+    // Keep the bootstrap secret configured so the first owner can always be created safely.
+    // It is used only by the one-time bootstrap endpoint; normal logins use owner credentials.
+    if (Buffer.byteLength(String(process.env.ADMIN_API_KEY || ''), 'utf8') < 32) {
+      errors.push('ADMIN_API_KEY must contain at least 32 bytes for secure owner bootstrap.');
+    }
     const paymentEnabled = String(process.env.ZARINPAL_ENABLED || 'false').trim().toLowerCase() === 'true';
     if (paymentEnabled) {
       if (String(process.env.ZARINPAL_MODE || '').trim().toLowerCase() !== 'production') {
