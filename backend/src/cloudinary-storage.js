@@ -22,7 +22,7 @@ function createCloudinaryStorage({env=process.env,fetchImpl=global.fetch,now=Dat
     form.set('folder',folder);
     form.set('public_id',filename.slice(0,filename.lastIndexOf('.')));
     form.set('signature',signature);
-    const response=await fetchImpl('https://api.cloudinary.com/v1_1/'+encodeURIComponent(cloudName)+'/image/upload',{method:'POST',body:form});
+    const response=await fetchImpl('https://api.cloudinary.com/v1_1/'+encodeURIComponent(cloudName)+'/image/upload',{method:'POST',body:form,signal:AbortSignal.timeout(20000)});
     let payload={};
     try { payload=await response.json(); } catch {}
     if(!response.ok||typeof payload.secure_url!=='string'||!payload.secure_url.startsWith('https://')) {
