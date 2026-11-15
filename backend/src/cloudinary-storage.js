@@ -8,7 +8,7 @@ function createCloudinaryStorage({env=process.env,fetchImpl=global.fetch,now=Dat
 
   async function upload({buffer,mime,filename}) {
     if(!configured) return null;
-    if(!Buffer.isBuffer(buffer)||!['image/jpeg','image/png','image/webp'].includes(mime)||!/^[a-f0-9]{32}\\.(jpg|png|webp)$/.test(filename)) {
+    if(!Buffer.isBuffer(buffer)||!['image/jpeg','image/png','image/webp'].includes(mime)||!/^[a-f0-9]{32}\.(jpg|png|webp)$/.test(filename)) {
       throw new Error('Invalid Cloudinary upload input.');
     }
     const timestamp=String(Math.floor(now()/1000));
