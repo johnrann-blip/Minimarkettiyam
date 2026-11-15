@@ -6,9 +6,10 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "check": "node --check src/server.js && node --check src/migrations.js && node --check src/seo.js && node --check src/engagement.js && node --check src/advertising.js && node --check ../admin/advertising.js && node --check ../frontend/advertising.js && node --check src/admin-auth.js && node --check src/customer-auth.js && node --check ../admin/admin.js && node --check ../frontend/app.js && node --check ../frontend/account.js && node --check ../frontend/assistant.js && node --check src/zarinpal.js",
+    "check": "node --check src/cloudinary-storage.js && node --check src/server.js && node --check src/migrations.js && node --check src/seo.js && node --check src/engagement.js && node --check src/advertising.js && node --check ../admin/advertising.js && node --check ../frontend/advertising.js && node --check src/admin-auth.js && node --check src/customer-auth.js && node --check ../admin/admin.js && node --check ../frontend/app.js && node --check ../frontend/account.js && node --check ../frontend/assistant.js && node --check src/zarinpal.js",
     "test:integration": "node test/integration.js && node test/customer-auth-transaction.js",
-    "test:zarinpal": "node test/zarinpal.js"
+    "test:zarinpal": "node test/zarinpal.js",
+    "test:cloudinary": "node test/cloudinary-storage.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
