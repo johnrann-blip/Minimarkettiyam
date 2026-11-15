@@ -192,6 +192,27 @@ $('#logoutButton').onclick = async () => {
   await refreshSetupStatus();
 };
 
+$('#changePasswordForm').onsubmit = async event => {
+  event.preventDefault();
+  const form=event.currentTarget;
+  if(form.elements.new_password.value!==form.elements.new_password_confirm.value){
+    $('#passwordMessage').textContent='تکرار رمز جدید یکسان نیست.';
+    return;
+  }
+  const button=form.querySelector('button[type="submit"]');
+  button.disabled=true;
+  $('#passwordMessage').textContent='در حال تغییر رمز عبور...';
+  try{
+    const result=await request('/api/admin/auth/password',{method:'POST',body:JSON.stringify({
+      current_password:form.elements.current_password.value,
+      new_password:form.elements.new_password.value
+    })});
+    form.reset();
+    $('#passwordMessage').textContent=result.message||'رمز عبور تغییر کرد.';
+  }catch(error){$('#passwordMessage').textContent=error.message;}
+  finally{button.disabled=false;}
+};
+
 $('#productForm').onsubmit = async event => {
   event.preventDefault();
 
