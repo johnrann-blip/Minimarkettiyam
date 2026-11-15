@@ -105,6 +105,23 @@ function createAdminAuth({pool,rateLimit}) {
    await audit(pool,admin,req,'admin.login','authentication',200); res.json({admin,permissions:row.role==='owner'?PERMISSIONS:row.permissions});
   } catch(error) { console.error('Admin login failed:',error.message); res.status(503).json({error:'ورود مدیر انجام نشد.'}); }
  });
+ router.post('/password',rateLimit,authenticate,async(req,res)=>{
+  if(req.get('x-admin-request')!=='1') return res.status(403).json({error:'درخواست معتبر نیست.'});
+  const current=String(req.body?.current_password||''),next=String(req.body?.new_password||'');
+  if(!current||next.length<12||next.length>200) return res.status(400).json({error:'رمز فعلی و رمز جدید حداقل ۱۲ نویسه‌ای لازم است.'});
+  try {
+   const found=await pool.query('SELECT password_hash,password_salt FROM admin_users WHERE id=$1 AND is_active=true',[req.admin.id]);
+   if(!found.rowCount) return res.status(401).json({error:'حساب مدیریت فعال نیست.'});
+   const row=found.rows[0],candidate=await scrypt(current,Buffer.from(row.password_salt,'hex'),64),expected=Buffer.from(row.password_hash,'hex');
+   if(candidate.length!==expected.length||!crypto.timingSafeEqual(candidate,expected)) return res.status(401).json({error:'رمز فعلی صحیح نیست.'});
+   const salt=crypto.randomBytes(16),hash=await scrypt(next,salt,64);
+   const token=cookieValue(req.headers.cookie,COOKIE);
+   await pool.query('UPDATE admin_users SET password_hash=$1,password_salt=$2,updated_at=NOW() WHERE id=$3',[hash.toString('hex'),salt.toString('hex'),req.admin.id]);
+   await pool.query('DELETE FROM admin_sessions WHERE admin_id=$1 AND token_hash<>$2',[req.admin.id,hashToken(token)]);
+   await audit(pool,req.admin,req,'admin.password.change','authentication',200);
+   res.json({success:true,message:'رمز عبور با موفقیت تغییر کرد.'});
+  } catch(error) { console.error('Admin password change failed:',error.message); res.status(503).json({error:'تغییر رمز عبور انجام نشد.'}); }
+ });
  router.get('/me',authenticate,(req,res)=>res.json({admin:req.admin,permissions:req.admin.role==='owner'?PERMISSIONS:req.admin.permissions}));
  router.post('/logout',authenticate,async(req,res)=>{
   if(req.get('x-admin-request')!=='1') return res.status(403).json({error:'درخواست معتبر نیست.'});
