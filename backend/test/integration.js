@@ -48,6 +48,7 @@ let memberSessionCookie = null;
 let memberOrderCode = null;
 let colorProductId = null;
 let colorOrderCode = null;
+let permanentDeleteProductId = null;
 let memberPhone = null;
 let adminSessionCookie = null;
 let managerUsername = null;
@@ -659,6 +660,24 @@ async function run() {
   });
   assert(r.status === 409, 'جلوگیری از تغییر سفارش لغوشده به پرداخت‌شده');
 
+  r = await request(`/api/admin/products/${productId}`, {method:'DELETE',admin:true});
+  assert(r.status===200, 'انتقال محصول دارای سابقه سفارش به بایگانی');
+  r = await request(`/api/admin/products/${productId}/permanent`, {method:'DELETE',admin:true});
+  assert(r.status===409 && String(r.data.error||'').includes('سوابق سفارش'), 'جلوگیری از حذف کامل محصول دارای سابقه سفارش');
+
+  r = await request('/api/admin/products', {method:'POST',admin:true,body:{
+    sku:SKU+'-PERMANENT',name:'محصول آزمایشی حذف کامل',price_toman:1000,stock:0,image_url:'',is_active:true
+  }});
+  assert(r.status===201 && r.data.id, 'ساخت محصول آزمایشی برای حذف کامل');
+  permanentDeleteProductId=r.data.id;
+  r = await request(`/api/admin/products/${permanentDeleteProductId}`, {method:'DELETE',admin:true});
+  assert(r.status===200, 'بایگانی محصول آزمایشی پیش از حذف کامل');
+  r = await request(`/api/admin/products/${permanentDeleteProductId}/permanent`, {method:'DELETE',admin:true});
+  assert(r.status===200 && r.data.success===true, 'حذف کامل محصول بایگانی‌شده بدون سابقه سفارش');
+  const deletedProduct = await db.query('SELECT id FROM products WHERE id=$1',[permanentDeleteProductId]);
+  assert(deletedProduct.rowCount===0, 'حذف دائمی رکورد محصول از پایگاه داده');
+  permanentDeleteProductId=null;
+
   r = await request('/api/admin/auth/logout', {method:'POST',admin:true,body:{}});
   assert(r.status === 200, 'خروج مدیر و ابطال نشست');
   r = await request('/api/admin/products');
@@ -685,6 +704,7 @@ async function run() {
       if (secondProductId) await db.query('DELETE FROM products WHERE id=$1', [secondProductId]);
       if (memberProductId) await db.query('DELETE FROM products WHERE id=$1', [memberProductId]);
       if (colorProductId) await db.query('DELETE FROM products WHERE id=$1', [colorProductId]);
+      if (permanentDeleteProductId) await db.query('DELETE FROM products WHERE id=$1', [permanentDeleteProductId]);
       if (memberSessionCookie) {
         const token=(memberSessionCookie.match(/avelora_session=([^;]+)/)||[])[1];
         if(token) await db.query('DELETE FROM customer_sessions WHERE token_hash=$1',[crypto.createHash('sha256').update(decodeURIComponent(token)).digest('hex')]);

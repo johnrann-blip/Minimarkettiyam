@@ -89,6 +89,7 @@ $('#imageFile').addEventListener('change',()=>{
 async function loadAdminWorkspace(admin) {
   $('#adminWorkspace').hidden = false;
   const owner = admin?.role === 'owner';
+  window.isStoreOwner = owner;
   const permissions = new Set(admin?.permissions || []);
   const can = permission => owner || permissions.has(permission);
   const productAccess = can('products.view') || can('products.create') || can('products.update') || can('products.archive');
@@ -284,7 +285,8 @@ function renderProductCard(p, archived = false) {
       <p>وضعیت: ${active ? 'فعال' : 'بایگانی‌شده'}</p>
       <div class="product-actions">
         ${archived
-          ? `<button type="button" data-restore="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">فعال‌سازی مجدد</button>`
+          ? `<button type="button" data-restore="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">فعال‌سازی مجدد</button>
+             ${window.isStoreOwner ? `<button type="button" data-permanent-delete="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">حذف کامل</button>` : ''}`
           : `
             <button type="button" data-edit="${escapeHtml(p.id)}">ویرایش محصول</button>
             <button type="button" data-toggle="${escapeHtml(p.id)}" data-active="1">غیرفعال‌کردن</button>
@@ -386,6 +388,24 @@ $('#products').addEventListener('click', async event => {
   }
 });
 
+
+$('#archivedProducts').addEventListener('click', async event => {
+  const button = event.target.closest('[data-permanent-delete]');
+  if (!button) return;
+  const id = button.dataset.permanentDelete;
+  const name = button.dataset.name || 'این محصول';
+  if (!confirm(`حذف کامل «${name}» برگشت‌ناپذیر است. اگر محصول سابقه سفارش داشته باشد، سرور اجازه حذف نمی‌دهد. ادامه می‌دهی؟`)) return;
+  button.disabled = true;
+  try {
+    await request(`/api/admin/products/${encodeURIComponent(id)}/permanent`, {method:'DELETE'});
+    message('محصول و اطلاعات وابسته آن از فهرست محصولات حذف شد.');
+    await products();
+  } catch (error) {
+    message(error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
 
 async function loadGatewayStatus() {
   const target = $('#gatewayStatus');

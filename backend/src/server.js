@@ -1114,6 +1114,57 @@ app.patch('/api/admin/products/:id', adminAuth.requireAdmin, async (req, res) =>
   }
 });
 
+app.delete('/api/admin/products/:id/permanent', adminAuth.requireAdmin, async (req, res) => {
+  if (req.admin?.role !== 'owner') {
+    return res.status(403).json({error:'حذف کامل محصولات فقط در اختیار مالک فروشگاه است.'});
+  }
+  const id = String(req.params.id || '');
+  if (!/^[1-9][0-9]*$/.test(id)) {
+    return res.status(400).json({error:'شناسه محصول معتبر نیست.'});
+  }
+
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const found = await client.query(
+      'SELECT id,is_active FROM products WHERE id=$1 FOR UPDATE',
+      [id]
+    );
+    if (!found.rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({error:'محصول پیدا نشد.'});
+    }
+    if (found.rows[0].is_active) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({error:'برای حذف کامل، ابتدا محصول را به بایگانی منتقل کن.'});
+    }
+
+    const history = await client.query(
+      'SELECT COUNT(*)::int AS count FROM order_items WHERE product_id=$1',
+      [id]
+    );
+    if (Number(history.rows[0].count) > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        error:'این محصول در سوابق سفارش‌ها وجود دارد؛ برای حفظ تاریخچه خرید مشتریان، حذف کامل آن مجاز نیست.'
+      });
+    }
+
+    await client.query('DELETE FROM products WHERE id=$1', [id]);
+    await client.query('COMMIT');
+    res.json({success:true});
+  } catch (error) {
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch {}
+    }
+    console.error('Permanent product deletion failed:', error.message);
+    res.status(500).json({error:'حذف کامل محصول انجام نشد.'});
+  } finally {
+    if (client) client.release();
+  }
+});
+
 app.delete('/api/admin/products/:id', adminAuth.requireAdmin, async (req, res) => {
   const id = String(req.params.id || '');
   if (!/^[1-9][0-9]*$/.test(id)) {
