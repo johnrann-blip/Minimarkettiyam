@@ -497,3 +497,5 @@ body{background:var(--theme-background);color:var(--theme-text);font-family:var(
 .theme-preview.preview-mobile .preview-nav{font-size:14px}
 .theme-preview.preview-mobile .preview-hero h2{font-size:23px}
 .theme-preview.preview-mobile .preview-custom{width:100%;padding:18px 12px}
+
+.theme-preview:not(.preview-mobile)>section{order:0}
