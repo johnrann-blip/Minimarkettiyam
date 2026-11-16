@@ -44,8 +44,9 @@ async function categories() {
 
 function resetProductForm() {
   $('#productForm').reset();
-  $('#imagePreview').hidden = true;
-  $('#imagePreview').removeAttribute('src');
+  $('#imagePreview').innerHTML = '';
+  $('#productColors').innerHTML = '';
+  window.currentProductImages=[];
   $('#productForm [name="id"]').value = '';
   $('#formTitle').textContent = 'افزودن محصول';
   $('#submitProduct').textContent = 'ثبت محصول';
@@ -59,17 +60,30 @@ $('#submitProduct').addEventListener('click', () => {
   message('دکمه ذخیره انتخاب شد؛ در حال بررسی اطلاعات محصول...');
 });
 
-$('#imageFile').addEventListener('change', () => {
-  const file = $('#imageFile').files[0];
-  if (!file) return;
-  if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
-    message('عکس باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.');
-    $('#imageFile').value = '';
-    return;
+function addColorRow(color={name:'',stock:0}) {
+  const row=document.createElement('div');
+  row.className='product-color-row';
+  row.innerHTML='<input type="text" maxlength="60" placeholder="نام رنگ (مثلاً مشکی)" aria-label="نام رنگ"><input type="number" min="0" step="1" placeholder="موجودی این رنگ" aria-label="موجودی رنگ"><button type="button" class="remove-product-color">حذف</button>';
+  row.querySelector('input[type=text]').value=color.name||'';
+  row.querySelector('input[type=number]').value=Number(color.stock)||0;
+  row.querySelector('button').onclick=()=>row.remove();
+  $('#productColors').append(row);
+}
+$('#addProductColor').onclick=()=>addColorRow();
+function selectedColors(){
+  return [...$('#productColors').querySelectorAll('.product-color-row')].map(row=>({
+    name:row.querySelector('input[type=text]').value.trim(),
+    stock:Number(row.querySelector('input[type=number]').value)
+  })).filter(x=>x.name);
+}
+$('#imageFile').addEventListener('change',()=>{
+  const files=[...$('#imageFile').files];
+  if(files.length>12){message('حداکثر ۱۲ عکس برای هر محصول مجاز است.');$('#imageFile').value='';return;}
+  if(files.some(file=>!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024)){
+    message('هر عکس باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.');$('#imageFile').value='';return;
   }
-  $('#imagePreview').src = URL.createObjectURL(file);
-  $('#imagePreview').hidden = false;
-  message('عکس انتخاب شد و پیش‌نمایش آن آماده است. برای آپلود و ذخیره عکس، دکمه «ذخیره تغییرات» را بزن.');
+  $('#imagePreview').innerHTML=files.map(file=>'<img alt="پیش‌نمایش عکس محصول" style="max-width:100px;max-height:100px;object-fit:contain" src="'+URL.createObjectURL(file)+'">').join('');
+  message(files.length+' عکس انتخاب شد.');
 });
 
 async function loadAdminWorkspace(admin) {
@@ -215,66 +229,41 @@ $('#changePasswordForm').onsubmit = async event => {
 
 $('#productForm').onsubmit = async event => {
   event.preventDefault();
-
-  const form = event.currentTarget;
-  const data = Object.fromEntries(new FormData(form).entries());
-  const imageFile = form.elements.image_file.files[0];
+  const form=event.currentTarget;
+  const data=Object.fromEntries(new FormData(form).entries());
+  const imageFiles=[...form.elements.image_file.files];
   delete data.image_file;
-  const id = data.id;
-  delete data.id;
-
-  data.price_toman = Number(data.price_toman);
-  data.cost_price_toman = data.cost_price_toman === '' ? null : Number(data.cost_price_toman);
-  data.stock = Number(data.stock);
-  data.category_id = data.category_id ? Number(data.category_id) : null;
-  data.sale_price_toman =
-    data.sale_price_toman === '' ? null : Number(data.sale_price_toman);
-
-  const editing = Boolean(id);
-
-  const submitButton = $('#submitProduct');
-  submitButton.disabled = true;
-  submitButton.textContent = imageFile ? 'در حال آپلود عکس و ذخیره...' : 'در حال ذخیره...';
-  message(imageFile ? 'در حال آپلود عکس؛ لطفاً صفحه را نبند...' : 'در حال ذخیره محصول...');
-
-  try {
-    if (imageFile) {
-      if (!['image/jpeg','image/png','image/webp'].includes(imageFile.type)) {
-        throw new Error('فقط تصویر JPG، PNG یا WebP قابل قبول است.');
-      }
-      if (imageFile.size > 5 * 1024 * 1024) {
-        throw new Error('حجم عکس باید حداکثر ۵ مگابایت باشد.');
-      }
-      const imageBase64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
-        reader.onerror = () => reject(new Error('خواندن عکس انجام نشد.'));
-        reader.readAsDataURL(imageFile);
+  const id=data.id;delete data.id;
+  data.price_toman=Number(data.price_toman);
+  data.cost_price_toman=data.cost_price_toman===''?null:Number(data.cost_price_toman);
+  data.stock=Number(data.stock);
+  data.category_id=data.category_id?Number(data.category_id):null;
+  data.sale_price_toman=data.sale_price_toman===''?null:Number(data.sale_price_toman);
+  data.colors=selectedColors();
+  const editing=Boolean(id), button=$('#submitProduct');
+  button.disabled=true;button.textContent='در حال آپلود عکس‌ها و ذخیره...';
+  try{
+    const uploaded=[];
+    for(const file of imageFiles){
+      const base64=await new Promise((resolve,reject)=>{
+        const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');
+        reader.onerror=()=>reject(new Error('خواندن عکس انجام نشد.'));reader.readAsDataURL(file);
       });
-      const uploaded = await request('/api/admin/uploads/product', {
-        method: 'POST',
-        body: JSON.stringify({ image_base64: imageBase64, mime_type: imageFile.type })
-      });
-      data.image_url = uploaded.image_url;
+      const result=await request('/api/admin/uploads/product',{method:'POST',body:JSON.stringify({image_base64:base64,mime_type:file.type})});
+      uploaded.push(result.image_url);
     }
-
-    await request(
-      editing ? `/api/admin/products/${encodeURIComponent(id)}` : '/api/admin/products',
-      {
-        method: editing ? 'PATCH' : 'POST',
-        body: JSON.stringify(data)
-      }
-    );
-
-    message(editing ? 'محصول ویرایش شد.' : 'محصول ثبت شد.');
-    resetProductForm();
-    await products();
-  } catch (error) {
-    message('ذخیره محصول انجام نشد: ' + error.message);
-  } finally {
-    submitButton.disabled = false;
-    submitButton.textContent = editing ? 'ذخیره تغییرات' : 'ثبت محصول';
-  }
+    const existing=window.currentProductImages||[];
+    data.images=uploaded.length?([...existing,...uploaded].slice(0,12)):existing;
+    if(data.image_url&&!data.images.length)data.images=[data.image_url];
+    if(!data.images.length)delete data.images;
+    await request(editing?'/api/admin/products/'+encodeURIComponent(id):'/api/admin/products',{
+      method:editing?'PATCH':'POST',body:JSON.stringify(data)
+    });
+    window.currentProductImages=[];
+    message(editing?'محصول ویرایش شد.':'محصول ثبت شد.');
+    resetProductForm();await products();
+  }catch(error){message('ذخیره محصول انجام نشد: '+error.message);}
+  finally{button.disabled=false;button.textContent=editing?'ذخیره تغییرات':'ثبت محصول';}
 };
 
 function isProductActive(product) {
@@ -359,13 +348,10 @@ $('#products').addEventListener('click', async event => {
       form.elements.sale_price_toman.value = p.sale_price_toman ?? '';
       form.elements.stock.value = p.stock;
       form.elements.image_url.value = p.image_url || '';
-      if (p.image_url) {
-        $('#imagePreview').src = p.image_url;
-        $('#imagePreview').hidden = false;
-      } else {
-        $('#imagePreview').hidden = true;
-        $('#imagePreview').removeAttribute('src');
-      }
+      window.currentProductImages=(p.images||[]).map(x=>x.image_url);
+      $('#imagePreview').innerHTML=window.currentProductImages.map(url=>'<img alt="عکس فعلی محصول" style="max-width:100px;max-height:100px;object-fit:contain" src="'+escapeHtml(url)+'">').join('');
+      $('#productColors').innerHTML='';
+      (p.colors||[]).forEach(color=>addColorRow(color));
       form.elements.image_file.value = '';
       form.elements.description.value = p.description || '';
 
@@ -577,7 +563,7 @@ async function orders() {
         <p>نوع مشتری: ${o.customer_id ? 'عضو AVELORA' : 'مهمان'} | تخفیف ثبت‌شده: ${Number(o.membership_discount_toman||0).toLocaleString('fa-IR')} تومان</p>
         <p>روش پرداخت: ${escapeHtml(o.payment_method || 'نامشخص')} | کد پیگیری: ${escapeHtml(o.payment_reference || 'ثبت نشده')}</p>
         <p class="muted">${(o.items || []).map(i =>
-          `${escapeHtml(i.name)} × ${escapeHtml(i.quantity)}`
+          `${escapeHtml(i.name)}${i.color_name ? ' — رنگ ' + escapeHtml(i.color_name) : ''} × ${escapeHtml(i.quantity)}`
         ).join('، ')}</p>
         <select id="s${escapeHtml(o.id)}">
           <option value="awaiting_payment" ${o.status === 'awaiting_payment' ? 'selected' : ''}>در انتظار پرداخت</option>

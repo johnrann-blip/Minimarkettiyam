@@ -111,7 +111,8 @@ async function runApplicationMigrations(pool) {
     '004_customer_membership.sql',
     '008_admin_auth.sql',
     '009_advertising.sql',
-    '010_product_likes_customer_feedback.sql'
+    '010_product_likes_customer_feedback.sql',
+    '011_product_gallery_color_inventory.sql'
   ];
 
   try {

@@ -61,10 +61,16 @@
       <input name="cost_price_toman" type="number" min="0" step="1" placeholder="قیمت خرید (جهت ثبت اطلاعات داخلی مدیر)" required>
       <input name="sale_price_toman" type="number" min="0" step="1" placeholder="قیمت ویژه با تأیید مدیر (اختیاری)">
       <input name="stock" type="number" min="0" step="1" placeholder="تعداد موجودی" required>
-      <label for="imageFile">انتخاب عکس از گالری گوشی (JPG، PNG یا WebP؛ حداکثر ۵ مگابایت)</label>
-      <input id="imageFile" name="image_file" type="file" accept="image/jpeg,image/png,image/webp">
-      <img id="imagePreview" alt="پیش‌نمایش عکس محصول" hidden style="max-width:180px;max-height:180px;object-fit:contain">
-      <input name="image_url" type="text" inputmode="url" placeholder="یا نشانی تصویر HTTPS محصول">
+      <label for="imageFile">انتخاب چند عکس محصول (حداکثر ۱۲ عکس، هر عکس حداکثر ۵ مگابایت)</label>
+      <input id="imageFile" name="image_file" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+      <div id="imagePreview" class="product-image-previews" aria-live="polite"></div>
+      <input name="image_url" type="text" inputmode="url" placeholder="نشانی عکس اصلی HTTPS (اختیاری)">
+      <section class="product-colors-editor">
+        <h3>رنگ‌بندی و موجودی هر رنگ</h3>
+        <p class="muted">نام رنگ و تعداد موجودی هر رنگ را خودت وارد کن. برای افزودن رنگ از دکمه زیر استفاده کن.</p>
+        <div id="productColors"></div>
+        <button id="addProductColor" type="button">افزودن رنگ</button>
+      </section>
       <textarea name="description" maxlength="5000" placeholder="توضیحات محصول"></textarea>
       <button id="submitProduct" type="submit">ثبت محصول</button>
       <button id="cancelEdit" type="button" hidden>انصراف از ویرایش</button>
