@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>مدیریت ظاهر AVELORA</title>
+<link rel="stylesheet" href="/admin/admin.css?v=20261116-theme-builder">
+<style>
+body{background:#f3eee8}main{max-width:1050px}.theme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.theme-field{display:flex;flex-direction:column;gap:6px}.theme-field input,.theme-field select{margin:0}.theme-color{display:grid;grid-template-columns:1fr 56px;gap:8px;align-items:center}.theme-color input[type=color]{height:44px;padding:3px}.theme-section{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;background:#faf7f2;border:1px solid #e6d9cb;border-radius:10px;padding:10px;margin:8px 0}.theme-section button{width:auto;margin:0;padding:8px 12px}.theme-actions{display:flex;gap:8px;flex-wrap:wrap}.theme-actions button{width:auto;flex:1}.theme-preview{border:1px solid #ddcdbb;border-radius:14px;overflow:hidden;background:var(--preview-bg,#fbf9f5);color:var(--preview-text,#29221e)}.preview-nav{padding:15px;background:var(--preview-nav,#3b281f);color:white;font-weight:bold}.preview-hero{padding:28px 18px;text-align:center;background:linear-gradient(120deg,#f4eadc,#fffaf3)}.preview-promo{padding:20px;text-align:center;background:#ead9c7}.preview-products{padding:18px}.preview-products span{display:inline-block;padding:8px 12px;margin:4px;border-radius:8px;background:white}.status{min-height:24px;font-weight:bold}
+@media(max-width:600px){.theme-section{grid-template-columns:1fr auto auto}}
+</style>
+</head>
+<body><main>
+<h1>مدیریت ظاهر و صفحه‌ساز AVELORA</h1>
+<p><a href="/admin/">بازگشت به پنل مدیریت</a></p>
+<p id="authStatus" class="status">در حال بررسی دسترسی مالک...</p>
+<div id="editor" hidden>
+<section><h2>هویت و رنگ‌های فروشگاه</h2>
+<div class="theme-grid">
+<label class="theme-field">نشانی لوگو (HTTPS یا /uploads/)<input id="logoUrl" maxlength="1000" placeholder="https://..."></label>
+<label class="theme-field">نشانی تصویر اصلی بنر<input id="heroImageUrl" maxlength="1000" placeholder="https://... یا /uploads/..."></label>
+<label class="theme-field">فونت نوشته‌ها<select id="font"><option>Vazirmatn</option><option>Tahoma</option><option>Arial</option><option>Georgia</option></select></label>
+</div>
+<div class="theme-grid" id="colors"></div>
+</section>
+<section><h2>چیدمان صفحه اصلی</h2>
+<p class="muted">با دکمه‌های بالا و پایین ترتیب بخش‌ها را عوض کن. می‌توانی بخش‌ها را موقتاً خاموش یا روشن کنی.</p>
+<div id="sections"></div>
+<div class="theme-grid">
+<label class="theme-field">افزودن بخش<select id="newSection"><option value="hero">بنر اصلی</option><option value="products">ویترین محصولات</option><option value="feedback">دیدگاه مشتریان</option><option value="footer">پاورقی</option></select></label>
+<button id="addSection" type="button">افزودن به صفحه</button>
+</div>
+</section>
+<section><h2>بنر تبلیغاتی دلخواه</h2>
+<label class="setting-check"><input type="checkbox" id="promoEnabled"> نمایش بنر تبلیغاتی</label>
+<div class="theme-grid">
+<label class="theme-field">عنوان بنر<input id="promoTitle" maxlength="120"></label>
+<label class="theme-field">متن بنر<input id="promoText" maxlength="600"></label>
+<label class="theme-field">تصویر بنر<input id="promoImageUrl" maxlength="1000" placeholder="نشانی تصویر HTTPS"></label>
+<label class="theme-field">لینک مقصد<input id="promoLinkUrl" maxlength="1000" placeholder="https://..."></label>
+<label class="theme-field">متن دکمه<input id="promoButtonText" maxlength="40"></label>
+</div>
+</section>
+<section><h2>پیش‌نمایش</h2><div id="preview" class="theme-preview">
+<div class="preview-nav">AVELORA</div><div class="preview-hero"><h2>استایل خاص، با AVELORA</h2><p>پیش‌نمایش بنر اصلی</p></div><div class="preview-promo">بنر تبلیغاتی</div><div class="preview-products">ویترین محصولات</div>
+</div></section>
+<section><h2>ذخیره و انتشار</h2>
+<p class="muted">ذخیره پیش‌نویس ظاهر سایت را برای مشتریان تغییر نمی‌دهد. فقط با انتشار، تنظیمات جدید روی سایت عمومی اعمال می‌شود.</p>
+<div class="theme-actions"><button id="saveDraft" type="button">ذخیره پیش‌نویس</button><button id="publish" type="button">انتشار در سایت</button><button id="reset" type="button">بازگردانی پیش‌نویس به قالب پایه</button></div>
+<p id="message" class="status" role="status"></p>
+</section>
+</div></main><script src="/admin/appearance.js?v=20261116-theme-builder"></script></body></html>
