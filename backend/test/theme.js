@@ -4,6 +4,7 @@ const {DEFAULT_THEME,normalizeConfig}=require('../src/theme');
 const valid=normalizeConfig(DEFAULT_THEME);
 assert.equal(valid.font,'Vazirmatn');
 assert.equal(valid.sections.length,4);
+assert.equal(normalizeConfig({...DEFAULT_THEME,sections:[{id:'hero',type:'hero'},{id:'custom-1',type:'custom',title:'درباره ما',text:'متن',backgroundColor:'#eeeeee'}]}).sections[1].type,'custom');
 assert.equal(valid.colors.primary,'#3b281f');
 assert.throws(()=>normalizeConfig({...DEFAULT_THEME,colors:{...DEFAULT_THEME.colors,primary:'red'}}),/رنگ/);
 assert.throws(()=>normalizeConfig({...DEFAULT_THEME,logoUrl:'http://example.com/logo.png'}),/HTTPS/);
