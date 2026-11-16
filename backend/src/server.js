@@ -845,16 +845,18 @@ app.patch('/api/admin/orders/:id/status', adminAuth.requireAdmin, async (req,res
 
     if (next === 'cancelled') {
       const items = await client.query(
-        'SELECT product_id,quantity FROM order_items WHERE order_id=$1',
+        'SELECT product_id,quantity,color_id FROM order_items WHERE order_id=$1',
         [id]
       );
 
       for (const item of items.rows) {
         if (item.product_id) {
-          await client.query(
-            'UPDATE products SET stock=stock+$1,updated_at=NOW() WHERE id=$2',
-            [item.quantity,item.product_id]
-          );
+          if(item.color_id){
+            await client.query('UPDATE product_colors SET stock=stock+$1,updated_at=NOW() WHERE id=$2',[item.quantity,item.color_id]);
+            await client.query('UPDATE products SET stock=(SELECT COALESCE(SUM(stock),0) FROM product_colors WHERE product_id=$1 AND is_active=true),updated_at=NOW() WHERE id=$1',[item.product_id]);
+          }else{
+            await client.query('UPDATE products SET stock=stock+$1,updated_at=NOW() WHERE id=$2',[item.quantity,item.product_id]);
+          }
         }
       }
     }
