@@ -996,7 +996,7 @@ app.get('/api/admin/products', adminAuth.requireAdmin, async (_req, res) => {
               p.is_active,p.created_at,p.updated_at,
               c.name AS category_name,
               COALESCE((SELECT json_agg(json_build_object('id',i.id,'image_url',i.image_url,'sort_order',i.sort_order) ORDER BY i.sort_order,i.id) FROM product_images i WHERE i.product_id=p.id),'[]'::json) AS images,
-              COALESCE((SELECT json_agg(json_build_object('id',v.id,'name',v.name,'stock',v.stock,'sort_order',v.sort_order) FROM product_colors v WHERE v.product_id=p.id AND v.is_active=true),'[]'::json) AS colors
+              COALESCE((SELECT json_agg(json_build_object('id',v.id,'name',v.name,'stock',v.stock,'sort_order',v.sort_order) ORDER BY v.sort_order,v.id) FROM product_colors v WHERE v.product_id=p.id AND v.is_active=true),'[]'::json) AS colors
        FROM products p
        LEFT JOIN categories c ON c.id=p.category_id
        ORDER BY p.created_at DESC
@@ -1070,7 +1070,7 @@ app.patch('/api/admin/products/:id', adminAuth.requireAdmin, async (req, res) =>
       for(const c of p.colors) await client.query(`INSERT INTO product_colors(product_id,name,stock,sort_order,is_active) VALUES($1,$2,$3,$4,true)
         ON CONFLICT(product_id,name) DO UPDATE SET stock=EXCLUDED.stock,sort_order=EXCLUDED.sort_order,is_active=true,updated_at=NOW()`,
         [id,c.name,c.stock,c.sort_order]);
-      await client.query('UPDATE products SET stock=$1 WHERE id=$2',[p.colors.reduce((n,x)=>n+x.stock,0),id]);
+      p.stock=p.colors.reduce((n,x)=>n+x.stock,0);
     }
 
     const result = await client.query(
