@@ -563,7 +563,7 @@ async function orders() {
         <p>نوع مشتری: ${o.customer_id ? 'عضو AVELORA' : 'مهمان'} | تخفیف ثبت‌شده: ${Number(o.membership_discount_toman||0).toLocaleString('fa-IR')} تومان</p>
         <p>روش پرداخت: ${escapeHtml(o.payment_method || 'نامشخص')} | کد پیگیری: ${escapeHtml(o.payment_reference || 'ثبت نشده')}</p>
         <p class="muted">${(o.items || []).map(i =>
-          `${escapeHtml(i.name)} × ${escapeHtml(i.quantity)}`
+          `${escapeHtml(i.name)}${i.color_name ? ' — رنگ ' + escapeHtml(i.color_name) : ''} × ${escapeHtml(i.quantity)}`
         ).join('، ')}</p>
         <select id="s${escapeHtml(o.id)}">
           <option value="awaiting_payment" ${o.status === 'awaiting_payment' ? 'selected' : ''}>در انتظار پرداخت</option>
