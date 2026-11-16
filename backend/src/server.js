@@ -647,19 +647,23 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
     let subtotal = 0;
     const normalized = [];
 
-    for (const [id, qty] of quantities) {
-      const result = await client.query(
-        'SELECT id,name,price_toman,sale_price_toman,cost_price_toman,stock FROM products WHERE id=$1 AND is_active=true FOR UPDATE',
-        [id]
-      );
-
-      if (!result.rowCount) throw new Error('یکی از محصولات دیگر موجود نیست.');
-
-      const product = result.rows[0];
-      if (Number(product.stock) < qty) {
-        throw new Error('موجودی ' + product.name + ' کافی نیست.');
+    for (const item of quantities.values()) {
+      const id=item.id, qty=item.qty, colorId=item.colorId;
+      const result=await client.query('SELECT id,name,price_toman,sale_price_toman,cost_price_toman,stock FROM products WHERE id=$1 AND is_active=true FOR UPDATE',[id]);
+      if(!result.rowCount)throw new Error('یکی از محصولات دیگر موجود نیست.');
+      const product=result.rows[0];
+      const hasColors=await client.query('SELECT 1 FROM product_colors WHERE product_id=$1 AND is_active=true LIMIT 1',[id]);
+      let color=null;
+      if(hasColors.rowCount){
+        if(colorId===null)throw new Error('لطفاً رنگ محصول '+product.name+' را انتخاب کنید.');
+        const variant=await client.query('SELECT id,name,stock FROM product_colors WHERE id=$1 AND product_id=$2 AND is_active=true FOR UPDATE',[colorId,id]);
+        if(!variant.rowCount)throw new Error('رنگ انتخاب‌شده برای '+product.name+' معتبر نیست.');
+        color=variant.rows[0];
+        if(Number(color.stock)<qty)throw new Error('موجودی رنگ '+color.name+' از محصول '+product.name+' کافی نیست.');
+      }else{
+        if(colorId!==null)throw new Error('این محصول رنگ‌بندی ندارد.');
+        if(Number(product.stock)<qty)throw new Error('موجودی '+product.name+' کافی نیست.');
       }
-
       const currentPrice=Number(product.sale_price_toman ?? product.price_toman);
       const price=currentPrice;
       const line = price * qty;
@@ -671,7 +675,7 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
       }
 
       subtotal += line;
-      normalized.push({product,qty,price,line});
+      normalized.push({product,qty,price,line,color});
     }
 
     const total = subtotal + shipping;
