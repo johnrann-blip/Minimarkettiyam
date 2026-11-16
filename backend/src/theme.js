@@ -6,6 +6,7 @@ const DEFAULT_THEME = Object.freeze({
   font: 'Vazirmatn',
   logoUrl: '',
   heroImageUrl: '',
+  backgroundImageUrl: '',
   sections: [
     { id:'hero', type:'hero', enabled:true, title:'استایل خاص، با AVELORA', text:'کیف، اکسسوری و زیبایی؛ انتخاب‌هایی برای درخشش هر روز تو' },
     { id:'products', type:'products', enabled:true, title:'محصولات' },
@@ -49,7 +50,7 @@ function normalizeConfig(input) {
   });
   const promo=input.promo&&typeof input.promo==='object'?input.promo:{};
   return {
-    colors,font,logoUrl:safeUrl(input.logoUrl),heroImageUrl:safeUrl(input.heroImageUrl),
+    colors,font,logoUrl:safeUrl(input.logoUrl),heroImageUrl:safeUrl(input.heroImageUrl),backgroundImageUrl:safeUrl(input.backgroundImageUrl),
     sections:normalized,
     promo:{enabled:promo.enabled===true,title:String(promo.title||'').slice(0,120),text:String(promo.text||'').slice(0,600),imageUrl:safeUrl(promo.imageUrl),linkUrl:safeUrl(promo.linkUrl),buttonText:String(promo.buttonText||'مشاهده').slice(0,40)}
   };
@@ -94,4 +95,4 @@ function createThemeAdminRouter({pool}) {
   });
   return router;
 }
-module.exports={createThemePublicRouter,createThemeAdminRouter,DEFAULT_THEME};
+module.exports={createThemePublicRouter,createThemeAdminRouter,DEFAULT_THEME,normalizeConfig};
