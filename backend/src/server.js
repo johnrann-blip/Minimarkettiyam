@@ -560,19 +560,13 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
 
   const quantities = new Map();
   for (const item of items) {
-    const id = Number(item.product_id);
-    const qty = Number(item.quantity);
-
-    if (!Number.isSafeInteger(id) || id < 1 ||
-        !Number.isInteger(qty) || qty < 1 || qty > 20) {
-      return res.status(400).json({error:'تعداد یا شناسه محصول معتبر نیست.'});
-    }
-
-    const totalQty = (quantities.get(id) || 0) + qty;
-    if (totalQty > 20) {
-      return res.status(400).json({error:'تعداد هر محصول نمی‌تواند بیشتر از ۲۰ باشد.'});
-    }
-    quantities.set(id, totalQty);
+    const id=Number(item.product_id), qty=Number(item.quantity);
+    const colorId=item.color_id==null||item.color_id===''?null:Number(item.color_id);
+    if(!Number.isSafeInteger(id)||id<1||!Number.isInteger(qty)||qty<1||qty>20||(colorId!==null&&(!Number.isSafeInteger(colorId)||colorId<1))) return res.status(400).json({error:'تعداد، رنگ یا شناسه محصول معتبر نیست.'});
+    const key=id+':'+(colorId===null?'':colorId), previous=quantities.get(key);
+    const totalQty=(previous?.qty||0)+qty;
+    if(totalQty>20)return res.status(400).json({error:'تعداد هر محصول و رنگ نمی‌تواند بیشتر از ۲۰ باشد.'});
+    quantities.set(key,{id,qty:totalQty,colorId});
   }
 
   const crypto = require('crypto');
@@ -580,7 +574,7 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
   const canonicalRequest = {
     customer_id: customerId,
     customer: {name,phone,city,province,address,postal},
-    items: [...quantities.entries()].sort((a,b) => a[0] - b[0]),
+    items: [...quantities.values()].map(x=>[x.id,x.colorId,x.qty]).sort((a,b)=>a[0]-b[0]||Number(a[1]||0)-Number(b[1]||0)),
     delivery_method,
     note: customerNote
   };
