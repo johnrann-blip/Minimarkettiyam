@@ -17,7 +17,7 @@ const DEFAULT_THEME = Object.freeze({
 });
 const COLOR_KEYS = ['background','surface','text','primary','navBackground','navText','accent'];
 const FONTS = ['Vazirmatn','Tahoma','Arial','Georgia'];
-const SECTION_TYPES = ['hero','products','feedback','footer'];
+const SECTION_TYPES = ['hero','products','feedback','footer','custom'];
 function safeUrl(value) {
   const s=String(value||'').trim();
   if(!s) return '';
@@ -38,15 +38,18 @@ function normalizeConfig(input) {
   }
   const font=FONTS.includes(input.font)?input.font:DEFAULT_THEME.font;
   const sections=Array.isArray(input.sections)?input.sections:[];
-  if(sections.length<2||sections.length>12) throw new Error('چیدمان باید حداقل ۲ و حداکثر ۱۲ بخش داشته باشد.');
+  if(sections.length<2||sections.length>20) throw new Error('چیدمان باید حداقل ۲ و حداکثر ۲۰ بخش داشته باشد.');
   const seen=new Set();
   const normalized=sections.map((s,i)=>{
     const type=String(s?.type||'');
     if(!SECTION_TYPES.includes(type)) throw new Error('نوع یکی از بخش‌های صفحه پشتیبانی نمی‌شود.');
     const id=String(s.id||type).replace(/[^a-z0-9_-]/gi,'').slice(0,40)||type;
     if(seen.has(id)) throw new Error('شناسه بخش‌ها باید یکتا باشد.');
+    if(type!=='custom'&&sections.filter(x=>x?.type===type).length>1) throw new Error('بخش‌های اصلی فقط یک‌بار قابل استفاده هستند.');
     seen.add(id);
-    return {id,type,enabled:s.enabled!==false,title:String(s.title||'').slice(0,100)};
+    const backgroundColor=String(s.backgroundColor||'').trim();
+    if(backgroundColor&&!/^#[0-9a-fA-F]{6}$/.test(backgroundColor)) throw new Error('رنگ پس‌زمینه بخش معتبر نیست.');
+    return {id,type,enabled:s.enabled!==false,title:String(s.title||'').slice(0,100),text:String(s.text||'').slice(0,600),imageUrl:safeUrl(s.imageUrl),linkUrl:safeUrl(s.linkUrl),buttonText:String(s.buttonText||'مشاهده').slice(0,40),backgroundColor:backgroundColor.toLowerCase()};
   });
   const promo=input.promo&&typeof input.promo==='object'?input.promo:{};
   return {
