@@ -7,6 +7,6 @@ assert.equal(valid.sections.length,4);
 assert.equal(valid.colors.primary,'#3b281f');
 assert.throws(()=>normalizeConfig({...DEFAULT_THEME,colors:{...DEFAULT_THEME.colors,primary:'red'}}),/رنگ/);
 assert.throws(()=>normalizeConfig({...DEFAULT_THEME,logoUrl:'http://example.com/logo.png'}),/HTTPS/);
-assert.throws(()=>normalizeConfig({...DEFAULT_THEME,sections:[{id:'x',type:'unknown',enabled:true}]}),/پشتیبانی/);
+assert.throws(()=>normalizeConfig({...DEFAULT_THEME,sections:[{id:'x',type:'unknown',enabled:true},{id:'y',type:'hero',enabled:true}]}),/پشتیبانی/);
 assert.throws(()=>normalizeConfig({...DEFAULT_THEME,sections:[{id:'x',type:'hero'},{id:'x',type:'products'}]}),/یکتا/);
 console.log('Appearance configuration validation: PASS');
