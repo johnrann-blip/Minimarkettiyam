@@ -491,3 +491,9 @@ body{background:var(--theme-background);color:var(--theme-text);font-family:var(
 .theme-section-toggles{display:flex;gap:10px;flex-wrap:wrap}
 .theme-section-toggles label{white-space:nowrap}
 .theme-section-toggles input{width:auto}
+
+.theme-preview.preview-mobile{max-width:390px;margin:14px auto;box-shadow:0 0 0 8px #e8e0d7}
+.theme-preview.preview-mobile>section{order:var(--mobile-order,0)}
+.theme-preview.preview-mobile .preview-nav{font-size:14px}
+.theme-preview.preview-mobile .preview-hero h2{font-size:23px}
+.theme-preview.preview-mobile .preview-custom{width:100%;padding:18px 12px}
