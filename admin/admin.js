@@ -46,6 +46,7 @@ function resetProductForm() {
   $('#productForm').reset();
   $('#imagePreview').innerHTML = '';
   $('#productColors').innerHTML = '';
+  window.currentProductImages=[];
   $('#productForm [name="id"]').value = '';
   $('#formTitle').textContent = 'افزودن محصول';
   $('#submitProduct').textContent = 'ثبت محصول';
