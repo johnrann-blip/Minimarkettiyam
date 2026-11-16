@@ -456,3 +456,15 @@ button:focus-visible,a:focus-visible{outline:2px solid #b68a4c;outline-offset:3p
 @media(max-width:680px){.customer-feedback{grid-template-columns:1fr;padding:30px 14px}.customer-feedback-list{grid-template-columns:1fr}.customer-feedback-form{grid-template-columns:1fr}.customer-feedback-form label:nth-child(3){grid-column:auto}}
 
 .detail-gallery{display:grid;gap:10px}.detail-image{width:100%;max-height:390px;object-fit:contain;border-radius:14px;background:#faf7f4}.detail-thumbnails{display:flex;gap:8px;overflow:auto}.detail-thumbnails button{border:1px solid #e5d9d0;background:#fff;border-radius:8px;padding:3px;flex:0 0 64px}.detail-thumbnails img{width:56px;height:56px;object-fit:cover}.detail-copy label{display:grid;gap:6px;margin:12px 0}.detail-copy select,.detail-copy input{width:100%;padding:11px;border:1px solid #d9cec5;border-radius:9px;font:inherit}.detail-description{line-height:2}.cart-line>div{display:flex;gap:5px;align-items:center}.cart-line button{min-width:30px;padding:5px 9px;border:1px solid #e2d6ce;border-radius:7px;background:#fff;color:#3b281f}
+
+/* Owner-published AVELORA theme tokens */
+:root{--theme-background:#fbf9f5;--theme-surface:#fff;--theme-text:#29221e;--theme-primary:#3b281f;--theme-nav-background:#3b281f;--theme-nav-text:#fff;--theme-accent:#b68a4c;--theme-font:Vazirmatn,Tahoma,sans-serif}
+body{background:var(--theme-background);color:var(--theme-text);font-family:var(--theme-font)}
+.top{background:var(--theme-nav-background);color:var(--theme-nav-text)}
+.top .brand,.top .account-open,.top .cart{color:var(--theme-nav-text)}
+.hero h1,.hero .primary,.primary,.chips button.active{background-color:var(--theme-primary);color:#fff}
+.eyebrow{color:var(--theme-accent)}
+.product,.site-footer .footer-column,.product-dialog{background:var(--theme-surface)}
+.theme-logo{display:block;max-width:150px;max-height:54px;object-fit:contain}
+.theme-promo{margin:24px auto;padding:32px 20px;max-width:1180px;min-height:120px;text-align:center;border-radius:16px;background-color:var(--theme-surface);background-position:center;color:var(--theme-text)}
+.theme-promo a{display:inline-block;margin:10px;padding:10px 20px;border-radius:24px;background:var(--theme-primary);color:#fff;text-decoration:none}
