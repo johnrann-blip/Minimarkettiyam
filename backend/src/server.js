@@ -696,16 +696,15 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
 
     for (const x of normalized) {
       await client.query(
-        `INSERT INTO order_items
-         (order_id,product_id,product_name,unit_price_toman,quantity,line_total_toman)
-         VALUES($1,$2,$3,$4,$5,$6)`,
-        [order.id,x.product.id,x.product.name,x.price,x.qty,x.line]
+        'INSERT INTO order_items (order_id,product_id,product_name,unit_price_toman,quantity,line_total_toman,color_id,color_name) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',
+        [order.id,x.product.id,x.product.name,x.price,x.qty,x.line,x.color ? x.color.id : null,x.color ? x.color.name : '']
       );
-
-      await client.query(
-        'UPDATE products SET stock=stock-$1,updated_at=NOW() WHERE id=$2',
-        [x.qty,x.product.id]
-      );
+      if(x.color){
+        await client.query('UPDATE product_colors SET stock=stock-$1,updated_at=NOW() WHERE id=$2',[x.qty,x.color.id]);
+        await client.query('UPDATE products SET stock=(SELECT COALESCE(SUM(stock),0) FROM product_colors WHERE product_id=$1 AND is_active=true),updated_at=NOW() WHERE id=$1',[x.product.id]);
+      }else{
+        await client.query('UPDATE products SET stock=stock-$1,updated_at=NOW() WHERE id=$2',[x.qty,x.product.id]);
+      }
     }
 
     await client.query('COMMIT');
@@ -732,7 +731,13 @@ app.post('/api/orders', orderRateLimit, async (req, res) => {
 
     const known = [
       'تعداد یا شناسه محصول معتبر نیست.',
+      'تعداد، رنگ یا شناسه محصول معتبر نیست.',
       'تعداد هر محصول نمی‌تواند بیشتر از ۲۰ باشد.',
+      'تعداد هر محصول و رنگ نمی‌تواند بیشتر از ۲۰ باشد.',
+      'لطفاً رنگ محصول ',
+      'رنگ انتخاب‌شده برای ',
+      'این محصول رنگ‌بندی ندارد.',
+      'موجودی رنگ ',
       'یکی از محصولات دیگر موجود نیست.',
       'موجودی ',
       'مبلغ سفارش معتبر نیست.',
@@ -769,7 +774,7 @@ app.get('/api/admin/customers', adminAuth.requireAdmin, async (_req,res) => {
 
 app.get('/api/admin/orders', adminAuth.requireAdmin, async (_req,res) => {
   try {
-    const r = await pool.query(`SELECT o.*, COALESCE(json_agg(json_build_object('name',i.product_name,'quantity',i.quantity,'unit_price_toman',i.unit_price_toman)) FILTER (WHERE i.id IS NOT NULL),'[]') items
+    const r = await pool.query(`SELECT o.*, COALESCE(json_agg(json_build_object('name',i.product_name,'quantity',i.quantity,'unit_price_toman',i.unit_price_toman,'color_id',i.color_id,'color_name',i.color_name)) FILTER (WHERE i.id IS NOT NULL),'[]') items
       FROM orders o LEFT JOIN order_items i ON i.order_id=o.id GROUP BY o.id ORDER BY o.created_at DESC LIMIT 200`);
     res.json(r.rows);
   } catch {
