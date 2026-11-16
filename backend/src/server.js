@@ -13,6 +13,7 @@ const { createAdminAuth } = require('./admin-auth');
 const { createAdvertisingRouter, createAdvertisingAdminRouter } = require('./advertising');
 const { createSeoRouter } = require('./seo');
 const { createCloudinaryStorage } = require('./cloudinary-storage');
+const { createThemePublicRouter, createThemeAdminRouter } = require('./theme');
 const { createEngagementRouter, createFeedbackAdminRouter, visitorKey } = require('./engagement');
 
 const app = express();
@@ -198,6 +199,8 @@ app.use('/api',customerAuth.optionalCustomer);
 app.use('/api/auth',customerAuth.router);
 app.use('/api/admin', adminRateLimit);
 app.use('/api/admin/auth', adminAuth.router);
+app.use('/api/theme', createThemePublicRouter({pool}));
+app.use('/api/admin/theme', adminAuth.requireAdmin, createThemeAdminRouter({pool}));
 app.use('/api/advertising', createAdvertisingRouter({pool,rateLimit:advertisingRequestRateLimit}));
 app.use('/api/engagement', createEngagementRouter({pool,likeRateLimit:productLikeRateLimit,feedbackRateLimit}));
 app.use('/api/admin/feedback', adminAuth.requireAdmin, createFeedbackAdminRouter({pool}));

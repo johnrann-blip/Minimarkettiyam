@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {DEFAULT_THEME,normalizeConfig}=require('../src/theme');
+const valid=normalizeConfig(DEFAULT_THEME);
+assert.equal(valid.font,'Vazirmatn');
+assert.equal(valid.sections.length,4);
+const custom=normalizeConfig({...DEFAULT_THEME,sections:[{id:'hero',type:'hero'},{id:'custom-1',type:'custom',title:'درباره ما',text:'متن',backgroundColor:'#eeeeee',mobileOrder:1,linkUrl:'/category/bags'}]});
+assert.equal(custom.sections[1].type,'custom');
+assert.equal(custom.sections[1].linkUrl,'/category/bags');
+assert.equal(custom.sections[1].mobileEnabled,true);
+assert.throws(()=>normalizeConfig({...DEFAULT_THEME,sections:[{id:'hero',type:'hero',linkUrl:'javascript:alert(1)'},{id:'products',type:'products'}]}),/HTTPS/);
+assert.equal(valid.colors.primary,'#3b281f');
+assert.throws(()=>normalizeConfig({...DEFAULT_THEME,colors:{...DEFAULT_THEME.colors,primary:'red'}}),/رنگ/);
+assert.throws(()=>normalizeConfig({...DEFAULT_THEME,logoUrl:'http://example.com/logo.png'}),/HTTPS/);
+assert.throws(()=>normalizeConfig({...DEFAULT_THEME,sections:[{id:'x',type:'unknown',enabled:true},{id:'y',type:'hero',enabled:true}]}),/پشتیبانی/);
+assert.throws(()=>normalizeConfig({...DEFAULT_THEME,sections:[{id:'x',type:'hero'},{id:'x',type:'products'}]}),/یکتا/);
+console.log('Appearance configuration validation: PASS');
