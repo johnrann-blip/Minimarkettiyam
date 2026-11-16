@@ -462,7 +462,7 @@ button:focus-visible,a:focus-visible{outline:2px solid #b68a4c;outline-offset:3p
 body{background:var(--theme-background);color:var(--theme-text);font-family:var(--theme-font)}
 .top{background:var(--theme-nav-background);color:var(--theme-nav-text)}
 .top .brand,.top .account-open,.top .cart{color:var(--theme-nav-text)}
-.hero h1,.hero .primary,.primary,.chips button.active{background-color:var(--theme-primary);color:#fff}
+ .hero h1{color:var(--theme-primary);background:transparent}.hero .primary,.primary,.chips button.active{background-color:var(--theme-primary);color:#fff}
 .eyebrow{color:var(--theme-accent)}
 .product,.site-footer .footer-column,.product-dialog{background:var(--theme-surface)}
 .theme-logo{display:block;max-width:150px;max-height:54px;object-fit:contain}
