@@ -133,7 +133,7 @@ $('#productGrid').addEventListener('click',event=>{
   const likeButton=event.target.closest?.('[data-like-product]');
   if(likeButton){toggleProductLike(likeButton.dataset.likeProduct,likeButton);return}
   const addButton=event.target.closest?.('[data-add-cart]');
-  if(addButton){if(!addButton.disabled)addCart(addButton.dataset.addCart);return}
+  if(addButton){if(!addButton.disabled){const p=products.find(x=>String(x.id)===addButton.dataset.addCart);if(p)openProductDetails(p)}return}
   const viewButton=event.target.closest?.('[data-open-product]');
   if(viewButton){
     const product=products.find(p=>String(p.id)===String(viewButton.dataset.openProduct));
@@ -154,35 +154,63 @@ document.addEventListener('error',event=>{
   }
 },true);
 function openProductDetails(p){
-  const image=p.image_url
-    ? `<img class="detail-image product-image" src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}">`
+  const images=(p.images||[]).map(x=>x.image_url).filter(Boolean);
+  if(!images.length&&p.image_url)images.push(p.image_url);
+  const colors=p.colors||[];
+  const first=images[0]||'';
+  const gallery=images.length
+    ? '<div class="detail-gallery"><img id="detailMainImage" class="detail-image product-image" src="'+escapeHtml(first)+'" alt="'+escapeHtml(p.name)+'">'+
+      (images.length>1?'<div class="detail-thumbnails">'+images.map((url,i)=>'<button type="button" data-detail-image="'+i+'" aria-label="نمایش عکس '+(i+1)+'"><img src="'+escapeHtml(url)+'" alt=""></button>').join('')+'</div>':'')+'</div>'
     : '<div class="placeholder detail-placeholder">👜</div>';
-  $('#productDialogContent').innerHTML=`
-    ${image}
-    <div class="detail-copy">
-      <span class="eyebrow">${escapeHtml(p.category_name||'محصول AVELORA')}</span>
-      <h2>${escapeHtml(p.name)}</h2>
-      <div class="price detail-price">${toman(p.sale_price_toman??p.price_toman)}</div>
-      ${p.sale_price_toman?`<span class="old">${toman(p.price_toman)}</span>`:''}
-      
-      <p class="detail-description">${escapeHtml(p.description||'توضیحاتی برای این محصول ثبت نشده است.')}</p>
-      <p class="stock">${p.stock>0?'موجود در انبار':'ناموجود'}</p>
-      <button class="primary" type="button" data-detail-add="${escapeHtml(p.id)}" ${p.stock<1?'disabled':''}>افزودن به سبد خرید</button>
-    </div>`;
-  const add=$('#productDialogContent').querySelector('[data-detail-add]');
-  add.addEventListener('click',()=>{addCart(p.id);$('#productDialog').close()});
-  $('#productDialog').showModal();
+  $('#productDialogContent').innerHTML=gallery+'<div class="detail-copy">'+
+    '<span class="eyebrow">'+escapeHtml(p.category_name||'محصول AVELORA')+'</span>'+
+    '<h2>'+escapeHtml(p.name)+'</h2><div class="price detail-price">'+toman(p.sale_price_toman??p.price_toman)+'</div>'+
+    (p.sale_price_toman?'<span class="old">'+toman(p.price_toman)+'</span>':'')+
+    '<p class="detail-description">'+escapeHtml(p.description||'توضیحاتی برای این محصول ثبت نشده است.')+'</p>'+
+    (colors.length?'<label>انتخاب رنگ<select id="detailColor"><option value="">انتخاب رنگ</option>'+colors.map(c=>'<option value="'+escapeHtml(c.id)+'" '+(Number(c.stock)<1?'disabled':'')+'>'+escapeHtml(c.name)+' — '+(Number(c.stock)>0?'موجودی '+Number(c.stock).toLocaleString('fa-IR'):'ناموجود')+'</option>').join('')+'</select></label>':'')+
+    '<label>تعداد<input id="detailQuantity" type="number" min="1" max="20" value="1"></label>'+
+    '<p id="detailStock" class="stock">'+(colors.length?'ابتدا رنگ را انتخاب کن.':(p.stock>0?'موجود در انبار':'ناموجود'))+'</p>'+
+    '<button class="primary" type="button" data-detail-add="'+escapeHtml(p.id)+'" '+(p.stock<1?'disabled':'')+'>افزودن به سبد خرید</button></div>';
+  const colorSelect=$('#detailColor'), quantity=$('#detailQuantity'), add=$('#productDialogContent').querySelector('[data-detail-add]');
+  const update=()=>{
+    const selected=colors.find(c=>String(c.id)===String(colorSelect?.value));
+    const available=selected?Number(selected.stock):Number(p.stock);
+    $('#detailStock').textContent=colors.length?(selected?'موجودی '+selected.stock.toLocaleString('fa-IR')+' عدد':'ابتدا رنگ را انتخاب کن.'):(available>0?'موجود در انبار':'ناموجود');
+    add.disabled=available<1||(colors.length&&!selected);
+    quantity.max=String(Math.min(20,available||20));
+    if(Number(quantity.value)>Number(quantity.max))quantity.value=quantity.max;
+  };
+  colorSelect?.addEventListener('change',update);quantity.addEventListener('input',update);
+  $('#productDialogContent').querySelectorAll('[data-detail-image]').forEach(button=>button.addEventListener('click',()=>{
+    $('#detailMainImage').src=images[Number(button.dataset.detailImage)];
+  }));
+  add.addEventListener('click',()=>{
+    const selected=colors.find(c=>String(c.id)===String(colorSelect?.value));
+    const qty=Math.max(1,Math.min(20,Number(quantity.value)||1));
+    addCart(p.id,selected?.id??null,selected?.name??'',qty);$('#productDialog').close();
+  });
+  $('#productDialog').showModal();update();
 }
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function addCart(id){id=String(id);const p=products.find(x=>String(x.id)===id);if(!p)return;const line=cart.find(x=>String(x.product_id)===id);if(line)line.quantity=Math.min(20,line.quantity+1);else cart.push({product_id:id,name:p.name,price:Number(p.sale_price_toman??p.price_toman),quantity:1});saveCart()}
+function addCart(id,colorId=null,colorName='',qty=1){
+  id=String(id);const p=products.find(x=>String(x.id)===id);if(!p)return;
+  const key=x=>String(x.product_id)===id&&String(x.color_id??'')===String(colorId??'');
+  const line=cart.find(key);
+  if(line)line.quantity=Math.min(20,line.quantity+qty);
+  else cart.push({product_id:id,color_id:colorId,color_name:colorName,name:p.name,price:Number(p.sale_price_toman??p.price_toman),quantity:qty});
+  saveCart();
+}
 function saveCart(){localStorage.setItem('mm_cart',JSON.stringify(cart));$('#cartCount').textContent=tomanCount(cart.reduce((a,x)=>a+x.quantity,0));renderCart();if(typeof updateCheckout==='function')updateCheckout()}
 function tomanCount(n){return new Intl.NumberFormat('fa-IR').format(n)}
-function renderCart(){$('#cartItems').innerHTML=cart.map(x=>`<div class="cart-line"><span>${escapeHtml(x.name)} × ${tomanCount(x.quantity)}<br><small>${toman(x.price*x.quantity)}</small></span><button data-remove-cart="${escapeHtml(x.product_id)}">حذف</button></div>`).join('')||'<p>سبد خرید خالی است.</p>';$('#cartTotal').textContent=toman(cart.reduce((a,x)=>a+x.price*x.quantity,0))}
+function renderCart(){$('#cartItems').innerHTML=cart.map((x,i)=>'<div class="cart-line"><span>'+escapeHtml(x.name)+(x.color_name?' — رنگ '+escapeHtml(x.color_name):'')+' × '+tomanCount(x.quantity)+'<br><small>'+toman(x.price*x.quantity)+'</small></span><div><button data-cart-minus="'+i+'" type="button">−</button><button data-cart-plus="'+i+'" type="button">+</button><button data-remove-cart="'+i+'" type="button">حذف</button></div></div>').join('')||'<p>سبد خرید خالی است.</p>';$('#cartTotal').textContent=toman(cart.reduce((a,x)=>a+x.price*x.quantity,0))}
 $('#cartItems').addEventListener('click',event=>{
-  const button=event.target.closest?.('[data-remove-cart]');
-  if(button)removeCart(button.dataset.removeCart);
+  const remove=event.target.closest?.('[data-remove-cart]');
+  const plus=event.target.closest?.('[data-cart-plus]');
+  const minus=event.target.closest?.('[data-cart-minus]');
+  if(remove)removeCart(Number(remove.dataset.removeCart));
+  if(plus||minus){const i=Number((plus||minus).dataset[plus?'cartPlus':'cartMinus']);if(cart[i]){cart[i].quantity=Math.max(1,Math.min(20,cart[i].quantity+(plus?1:-1)));saveCart();}}
 });
-function removeCart(id){cart=cart.filter(x=>String(x.product_id)!==String(id));saveCart()}
+function removeCart(index){cart.splice(index,1);saveCart()}
 function toggleCart(show){$('#cartPanel').classList.toggle('hidden',!show);$('#scrim').classList.toggle('hidden',!show)}
 $('#cartOpen').addEventListener('click',()=>toggleCart(true));
 $('#cartClose').addEventListener('click',()=>toggleCart(false));
@@ -352,7 +380,7 @@ $('#orderForm').onsubmit=async e=>{
   if($('#submitOrder').disabled){$('#orderMessage').textContent='ابتدا تنظیمات پرداخت و ارسال فروشگاه باید تکمیل شود.';return}
   const f=new FormData(e.target);
   const customer={name:f.get('name'),phone:f.get('phone'),province:f.get('province'),city:f.get('city'),address:f.get('address'),postal_code:f.get('postal_code')};
-  const payload={customer,items:cart.map(x=>({product_id:x.product_id,quantity:x.quantity})),delivery_method:f.get('delivery_method'),note:f.get('note')};
+  const payload={customer,items:cart.map(x=>({product_id:x.product_id,color_id:x.color_id??null,quantity:x.quantity})),delivery_method:f.get('delivery_method'),note:f.get('note')};
   $('#orderMessage').textContent='در حال ثبت سفارش...';
   $('#submitOrder').disabled=true;
   try{
