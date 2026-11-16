@@ -17,7 +17,9 @@ body{background:#f3eee8}main{max-width:1050px}.theme-grid{display:grid;grid-temp
 <section><h2>هویت و رنگ‌های فروشگاه</h2>
 <div class="theme-grid">
 <label class="theme-field">نشانی لوگو (HTTPS یا /uploads/)<input id="logoUrl" maxlength="1000" placeholder="https://..."></label>
-<label class="theme-field">نشانی تصویر اصلی بنر<input id="heroImageUrl" maxlength="1000" placeholder="https://... یا /uploads/..."></label>
+<label class="theme-field">نشانی تصویر اصلی بنر<input id="heroImageUrl" maxlength="1000" placeholder="https://... یا /uploads/..."><input id="heroImageFile" type="file" accept="image/jpeg,image/png,image/webp"></label>
+<label class="theme-field">تصویر پس‌زمینه کل سایت<input id="backgroundImageUrl" maxlength="1000" placeholder="نشانی تصویر HTTPS"><input id="backgroundImageFile" type="file" accept="image/jpeg,image/png,image/webp"></label>
+<label class="theme-field">بارگذاری لوگو<input id="logoFile" type="file" accept="image/jpeg,image/png,image/webp"></label>
 <label class="theme-field">فونت نوشته‌ها<select id="font"><option>Vazirmatn</option><option>Tahoma</option><option>Arial</option><option>Georgia</option></select></label>
 </div>
 <div class="theme-grid" id="colors"></div>
@@ -35,7 +37,7 @@ body{background:#f3eee8}main{max-width:1050px}.theme-grid{display:grid;grid-temp
 <div class="theme-grid">
 <label class="theme-field">عنوان بنر<input id="promoTitle" maxlength="120"></label>
 <label class="theme-field">متن بنر<input id="promoText" maxlength="600"></label>
-<label class="theme-field">تصویر بنر<input id="promoImageUrl" maxlength="1000" placeholder="نشانی تصویر HTTPS"></label>
+<label class="theme-field">تصویر بنر<input id="promoImageUrl" maxlength="1000" placeholder="نشانی تصویر HTTPS"><input id="promoImageFile" type="file" accept="image/jpeg,image/png,image/webp"></label>
 <label class="theme-field">لینک مقصد<input id="promoLinkUrl" maxlength="1000" placeholder="https://..."></label>
 <label class="theme-field">متن دکمه<input id="promoButtonText" maxlength="40"></label>
 </div>
