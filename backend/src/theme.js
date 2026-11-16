@@ -27,6 +27,15 @@ function safeUrl(value) {
   if(u.protocol!=='https:') throw new Error('نشانی تصاویر باید HTTPS باشد.');
   return s;
 }
+function safeLink(value) {
+  const s=String(value||'').trim();
+  if(!s) return '';
+  if(s.length>1000) throw new Error('نشانی پیوند بیش از حد طولانی است.');
+  if(s.startsWith('/')&&!s.startsWith('//')) return s;
+  let u; try { u=new URL(s); } catch { throw new Error('نشانی پیوند معتبر نیست.'); }
+  if(u.protocol!=='https:') throw new Error('پیوندها باید HTTPS یا مسیر داخلی سایت باشند.');
+  return s;
+}
 function normalizeConfig(input) {
   if(!input||typeof input!=='object'||Array.isArray(input)) throw new Error('تنظیمات قالب معتبر نیست.');
   const c=input.colors&&typeof input.colors==='object'?input.colors:{};
@@ -49,13 +58,13 @@ function normalizeConfig(input) {
     seen.add(id);
     const backgroundColor=String(s.backgroundColor||'').trim();
     if(backgroundColor&&!/^#[0-9a-fA-F]{6}$/.test(backgroundColor)) throw new Error('رنگ پس‌زمینه بخش معتبر نیست.');
-    return {id,type,enabled:s.enabled!==false,title:String(s.title||'').slice(0,100),text:String(s.text||'').slice(0,600),imageUrl:safeUrl(s.imageUrl),linkUrl:safeUrl(s.linkUrl),buttonText:String(s.buttonText||'مشاهده').slice(0,40),backgroundColor:backgroundColor.toLowerCase()};
+    return {id,type,enabled:s.enabled!==false,desktopEnabled:s.desktopEnabled!==false&&s.enabled!==false,mobileEnabled:s.mobileEnabled!==false&&s.enabled!==false,mobileOrder:Number.isInteger(Number(s.mobileOrder))?Math.max(0,Math.min(30,Number(s.mobileOrder))):i,title:String(s.title||'').slice(0,100),text:String(s.text||'').slice(0,600),imageUrl:safeUrl(s.imageUrl),linkUrl:safeLink(s.linkUrl),buttonText:String(s.buttonText||'مشاهده').slice(0,40),backgroundColor:backgroundColor.toLowerCase()};
   });
   const promo=input.promo&&typeof input.promo==='object'?input.promo:{};
   return {
     colors,font,logoUrl:safeUrl(input.logoUrl),heroImageUrl:safeUrl(input.heroImageUrl),backgroundImageUrl:safeUrl(input.backgroundImageUrl),
     sections:normalized,
-    promo:{enabled:promo.enabled===true,title:String(promo.title||'').slice(0,120),text:String(promo.text||'').slice(0,600),imageUrl:safeUrl(promo.imageUrl),linkUrl:safeUrl(promo.linkUrl),buttonText:String(promo.buttonText||'مشاهده').slice(0,40)}
+    promo:{enabled:promo.enabled===true,title:String(promo.title||'').slice(0,120),text:String(promo.text||'').slice(0,600),imageUrl:safeUrl(promo.imageUrl),linkUrl:safeLink(promo.linkUrl),buttonText:String(promo.buttonText||'مشاهده').slice(0,40)}
   };
 }
 function ownerOnly(req,res,next) {
