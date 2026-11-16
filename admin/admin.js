@@ -98,6 +98,7 @@ async function loadAdminWorkspace(admin) {
   // Store settings include bank/payment details; keep them owner-only.
   const settingsAccess = owner;
   $('#advertisingAdminLink').hidden = !owner;
+  $('#appearanceAdminLink').hidden = !owner;
   $('#feedbackAdmin').hidden = !owner;
   if(owner) loadFeedback();
   $('#managerAdmin').hidden = !owner;
