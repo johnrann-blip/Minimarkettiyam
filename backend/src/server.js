@@ -230,6 +230,8 @@ app.get('/api/products', async (req, res) => {
       `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,c.name AS category_name,c.slug AS category_slug,
               (SELECT COUNT(*)::int FROM product_likes l WHERE l.product_id=p.id) AS likes_count,
               EXISTS (SELECT 1 FROM product_likes l WHERE l.product_id=p.id AND l.voter_key=$1) AS liked
+              ,COALESCE((SELECT json_agg(json_build_object('id',i.id,'image_url',i.image_url,'sort_order',i.sort_order) ORDER BY i.sort_order,i.id) FROM product_images i WHERE i.product_id=p.id),'[]'::json) AS images,
+              COALESCE((SELECT json_agg(json_build_object('id',v.id,'name',v.name,'stock',v.stock,'sort_order',v.sort_order) ORDER BY v.sort_order,v.id) FROM product_colors v WHERE v.product_id=p.id AND v.is_active=true),'[]'::json) AS colors
        FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE ${where} ORDER BY p.created_at DESC LIMIT 100`, values);
     res.json(r.rows.map(p => {
       const {cost_price_toman,...publicProduct}=p;
@@ -908,6 +910,20 @@ function validateProduct(p) {
     }
   }
 
+  const images = Array.isArray(p.images) ? p.images : (image ? [image] : []);
+  if (images.length > 12) throw new Error('هر محصول حداکثر می‌تواند ۱۲ عکس داشته باشد.');
+  for (const item of images) {
+    const u=String(item?.image_url ?? item ?? '').trim();
+    if (!u || u.length>2048 || (!/^\/uploads\/products\/[a-f0-9]{32}\.(jpg|png|webp)$/.test(u) && !/^https:\/\//i.test(u))) throw new Error('نشانی یکی از عکس‌های محصول معتبر نیست.');
+  }
+  const colors = Array.isArray(p.colors) ? p.colors : [];
+  if (colors.length > 30) throw new Error('هر محصول حداکثر می‌تواند ۳۰ رنگ داشته باشد.');
+  const seenColors=new Set();
+  for (const color of colors) {
+    const colorName=String(color?.name||'').trim(), colorStock=Number(color?.stock);
+    if (!colorName || colorName.length>60 || !Number.isInteger(colorStock) || colorStock<0 || colorStock>2147483647) throw new Error('نام یا موجودی یکی از رنگ‌ها معتبر نیست.');
+    const key=colorName.toLocaleLowerCase('fa'); if(seenColors.has(key)) throw new Error('نام رنگ‌ها نباید تکراری باشد.'); seenColors.add(key);
+  }
   if (p.is_active !== undefined && typeof p.is_active !== 'boolean') {
     throw new Error('وضعیت فعال‌بودن محصول معتبر نیست.');
   }
@@ -923,7 +939,9 @@ function validateProduct(p) {
     price_toman: price,
     sale_price_toman: sale,
     stock,
-    image_url: image,
+    image_url: image || String(images[0]?.image_url ?? images[0] ?? ''),
+    images: images.map((item,sort_order)=>({image_url:String(item?.image_url ?? item).trim(),sort_order})),
+    colors: colors.map((color,sort_order)=>({name:String(color.name).trim(),stock:Number(color.stock),sort_order})),
     is_active: p.is_active === undefined ? true : p.is_active
   };
 }
@@ -976,7 +994,9 @@ app.get('/api/admin/products', adminAuth.requireAdmin, async (_req, res) => {
       `SELECT p.id,p.sku,p.name,p.category_id,p.description,
               p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,
               p.is_active,p.created_at,p.updated_at,
-              c.name AS category_name
+              c.name AS category_name,
+              COALESCE((SELECT json_agg(json_build_object('id',i.id,'image_url',i.image_url,'sort_order',i.sort_order) ORDER BY i.sort_order,i.id) FROM product_images i WHERE i.product_id=p.id),'[]'::json) AS images,
+              COALESCE((SELECT json_agg(json_build_object('id',v.id,'name',v.name,'stock',v.stock,'sort_order',v.sort_order) FROM product_colors v WHERE v.product_id=p.id AND v.is_active=true),'[]'::json) AS colors
        FROM products p
        LEFT JOIN categories c ON c.id=p.category_id
        ORDER BY p.created_at DESC
@@ -991,35 +1011,21 @@ app.get('/api/admin/products', adminAuth.requireAdmin, async (_req, res) => {
 app.post('/api/admin/products', adminAuth.requireAdmin, async (req, res) => {
   let client;
   try {
-    const p = validateProduct(req.body || {});
-    client = await pool.connect();
-    await validateCategory(client, p.category_id);
-
-    const result = await client.query(
-      `INSERT INTO products
-       (sku,name,category_id,description,price_toman,sale_price_toman,cost_price_toman,stock,image_url,is_active)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id,name,sku,category_id,description,price_toman,sale_price_toman,cost_price_toman,stock,image_url,is_active`,
-      [p.sku,p.name,p.category_id,p.description,p.price_toman,
-       p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,p.is_active]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (e) {
-    const known = e.message && (
-      e.message.includes('محصول') ||
-      e.message.includes('قیمت') ||
-      e.message.includes('موجودی') ||
-      e.message.includes('کد کالا') ||
-      e.message.includes('دسته‌بندی') ||
-      e.message.includes('توضیحات') ||
-      e.message.includes('نشانی') ||
-      e.message.includes('وضعیت')
-    );
-    res.status(known ? 400 : 409).json({
-      error: known ? e.message : 'محصول ثبت نشد؛ احتمالاً کد کالا تکراری است یا خطای پایگاه داده رخ داده است.'
-    });
-  } finally {
-    if (client) client.release();
-  }
+    const p=validateProduct(req.body||{}); client=await pool.connect(); await client.query('BEGIN');
+    await validateCategory(client,p.category_id);
+    const result=await client.query(`INSERT INTO products (sku,name,category_id,description,price_toman,sale_price_toman,cost_price_toman,stock,image_url,is_active)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id,name,sku,category_id,description,price_toman,sale_price_toman,cost_price_toman,stock,image_url,is_active`,
+      [p.sku,p.name,p.category_id,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,p.is_active]);
+    const id=result.rows[0].id;
+    for(const im of p.images) await client.query('INSERT INTO product_images(product_id,image_url,sort_order) VALUES($1,$2,$3)',[id,im.image_url,im.sort_order]);
+    for(const c of p.colors) await client.query('INSERT INTO product_colors(product_id,name,stock,sort_order) VALUES($1,$2,$3,$4)',[id,c.name,c.stock,c.sort_order]);
+    if(p.colors.length) await client.query('UPDATE products SET stock=$1 WHERE id=$2',[p.colors.reduce((n,x)=>n+x.stock,0),id]);
+    await client.query('COMMIT'); res.status(201).json({...result.rows[0],images:p.images,colors:p.colors});
+  } catch(e) {
+    if(client)await client.query('ROLLBACK').catch(()=>{});
+    const known=e.message&&['محصول','قیمت','موجودی','کد کالا','دسته‌بندی','توضیحات','نشانی','وضعیت','رنگ','عکس'].some(x=>e.message.includes(x));
+    res.status(known?400:409).json({error:known?e.message:'محصول ثبت نشد؛ احتمالاً کد کالا تکراری است یا خطای پایگاه داده رخ داده است.'});
+  } finally {if(client)client.release();}
 });
 
 app.patch('/api/admin/products/:id', adminAuth.requireAdmin, async (req, res) => {
@@ -1042,7 +1048,7 @@ app.patch('/api/admin/products/:id', adminAuth.requireAdmin, async (req, res) =>
     const current = found.rows[0];
     const allowed = [
       'sku','name','category_id','description','price_toman',
-      'sale_price_toman','cost_price_toman','stock','image_url','is_active'
+      'sale_price_toman','cost_price_toman','stock','image_url','is_active','images','colors'
     ];
     const merged = {};
 
@@ -1053,6 +1059,19 @@ app.patch('/api/admin/products/:id', adminAuth.requireAdmin, async (req, res) =>
 
     const p = validateProduct(merged);
     await validateCategory(client, p.category_id);
+    if (Object.prototype.hasOwnProperty.call(req.body||{},'images')) {
+      await client.query('DELETE FROM product_images WHERE product_id=$1',[id]);
+      for(const im of p.images) await client.query('INSERT INTO product_images(product_id,image_url,sort_order) VALUES($1,$2,$3)',[id,im.image_url,im.sort_order]);
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body||{},'colors')) {
+      const existing=await client.query('SELECT id,name FROM product_colors WHERE product_id=$1 FOR UPDATE',[id]);
+      const keep=new Set(p.colors.map(c=>c.name.toLocaleLowerCase('fa')));
+      for(const row of existing.rows) if(!keep.has(row.name.toLocaleLowerCase('fa'))) await client.query('UPDATE product_colors SET is_active=false,updated_at=NOW() WHERE id=$1',[row.id]);
+      for(const c of p.colors) await client.query(`INSERT INTO product_colors(product_id,name,stock,sort_order,is_active) VALUES($1,$2,$3,$4,true)
+        ON CONFLICT(product_id,name) DO UPDATE SET stock=EXCLUDED.stock,sort_order=EXCLUDED.sort_order,is_active=true,updated_at=NOW()`,
+        [id,c.name,c.stock,c.sort_order]);
+      await client.query('UPDATE products SET stock=$1 WHERE id=$2',[p.colors.reduce((n,x)=>n+x.stock,0),id]);
+    }
 
     const result = await client.query(
       `UPDATE products SET
@@ -1064,8 +1083,10 @@ app.patch('/api/admin/products/:id', adminAuth.requireAdmin, async (req, res) =>
        p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,p.is_active,id]
     );
 
+    const gallery=await client.query('SELECT id,image_url,sort_order FROM product_images WHERE product_id=$1 ORDER BY sort_order,id',[id]);
+    const variants=await client.query('SELECT id,name,stock,sort_order FROM product_colors WHERE product_id=$1 AND is_active=true ORDER BY sort_order,id',[id]);
     await client.query('COMMIT');
-    res.json(result.rows[0]);
+    res.json({...result.rows[0],images:gallery.rows,colors:variants});
   } catch (e) {
     if (client) {
       try { await client.query('ROLLBACK'); } catch {}
