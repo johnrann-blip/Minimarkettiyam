@@ -46,6 +46,8 @@ let secondProductId = null;
 let memberProductId = null;
 let memberSessionCookie = null;
 let memberOrderCode = null;
+let colorProductId = null;
+let colorOrderCode = null;
 let memberPhone = null;
 let adminSessionCookie = null;
 let managerUsername = null;
@@ -531,6 +533,36 @@ async function run() {
     r.data.policy_returns === 'شرایط مرجوعی آزمایشی',
     'دریافت تنظیمات فوتر و صفحات راهنما در پنل مدیریت');
 
+  // Product gallery and per-color stock integration coverage.
+  r=await request('/api/admin/products',{method:'POST',admin:true,body:{
+    sku:'COLOR-'+crypto.randomBytes(5).toString('hex'),name:'محصول تست رنگ‌بندی',description:'آزمون موجودی مستقل رنگ‌ها',
+    price_toman:15000,stock:0,images:[uploadedImageUrl],colors:[{name:'آبی',stock:2},{name:'مشکی',stock:4}]
+  }});
+  assert(r.status===201 && Array.isArray(r.data.images) && r.data.images.length===1 && r.data.colors.length===2,'ساخت محصول با گالری عکس و رنگ‌های مستقل');
+  colorProductId=r.data.id;
+  const publicColorProducts=await request('/api/products');
+  const publicColorProduct=publicColorProducts.data.find(x=>String(x.id)===String(colorProductId));
+  assert(!!publicColorProduct && publicColorProduct.images.length===1 && publicColorProduct.colors.length===2,'نمایش گالری و رنگ‌بندی در API عمومی محصولات');
+  const blue=publicColorProduct.colors.find(x=>x.name==='آبی');
+  const black=publicColorProduct.colors.find(x=>x.name==='مشکی');
+  assert(!!blue&&!!black&&Number(publicColorProduct.stock)===6,'محاسبه موجودی کل از مجموع موجودی رنگ‌ها');
+  const colorPayload={customer:{name:'مشتری تست رنگ',phone:'09123334455',city:'اصفهان',province:'اصفهان',address:'نشانی تست رنگ',postal_code:''},items:[{product_id:colorProductId,quantity:1}],delivery_method:'local',note:'رنگ اجباری'};
+  r=await request('/api/orders',{method:'POST',headers:{'Idempotency-Key':crypto.randomUUID()},body:colorPayload});
+  assert(r.status===400,'الزام انتخاب رنگ برای محصول دارای رنگ‌بندی');
+  const colorOrderKey=crypto.randomUUID();
+  r=await request('/api/orders',{method:'POST',headers:{'Idempotency-Key':colorOrderKey},body:{...colorPayload,items:[{product_id:colorProductId,color_id:blue.id,quantity:2}]}});
+  assert(r.status===201,'ثبت سفارش با رنگ انتخاب‌شده و تعداد مشخص');
+  colorOrderCode=r.data.order_code;
+  const colorStockAfter=await db.query('SELECT v.name,v.stock,p.stock AS total_stock FROM product_colors v JOIN products p ON p.id=v.product_id WHERE p.id=$1 ORDER BY v.name',[colorProductId]);
+  assert(Number(colorStockAfter.rows.find(x=>x.name==='آبی').stock)===0&&Number(colorStockAfter.rows.find(x=>x.name==='مشکی').stock)===4&&Number(colorStockAfter.rows[0].total_stock)===4,'کسر موجودی فقط از رنگ سفارش‌داده‌شده');
+  const savedColorLine=await db.query('SELECT color_id,color_name,quantity FROM order_items i JOIN orders o ON o.id=i.order_id WHERE o.order_code=$1',[colorOrderCode]);
+  assert(savedColorLine.rowCount===1&&String(savedColorLine.rows[0].color_id)===String(blue.id)&&savedColorLine.rows[0].color_name==='آبی'&&Number(savedColorLine.rows[0].quantity)===2,'ذخیره رنگ انتخابی در جزئیات سفارش');
+  const colorOrder=await db.query('SELECT id FROM orders WHERE order_code=$1',[colorOrderCode]);
+  r=await request('/api/admin/orders/'+colorOrder.rows[0].id+'/status',{method:'PATCH',admin:true,body:{status:'cancelled'}});
+  assert(r.status===200,'لغو سفارش دارای رنگ‌بندی');
+  const colorStockRestored=await db.query('SELECT v.name,v.stock,p.stock AS total_stock FROM product_colors v JOIN products p ON p.id=v.product_id WHERE p.id=$1 ORDER BY v.name',[colorProductId]);
+  assert(Number(colorStockRestored.rows.find(x=>x.name==='آبی').stock)===2&&Number(colorStockRestored.rows.find(x=>x.name==='مشکی').stock)===4&&Number(colorStockRestored.rows[0].total_stock)===6,'بازگشت موجودی به همان رنگ پس از لغو سفارش');
+
   const memberOrderKey=crypto.randomUUID();
   const memberOrderPayload={
     customer:{name:'عضو آزمایشی',phone:memberPhone,city:'اصفهان',province:'اصفهان',address:'نشانی عضو آزمایشی',postal_code:''},
@@ -647,10 +679,12 @@ async function run() {
         await fs.unlink(path.join(__dirname, '..', 'uploads', 'products', uploadedImageFile)).catch(() => {});
       }
       if (orderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [orderCode]);
+      if (colorOrderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [colorOrderCode]);
       if (memberOrderCode) await db.query('DELETE FROM orders WHERE order_code=$1', [memberOrderCode]);
       if (productId) await db.query('DELETE FROM products WHERE id=$1', [productId]);
       if (secondProductId) await db.query('DELETE FROM products WHERE id=$1', [secondProductId]);
       if (memberProductId) await db.query('DELETE FROM products WHERE id=$1', [memberProductId]);
+      if (colorProductId) await db.query('DELETE FROM products WHERE id=$1', [colorProductId]);
       if (memberSessionCookie) {
         const token=(memberSessionCookie.match(/avelora_session=([^;]+)/)||[])[1];
         if(token) await db.query('DELETE FROM customer_sessions WHERE token_hash=$1',[crypto.createHash('sha256').update(decodeURIComponent(token)).digest('hex')]);
