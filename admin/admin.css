@@ -4,3 +4,5 @@ body{margin:0;background:#f7f1e9;color:#35261d;font-family:Tahoma,sans-serif}mai
 .setting-check input{width:auto;margin:0}
 #settingsForm h3{margin-top:24px}
 #settingsMessage{font-weight:bold}
+
+.product-image-previews{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.product-image-previews img{border:1px solid #eadfd4;border-radius:8px;padding:3px}.product-color-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(100px,.55fr) auto;gap:8px;align-items:center}.product-color-row button{width:auto;margin:0;background:#7b3b36}.product-colors-editor{border-top:1px solid #eadfd4;margin-top:18px;padding-top:10px}@media(max-width:520px){.product-color-row{grid-template-columns:1fr 1fr}.product-color-row button{grid-column:1/-1}}
