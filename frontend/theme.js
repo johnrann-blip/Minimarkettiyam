@@ -23,7 +23,9 @@
     const wrapper=document.createElement('div');wrapper.id='themeSectionsRoot';
     const first=hero||homeAd||products;if(first?.parentNode)first.parentNode.insertBefore(wrapper,first);
     const core={hero,products,feedback,footer};
-    for(const [sectionIndex,item] of (Array.isArray(theme.sections)?theme.sections:[]).entries()){
+    const sectionList=Array.isArray(theme.sections)?theme.sections:[];
+    if(sectionList.length){for(const node of [hero,products,feedback,footer,homeAd])node?.remove();}
+    for(const [sectionIndex,item] of sectionList.entries()){
       if(item.type==='custom'){
         const block=document.createElement('section');block.className='theme-custom-section';block.dataset.themeSection=item.id;block.style.order=sectionIndex;block.style.setProperty('--mobile-order',Number(item.mobileOrder??sectionIndex));block.classList.toggle('theme-mobile-hidden',item.mobileEnabled===false);block.classList.toggle('theme-desktop-hidden',item.desktopEnabled===false);
         if(item.backgroundColor)block.style.backgroundColor=item.backgroundColor;
@@ -39,6 +41,7 @@
       if(item.enabled!==false)wrapper.append(node);
       if(item.type==='hero'&&homeAd&&homeAd.parentNode)wrapper.append(homeAd);
     }
+    if(sectionList.length&&homeAd&&!wrapper.contains(homeAd))wrapper.append(homeAd);
     if(promo){const before=wrapper.querySelector('main#products');if(before)wrapper.insertBefore(promo,before);else wrapper.append(promo);}
     if(wrapper.childNodes.length)root.dataset.aveloraTheme='published';
   }catch(error){/* Keep the built-in storefront usable if a theme cannot load. */}
