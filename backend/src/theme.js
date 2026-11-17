@@ -6,6 +6,7 @@ const DEFAULT_THEME = Object.freeze({
   font: 'Vazirmatn',
   logoUrl: '',
   heroImageUrl: '',
+  heroSlides: [],
   backgroundImageUrl: '',
   sections: [
     { id:'hero', type:'hero', enabled:true, title:'استایل خاص، با AVELORA', text:'کیف، اکسسوری و زیبایی؛ انتخاب‌هایی برای درخشش هر روز تو' },
@@ -62,7 +63,9 @@ function normalizeConfig(input) {
   });
   const promo=input.promo&&typeof input.promo==='object'?input.promo:{};
   return {
-    colors,font,logoUrl:safeUrl(input.logoUrl),heroImageUrl:safeUrl(input.heroImageUrl),backgroundImageUrl:safeUrl(input.backgroundImageUrl),
+    colors,font,logoUrl:safeUrl(input.logoUrl),heroImageUrl:safeUrl(input.heroImageUrl),
+    heroSlides:(Array.isArray(input.heroSlides)?input.heroSlides:[]).slice(0,10).map((slide,i)=>({id:String(slide.id||('slide-'+(i+1))).replace(/[^a-z0-9_-]/gi,'').slice(0,40),enabled:slide.enabled!==false,imageUrl:safeUrl(slide.imageUrl),title:String(slide.title||'').slice(0,120),text:String(slide.text||'').slice(0,400),linkUrl:safeLink(slide.linkUrl),buttonText:String(slide.buttonText||'همین حالا خرید کنید').slice(0,40)})).filter(slide=>slide.imageUrl),
+    backgroundImageUrl:safeUrl(input.backgroundImageUrl),
     sections:normalized,
     promo:{enabled:promo.enabled===true,title:String(promo.title||'').slice(0,120),text:String(promo.text||'').slice(0,600),imageUrl:safeUrl(promo.imageUrl),linkUrl:safeLink(promo.linkUrl),buttonText:String(promo.buttonText||'مشاهده').slice(0,40)}
   };
