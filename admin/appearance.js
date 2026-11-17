@@ -2,6 +2,15 @@
 const $=id=>document.getElementById(id);
 const colorLabels={background:'پس‌زمینه صفحه',surface:'پس‌زمینه کارت‌ها',text:'رنگ نوشته‌ها',primary:'رنگ اصلی دکمه‌ها',navBackground:'پس‌زمینه منو',navText:'رنگ نوشته منو',accent:'رنگ تأکیدی'};
 const defaults={colors:{background:'#fbf9f5',surface:'#ffffff',text:'#29221e',primary:'#3b281f',navBackground:'#3b281f',navText:'#ffffff',accent:'#b68a4c'},font:'Vazirmatn',logoUrl:'',heroImageUrl:'',backgroundImageUrl:'',sections:[{id:'hero',type:'hero',enabled:true,title:'استایل خاص، با AVELORA',text:'کیف، اکسسوری و زیبایی؛ انتخاب‌هایی برای درخشش هر روز تو'},{id:'products',type:'products',enabled:true,title:'محصولات'},{id:'feedback',type:'feedback',enabled:true,title:'نظرت برای ما ارزشمنده'},{id:'footer',type:'footer',enabled:true,title:'ارتباط با ما'}],promo:{enabled:false,title:'',text:'',imageUrl:'',linkUrl:'',buttonText:'مشاهده'}};
+
+const luxuryPresets=[
+ {id:'black-gold',name:'مشکی و طلایی',tag:'BLACK GOLD',description:'شکوه جسورانه با تضاد عمیق و جزئیات طلایی',font:'Vazirmatn',colors:{background:'#11100f',surface:'#1d1a17',text:'#f5eee2',primary:'#b89455',navBackground:'#090909',navText:'#f5e6c8',accent:'#d6b36b'},sections:[{id:'hero',type:'hero',enabled:true,title:'درخشش، امضای انتخاب تو',text:'کالکشن منتخب AVELORA؛ ظرافتی که دیده می‌شود'},{id:'products',type:'products',enabled:true,title:'منتخب‌های خاص برای تو'},{id:'feedback',type:'feedback',enabled:true,title:'تجربه مشتریان ما'},{id:'footer',type:'footer',enabled:true,title:'همراه تو در انتخابی خاص'}]},
+ {id:'warm-classic',name:'کرم و قهوه‌ای',tag:'WARM CLASSIC',description:'گرمای لوکس، آرامش و اصالت در هر جزئیات',font:'Vazirmatn',colors:{background:'#f3eadc',surface:'#fffaf2',text:'#39291f',primary:'#684632',navBackground:'#3d2b21',navText:'#fff7eb',accent:'#b58a60'},sections:[{id:'hero',type:'hero',enabled:true,title:'زیبایی در سادگیِ ماندگار',text:'انتخاب‌هایی دلنشین برای سبک زندگی تو'},{id:'products',type:'products',enabled:true,title:'تازه‌های AVELORA'},{id:'feedback',type:'feedback',enabled:true,title:'صدای همراهان ما'},{id:'footer',type:'footer',enabled:true,title:'با ما در ارتباط باش'}]},
+ {id:'emerald-luxe',name:'زمردی و طلایی',tag:'EMERALD LUXE',description:'رنگی عمیق و اشرافی با درخشش ظریف طلایی',font:'Vazirmatn',colors:{background:'#102b25',surface:'#183a31',text:'#f1ead9',primary:'#c5a15b',navBackground:'#0a211c',navText:'#f7edda',accent:'#d5b66f'},sections:[{id:'hero',type:'hero',enabled:true,title:'انتخابی به رنگ تمایز',text:'زیبایی و کیفیت در مجموعه‌ای از انتخاب‌های خاص'},{id:'products',type:'products',enabled:true,title:'ویترین منتخب زمردی'},{id:'feedback',type:'feedback',enabled:true,title:'آنچه مشتریان می‌گویند'},{id:'footer',type:'footer',enabled:true,title:'ارتباط با AVELORA'}]},
+ {id:'rose-minimal',name:'سفید و رزگلد',tag:'ROSE MINIMAL',description:'مینیمال، روشن و لطیف با امضای رزگلد',font:'Vazirmatn',colors:{background:'#fffafa',surface:'#ffffff',text:'#493b3c',primary:'#b87578',navBackground:'#fff4f2',navText:'#593e40',accent:'#c58e88'},sections:[{id:'hero',type:'hero',enabled:true,title:'زیبایی، ساده و بی‌زمان',text:'جزئیات دوست‌داشتنی برای هر روز و هر مناسبت'},{id:'products',type:'products',enabled:true,title:'محبوب‌ترین انتخاب‌ها'},{id:'feedback',type:'feedback',enabled:true,title:'نظر همراهان AVELORA'},{id:'footer',type:'footer',enabled:true,title:'کنار تو هستیم'}]},
+ {id:'navy-silver',name:'سرمه‌ای و نقره‌ای',tag:'NAVY SILVER',description:'وقار مدرن با ترکیب سرمه‌ای و نقره‌ای',font:'Vazirmatn',colors:{background:'#eef1f5',surface:'#ffffff',text:'#202c3d',primary:'#344b68',navBackground:'#17283e',navText:'#f4f6fa',accent:'#aab8c8'},sections:[{id:'hero',type:'hero',enabled:true,title:'وقار در انتخاب، تفاوت در استایل',text:'مجموعه‌ای از محصولات خاص برای سلیقه‌های دقیق'},{id:'products',type:'products',enabled:true,title:'کالکشن منتخب'},{id:'feedback',type:'feedback',enabled:true,title:'تجربه خرید از AVELORA'},{id:'footer',type:'footer',enabled:true,title:'راه‌های ارتباط با ما'}]},
+ {id:'charcoal-champagne',name:'زغالی و شامپاینی',tag:'CHARCOAL CHAMPAGNE',description:'لوکس معاصر با تونالیته گرم و درخشش شامپاینی',font:'Vazirmatn',colors:{background:'#242321',surface:'#302e2a',text:'#f4eee3',primary:'#c8ae83',navBackground:'#191817',navText:'#f7f0e5',accent:'#ddc69e'},sections:[{id:'hero',type:'hero',enabled:true,title:'لحظه‌ای برای انتخاب متفاوت',text:'کالکشن‌هایی چشم‌نواز برای سلیقه‌ای خاص'},{id:'products',type:'products',enabled:true,title:'انتخاب‌های ویژه'},{id:'feedback',type:'feedback',enabled:true,title:'داستان رضایت مشتریان'},{id:'footer',type:'footer',enabled:true,title:'با AVELORA همراه بمان'}]}
+];
 const labels={hero:'بنر اصلی',products:'ویترین محصولات',feedback:'دیدگاه مشتریان',footer:'پاورقی',custom:'بخش سفارشی'};
 let config=structuredClone(defaults);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -24,6 +33,21 @@ function fill(c){
  $('logoUrl').value=config.logoUrl||'';$('heroImageUrl').value=config.heroImageUrl||'';$('backgroundImageUrl').value=config.backgroundImageUrl||'';$('font').value=config.font||'Vazirmatn';
  $('promoEnabled').checked=!!config.promo.enabled;$('promoTitle').value=config.promo.title||'';$('promoText').value=config.promo.text||'';$('promoImageUrl').value=config.promo.imageUrl||'';$('promoLinkUrl').value=config.promo.linkUrl||'';$('promoButtonText').value=config.promo.buttonText||'مشاهده';
  renderColors();renderSections();preview();
+}
+
+function renderPresets(){
+ const host=$('luxuryPresets');
+ if(!host)return;
+ host.innerHTML=luxuryPresets.map(p=>'<article class="preset-card" data-preset-card="'+p.id+'"><div class="preset-art" style="--p-bg:'+p.colors.background+';--p-surface:'+p.colors.surface+';--p-text:'+p.colors.text+';--p-primary:'+p.colors.primary+';--p-nav:'+p.colors.navBackground+';--p-accent:'+p.colors.accent+'"><div class="preset-art-nav"></div><div class="preset-art-hero"><i></i><b></b><span></span></div><div class="preset-art-products"><i></i><i></i><i></i></div></div><div class="preset-card-body"><div class="preset-card-title"><strong>'+p.name+'</strong><small>'+p.tag+'</small></div><p>'+p.description+'</p><div class="preset-swatches">'+[p.colors.background,p.colors.surface,p.colors.primary,p.colors.accent,p.colors.navBackground].map(c=>'<i style="background:'+c+'"></i>').join('')+'</div><button type="button" data-apply-preset="'+p.id+'">انتخاب این قالب</button></div></article>').join('');
+}
+function applyPreset(id){
+ const preset=luxuryPresets.find(p=>p.id===id);if(!preset)return;
+ if(!confirm('قالب «'+preset.name+'» بارگذاری شود؟ تغییرات ذخیره‌نشده فرم جایگزین می‌شود؛ تصاویر و لوگوی فعلی حفظ خواهند شد.'))return;
+ readForm();
+ const keep={logoUrl:config.logoUrl,heroImageUrl:config.heroImageUrl,backgroundImageUrl:config.backgroundImageUrl,promo:structuredClone(config.promo)};
+ fill({...structuredClone(defaults),colors:{...preset.colors},font:preset.font,sections:structuredClone(preset.sections),...keep});
+ document.querySelectorAll('[data-preset-card]').forEach(card=>card.classList.toggle('selected',card.dataset.presetCard===id));
+ setMessage('قالب «'+preset.name+'» بارگذاری شد. برای اعمال روی سایت، پیش‌نویس را ذخیره و سپس در صورت اطمینان منتشر کن.');
 }
 async function uploadImage(file){
  if(!file)return '';
@@ -67,6 +91,8 @@ $('addSection').onclick=()=>{const type=$('newSection').value;if(config.sections
 $('saveDraft').onclick=async()=>{try{await uploadSelectedImages();const d=await request('/api/admin/theme/draft',{method:'PUT',body:JSON.stringify(readForm())});fill(d.draft_config);setMessage('پیش‌نویس با موفقیت ذخیره شد؛ هنوز برای مشتریان منتشر نشده است.');}catch(e){setMessage(e.message);}};
 $('publish').onclick=async()=>{if(!confirm('قالب فعلی برای همه بازدیدکنندگان منتشر شود؟'))return;try{await uploadSelectedImages();await request('/api/admin/theme/draft',{method:'PUT',body:JSON.stringify(readForm())});await request('/api/admin/theme/publish',{method:'POST',body:'{}'});setMessage('قالب جدید منتشر شد. صفحه فروشگاه را تازه‌سازی کن.');}catch(e){setMessage(e.message);}};
 $('reset').onclick=async()=>{if(!confirm('پیش‌نویس به قالب پایه بازگردد؟ نسخه منتشرشده تغییر نمی‌کند.'))return;try{const d=await request('/api/admin/theme/reset',{method:'POST',body:'{}'});fill(d.draft_config);setMessage('پیش‌نویس به قالب پایه بازگشت.');}catch(e){setMessage(e.message);}};
+renderPresets();
+$('luxuryPresets').addEventListener('click',e=>{const b=e.target.closest('[data-apply-preset]');if(b)applyPreset(b.dataset.applyPreset);});
 init();
 
 document.querySelectorAll('[data-preview]').forEach(button=>button.addEventListener('click',()=>{$('preview').classList.toggle('preview-mobile',button.dataset.preview==='mobile');document.querySelectorAll('[data-preview]').forEach(b=>b.disabled=b===button);preview();}));
