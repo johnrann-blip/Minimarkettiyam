@@ -67,6 +67,29 @@
     const footer=document.querySelector('footer#contact');
     const homeAd=document.querySelector('#homeAdSlot');
     if(theme.heroImageUrl){const img=hero&&hero.querySelector('.hero-visual img');if(img)img.src=theme.heroImageUrl;}
+    const heroTrack=document.getElementById('heroTrack'),heroDots=document.getElementById('heroDots');
+    const slides=(Array.isArray(theme.heroSlides)?theme.heroSlides:[]).filter(s=>s&&s.enabled!==false&&s.imageUrl).slice(0,10);
+    if(heroTrack&&slides.length){
+      heroTrack.replaceChildren();
+      slides.forEach((slide,index)=>{
+        const card=document.createElement('article');card.className='hero-slide';card.dataset.slide=String(index);
+        const img=document.createElement('img');img.src=slide.imageUrl;img.alt=slide.title||'بنر AVELORA';img.loading=index===0?'eager':'lazy';if(index===0)img.fetchPriority='high';card.append(img);
+        const overlay=document.createElement('div');overlay.className='hero-slide-copy';
+        if(slide.title){const title=safe('h2',slide.title);overlay.append(title);}
+        if(slide.text)overlay.append(safe('p',slide.text));
+        if(slide.linkUrl){const link=safe('a',slide.buttonText||'همین حالا خرید کنید');link.href=slide.linkUrl;link.className='primary';overlay.append(link);}
+        card.append(overlay);heroTrack.append(card);
+      });
+      if(heroDots){heroDots.replaceChildren();slides.forEach((slide,index)=>{const dot=document.createElement('button');dot.type='button';dot.className='hero-dot'+(index===0?' active':'');dot.setAttribute('aria-label','رفتن به بنر '+(index+1));dot.addEventListener('click',()=>heroTrack.children[index]?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'start'}));heroDots.append(dot);});}
+      const updateDots=()=>{const width=heroTrack.clientWidth||1;const index=Math.max(0,Math.min(slides.length-1,Math.round(heroTrack.scrollLeft/width)));heroDots?.querySelectorAll('button').forEach((dot,i)=>dot.classList.toggle('active',i===index));};
+      heroTrack.addEventListener('scroll',()=>requestAnimationFrame(updateDots),{passive:true});
+      const move=delta=>{const width=heroTrack.clientWidth||1;heroTrack.scrollBy({left:delta*width,behavior:'smooth'});};
+      document.getElementById('heroPrev')?.addEventListener('click',()=>move(-1));
+      document.getElementById('heroNext')?.addEventListener('click',()=>move(1));
+      if(slides.length>1){let startX=0;heroTrack.addEventListener('touchstart',e=>{startX=e.touches[0].clientX;},{passive:true});heroTrack.addEventListener('touchend',e=>{const delta=e.changedTouches[0].clientX-startX;if(Math.abs(delta)>45)move(delta>0?-1:1);},{passive:true});}
+    }else if(heroTrack&&theme.heroImageUrl){
+      heroTrack.innerHTML='<article class="hero-slide"><img src="'+String(theme.heroImageUrl).replace(/"/g,'%22')+'" alt="بنر AVELORA"></article>';
+    }
     const sections=Array.isArray(theme.sections)?theme.sections:[];
     const find=type=>sections.find(item=>item&&item.type===type);
     const heroSection=find('hero'),productSection=find('products'),feedbackSection=find('feedback'),footerSection=find('footer');
