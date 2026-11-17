@@ -741,7 +741,7 @@ body{background:#fffaf5;color:#211b17;font-family:var(--theme-font,Vazirmatn,Tah
 .header-search{grid-column:3;grid-row:1;max-width:280px;justify-self:end;width:100%}
 .header-search input{border-radius:30px;background:#fff;border:1px solid #d9cfc4;padding:12px 18px}
 .mobile-menu{display:none}
-.hero.hero-editorial{padding:0;min-height:390px;display:grid;grid-template-columns:1fr 1.1fr;direction:ltr;text-align:right;background:#171411;color:#fff;overflow:hidden}
+.hero.hero-editorial{padding:0;min-height:390px;display:grid;grid-template-columns:1fr 1.1fr;direction:rtl;text-align:right;background:#171411;color:#fff;overflow:hidden}
 .hero-copy{direction:rtl;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:clamp(28px,6vw,86px);background:radial-gradient(ellipse at 80% 20%,#46331f,#171411 65%)}
 .hero-copy .eyebrow{color:#d7b36d}
 .hero-copy h1{color:#fff;font-size:clamp(32px,5vw,62px);line-height:1.45;margin:12px 0}
