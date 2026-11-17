@@ -37,15 +37,11 @@ async function loadCategories(){
     if(!response.ok)throw new Error('دریافت دسته‌بندی‌ها ناموفق بود.');
     const cats=await response.json();
     if(!Array.isArray(cats))throw new Error('پاسخ دسته‌بندی‌ها معتبر نیست.');
-    const preferred=[
-      {slug:'bags-accessories',name:'کیف و اکسسوری'},
-      {slug:'beauty',name:'لوازم آرایشی'}
-    ];
-    const available=new Map(cats.map(item=>[item.slug,item]));
-    const ordered=[...preferred.filter(item=>available.has(item.slug)).map(item=>available.get(item.slug)),
-      ...cats.filter(item=>!preferred.some(p=>p.slug===item.slug))];
+    const ordered=cats.filter(item=>item&&item.slug).slice(0,8);
+    const tiles=document.querySelector('.category-entry-grid');
+    if(tiles)tiles.innerHTML=ordered.map(item=>'<button class="category-entry" type="button" data-category="'+escapeHtml(item.slug)+'"><span class="category-entry-image"></span><strong>'+escapeHtml(item.name)+'</strong></button>').join('');
     $('#categories').innerHTML='<button class="active" data-category="">همه محصولات</button>'+
-      ordered.map(item=>`<button type="button" data-category="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</button>`).join('');
+      ordered.map(item=>'<button type="button" data-category="'+escapeHtml(item.slug)+'">'+escapeHtml(item.name)+'</button>').join('');
     $('#categories').querySelectorAll('button').forEach(button=>
       button.addEventListener('click',()=>selectCategory(button.dataset.category))
     );
@@ -53,12 +49,10 @@ async function loadCategories(){
     $('#categories').innerHTML='<span class="category-error">دسته‌بندی‌ها بارگذاری نشدند.</span>';
   }
 }
-document.querySelectorAll('.category-entry').forEach(button=>
-  button.addEventListener('click',()=>{
-    selectCategory(button.dataset.category);
-    $('#products').scrollIntoView({behavior:'smooth',block:'start'});
-  })
-);
+document.querySelector('.category-entry-grid')?.addEventListener('click',event=>{
+ const button=event.target.closest('.category-entry');if(!button)return;
+ selectCategory(button.dataset.category);$('#products').scrollIntoView({behavior:'smooth',block:'start'});
+});
 async function loadProducts(){
   const q=$('#search').value.trim();
   const p=new URLSearchParams();
@@ -223,6 +217,9 @@ $('#cartOpen').addEventListener('click',()=>toggleCart(true));
 $('#cartClose').addEventListener('click',()=>toggleCart(false));
 $('#scrim').addEventListener('click',()=>toggleCart(false));
 $('#search').addEventListener('input',()=>loadProducts());
+const headerSearch=document.getElementById('headerSearch');
+if(headerSearch)headerSearch.addEventListener('input',()=>{$('#search').value=headerSearch.value;loadProducts();});
+document.getElementById('mobileCart')?.addEventListener('click',()=>document.getElementById('cartOpen')?.click());
 function normalizeMobile(value){
   let phone=String(value??'').replace(/[۰-۹٠-٩]/g,d=>{
     const code=d.charCodeAt(0);
