@@ -831,3 +831,10 @@ body[data-avelora-design] .category-entry strong,body[data-avelora-design] .prod
 body[data-avelora-design] .section-head h2{color:#211b17!important}
 body[data-avelora-design] .add,body[data-avelora-design] .primary{background:linear-gradient(110deg,#f6d98f,#c18a3f)!important;color:#24190e!important;border-color:#c59a52!important}
 body[data-avelora-design] .site-footer{background:#211b17!important;color:#f2e6d4!important}
+
+body[data-avelora-design] .hero-editorial{width:100%!important;max-width:none!important;min-height:390px!important;margin:0!important;padding:0!important;border-radius:0!important}
+body[data-avelora-design] .chips button{background:#fff!important;color:#35271c!important;border-color:#e5d7c5!important}
+body[data-avelora-design] .chips button.active{background:#c69a50!important;color:#21170d!important;border-color:#c69a50!important}
+body[data-avelora-design] .dialog-head{background:#211b17!important;color:#fffaf5!important}
+body[data-avelora-design] .account-dialog,body[data-avelora-design] .cart-panel{background:#fffaf5!important;color:#211b17!important}
+@media(max-width:760px){body[data-avelora-design] .hero-editorial{width:100%!important;margin:0!important;padding:0!important;min-height:0!important}}
