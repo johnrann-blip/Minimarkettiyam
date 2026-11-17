@@ -15,6 +15,12 @@ function getVisitorId(){
 const visitorId=getVisitorId();
 const visitorHeaders={'X-Avelora-Visitor':visitorId};
 const toman=n=>new Intl.NumberFormat('fa-IR').format(Number(n))+' تومان';
+function renderCategoryImages(){
+ document.querySelectorAll('.category-entry').forEach(button=>{
+  const slug=button.dataset.category;const product=products.find(p=>p.category_slug===slug&&p.image_url);
+  if(product){const image=document.createElement('img');image.src=product.image_url;image.alt=button.querySelector('strong')?.textContent||'تصویر دسته‌بندی';image.loading='lazy';button.querySelector('.category-entry-image')?.replaceChildren(image);}
+ });
+}
 function selectCategory(value){
   category=value;
   $('#categories').querySelectorAll('button').forEach(button=>
@@ -63,6 +69,7 @@ async function loadProducts(){
     const data=await response.json();
     if(!response.ok||!Array.isArray(data))throw new Error(data.error||'پاسخ محصولات معتبر نیست.');
     products=data;
+    renderCategoryImages();
     cart=cart.map(line=>{const p=products.find(x=>String(x.id)===String(line.product_id));return p?{...line,name:p.name,price:Number(p.sale_price_toman??p.price_toman)}:line;});
     localStorage.setItem('mm_cart',JSON.stringify(cart));
     renderProducts();
