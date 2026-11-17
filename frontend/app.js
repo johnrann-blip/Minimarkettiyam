@@ -15,6 +15,12 @@ function getVisitorId(){
 const visitorId=getVisitorId();
 const visitorHeaders={'X-Avelora-Visitor':visitorId};
 const toman=n=>new Intl.NumberFormat('fa-IR').format(Number(n))+' تومان';
+function renderCategoryImages(){
+ document.querySelectorAll('.category-entry').forEach(button=>{
+  const slug=button.dataset.category;const product=products.find(p=>p.category_slug===slug&&p.image_url);
+  if(product){const image=document.createElement('img');image.src=product.image_url;image.alt=button.querySelector('strong')?.textContent||'تصویر دسته‌بندی';image.loading='lazy';button.querySelector('.category-entry-image')?.replaceChildren(image);}
+ });
+}
 function selectCategory(value){
   category=value;
   $('#categories').querySelectorAll('button').forEach(button=>
@@ -31,15 +37,11 @@ async function loadCategories(){
     if(!response.ok)throw new Error('دریافت دسته‌بندی‌ها ناموفق بود.');
     const cats=await response.json();
     if(!Array.isArray(cats))throw new Error('پاسخ دسته‌بندی‌ها معتبر نیست.');
-    const preferred=[
-      {slug:'bags-accessories',name:'کیف و اکسسوری'},
-      {slug:'beauty',name:'لوازم آرایشی'}
-    ];
-    const available=new Map(cats.map(item=>[item.slug,item]));
-    const ordered=[...preferred.filter(item=>available.has(item.slug)).map(item=>available.get(item.slug)),
-      ...cats.filter(item=>!preferred.some(p=>p.slug===item.slug))];
+    const ordered=cats.filter(item=>item&&item.slug).slice(0,8);
+    const tiles=document.querySelector('.category-entry-grid');
+    if(tiles)tiles.innerHTML=ordered.map(item=>'<button class="category-entry" type="button" data-category="'+escapeHtml(item.slug)+'"><span class="category-entry-image"></span><strong>'+escapeHtml(item.name)+'</strong></button>').join('');
     $('#categories').innerHTML='<button class="active" data-category="">همه محصولات</button>'+
-      ordered.map(item=>`<button type="button" data-category="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</button>`).join('');
+      ordered.map(item=>'<button type="button" data-category="'+escapeHtml(item.slug)+'">'+escapeHtml(item.name)+'</button>').join('');
     $('#categories').querySelectorAll('button').forEach(button=>
       button.addEventListener('click',()=>selectCategory(button.dataset.category))
     );
@@ -47,12 +49,10 @@ async function loadCategories(){
     $('#categories').innerHTML='<span class="category-error">دسته‌بندی‌ها بارگذاری نشدند.</span>';
   }
 }
-document.querySelectorAll('.category-entry').forEach(button=>
-  button.addEventListener('click',()=>{
-    selectCategory(button.dataset.category);
-    $('#products').scrollIntoView({behavior:'smooth',block:'start'});
-  })
-);
+document.querySelector('.category-entry-grid')?.addEventListener('click',event=>{
+ const button=event.target.closest('.category-entry');if(!button)return;
+ selectCategory(button.dataset.category);$('#products').scrollIntoView({behavior:'smooth',block:'start'});
+});
 async function loadProducts(){
   const q=$('#search').value.trim();
   const p=new URLSearchParams();
@@ -63,6 +63,7 @@ async function loadProducts(){
     const data=await response.json();
     if(!response.ok||!Array.isArray(data))throw new Error(data.error||'پاسخ محصولات معتبر نیست.');
     products=data;
+    renderCategoryImages();
     cart=cart.map(line=>{const p=products.find(x=>String(x.id)===String(line.product_id));return p?{...line,name:p.name,price:Number(p.sale_price_toman??p.price_toman)}:line;});
     localStorage.setItem('mm_cart',JSON.stringify(cart));
     renderProducts();
@@ -216,6 +217,9 @@ $('#cartOpen').addEventListener('click',()=>toggleCart(true));
 $('#cartClose').addEventListener('click',()=>toggleCart(false));
 $('#scrim').addEventListener('click',()=>toggleCart(false));
 $('#search').addEventListener('input',()=>loadProducts());
+const headerSearch=document.getElementById('headerSearch');
+if(headerSearch)headerSearch.addEventListener('input',()=>{$('#search').value=headerSearch.value;loadProducts();});
+document.getElementById('mobileCart')?.addEventListener('click',()=>document.getElementById('cartOpen')?.click());
 function normalizeMobile(value){
   let phone=String(value??'').replace(/[۰-۹٠-٩]/g,d=>{
     const code=d.charCodeAt(0);
