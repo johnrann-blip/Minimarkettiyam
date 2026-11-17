@@ -499,3 +499,62 @@ body{background:var(--theme-background);color:var(--theme-text);font-family:var(
 .theme-preview.preview-mobile .preview-custom{width:100%;padding:18px 12px}
 
 .theme-preview:not(.preview-mobile)>section{order:0}
+
+
+/* AVELORA luxury design systems: layout, surfaces, typography and product merchandising */
+:root{--luxury-radius:18px;--luxury-shadow:0 18px 48px rgba(20,15,12,.10);--luxury-line:color-mix(in srgb,var(--theme-text) 13%,transparent)}
+body[data-avelora-design]{background:var(--theme-background);color:var(--theme-text)}
+body[data-avelora-design] .top{height:82px;padding-inline:max(6vw,22px);border-bottom:1px solid color-mix(in srgb,var(--theme-accent) 42%,transparent);box-shadow:0 8px 30px #0000000c}
+body[data-avelora-design] .brand{letter-spacing:2px;font-size:27px}
+body[data-avelora-design] .brand small{letter-spacing:3.5px}
+body[data-avelora-design] .hero-editorial{max-width:1320px;min-height:520px;margin:30px auto;padding:clamp(28px,5vw,76px);border-radius:var(--luxury-radius);box-shadow:var(--luxury-shadow);text-align:right}
+body[data-avelora-design] .hero-copy h1{font-size:clamp(42px,6vw,76px);line-height:1.5;letter-spacing:-1.5px}
+body[data-avelora-design] .hero-copy p{max-width:510px;line-height:2.25;font-size:clamp(15px,1.5vw,19px)}
+body[data-avelora-design] .hero-visual{height:clamp(360px,42vw,540px);border-radius:calc(var(--luxury-radius) - 5px);box-shadow:0 24px 60px #0002}
+body[data-avelora-design] main#products{max-width:1320px;margin:76px auto;padding-inline:clamp(16px,4vw,48px)}
+body[data-avelora-design] .section-head{padding-bottom:22px;border-bottom:1px solid var(--luxury-line)}
+body[data-avelora-design] .section-head h2{font-size:clamp(28px,3vw,40px);letter-spacing:-.5px}
+body[data-avelora-design] .category-entry-grid{gap:16px;margin:24px 0}
+body[data-avelora-design] .category-entry{min-height:120px;border-radius:var(--luxury-radius);background:var(--theme-surface);border-color:var(--luxury-line);box-shadow:0 8px 26px #00000008}
+body[data-avelora-design] .chips button{border-radius:999px;padding:10px 20px}
+body[data-avelora-design] .grid{gap:clamp(12px,2vw,25px)}
+body[data-avelora-design] .product{border-radius:var(--luxury-radius);border-color:var(--luxury-line);background:var(--theme-surface);box-shadow:0 8px 28px #0000000b}
+body[data-avelora-design] .product img,body[data-avelora-design] .product .placeholder{height:clamp(190px,24vw,310px);background:color-mix(in srgb,var(--theme-surface) 88%,var(--theme-accent))}
+body[data-avelora-design] .product-info{padding:18px 18px 12px}
+body[data-avelora-design] .product h3{font-size:14px;line-height:2;color:var(--theme-text)}
+body[data-avelora-design] .price{font-weight:800;color:var(--theme-primary)}
+body[data-avelora-design] .add,body[data-avelora-design] .primary{border-radius:999px;background:var(--theme-primary);color:var(--theme-nav-text);border:1px solid var(--theme-accent);padding:12px 20px}
+body[data-avelora-design] .site-footer{margin-top:90px;border-top:1px solid var(--theme-accent);padding-top:62px}
+body[data-avelora-design] .social-item{border-radius:12px}
+body[data-avelora-design] .theme-promo{border:1px solid var(--luxury-line);border-radius:var(--luxury-radius);box-shadow:var(--luxury-shadow);padding:46px 24px}
+body[data-avelora-design="black-gold"] .hero-editorial{background:radial-gradient(ellipse at 15% 15%,#4b3927 0,transparent 48%),linear-gradient(115deg,#171513,#24201b);border:1px solid #8f7040}
+body[data-avelora-design="black-gold"] .hero-copy h1,body[data-avelora-design="black-gold"] .hero-copy p{color:#f5eee2}
+body[data-avelora-design="black-gold"] .hero-visual{border:1px solid #b89455}
+body[data-avelora-design="black-gold"] .product{border-color:#6f5938}
+body[data-avelora-design="warm-classic"] .hero-editorial{background:linear-gradient(115deg,#e8d8c2,#fff9ef 65%,#d8c1a4)}
+body[data-avelora-design="warm-classic"] .hero-visual{border-radius:48% 48% 12px 12px}
+body[data-avelora-design="emerald-luxe"] .hero-editorial{background:radial-gradient(ellipse at 85% 10%,#42685a,transparent 48%),linear-gradient(120deg,#0d2922,#1d4035);border:1px solid #c5a15b}
+body[data-avelora-design="emerald-luxe"] .hero-copy h1,body[data-avelora-design="emerald-luxe"] .hero-copy p{color:#f1ead9}
+body[data-avelora-design="emerald-luxe"] .hero-visual{border:2px solid #c5a15b}
+body[data-avelora-design="rose-minimal"] .hero-editorial{background:linear-gradient(125deg,#fff,#f9e9e7);border:1px solid #eed4d1;box-shadow:0 18px 55px #b8757818}
+body[data-avelora-design="rose-minimal"] .hero-visual{border-radius:48% 48% 14px 14px}
+body[data-avelora-design="navy-silver"] .hero-editorial{background:linear-gradient(120deg,#dce4ed,#f8fafc 62%,#c8d2df);border:1px solid #9aaabd}
+body[data-avelora-design="navy-silver"] .hero-visual{border:1px solid #9aaabd;border-radius:8px}
+body[data-avelora-design="charcoal-champagne"] .hero-editorial{background:radial-gradient(ellipse at 12% 0,#5a5142,transparent 48%),linear-gradient(120deg,#22211f,#37332d);border:1px solid #c8ae83}
+body[data-avelora-design="charcoal-champagne"] .hero-copy h1,body[data-avelora-design="charcoal-champagne"] .hero-copy p{color:#f4eee3}
+body[data-avelora-design="charcoal-champagne"] .hero-visual{border:1px solid #c8ae83;border-radius:8px}
+@media(max-width:700px){
+ body[data-avelora-design] .top{height:68px;padding-inline:12px}
+ body[data-avelora-design] .brand{font-size:21px}
+ body[data-avelora-design] .hero-editorial{min-height:0;margin:10px;padding:13px;border-radius:14px;gap:12px}
+ body[data-avelora-design] .hero-visual{height:clamp(230px,72vw,360px);border-radius:12px}
+ body[data-avelora-design] .hero-copy{padding:10px 8px 15px}
+ body[data-avelora-design] .hero-copy h1{font-size:clamp(31px,9vw,45px);line-height:1.45}
+ body[data-avelora-design] main#products{margin:42px auto;padding-inline:12px}
+ body[data-avelora-design] .grid{gap:10px}
+ body[data-avelora-design] .product{border-radius:12px}
+ body[data-avelora-design] .product img,body[data-avelora-design] .product .placeholder{height:clamp(150px,48vw,220px)}
+ body[data-avelora-design] .product-info{padding:10px 9px 7px}
+ body[data-avelora-design] .add{width:calc(100% - 16px);margin:0 8px 9px;padding:9px 5px;font-size:10px}
+ body[data-avelora-design] .site-footer{margin-top:52px;padding:36px 12px 0}
+}
