@@ -5,6 +5,15 @@
     if(!response.ok)return;
     const theme=await response.json();
     const root=document.documentElement,colors=theme.colors||{};
+    const luxuryThemes=[
+      ['black-gold','#11100f','#b89455','#090909'],['warm-classic','#f3eadc','#684632','#3d2b21'],
+      ['emerald-luxe','#102b25','#c5a15b','#0a211c'],['rose-minimal','#fffafa','#b87578','#fff4f2'],
+      ['navy-silver','#eef1f5','#344b68','#17283e'],['charcoal-champagne','#242321','#c8ae83','#191817']
+    ];
+    const matched=luxuryThemes.find(([id,bg,primary,nav])=>colors.background?.toLowerCase()===bg&&colors.primary?.toLowerCase()===primary&&colors.navBackground?.toLowerCase()===nav);
+    const design=matched?.[0]||'classic';
+    document.body.dataset.aveloraDesign=design;
+    root.dataset.aveloraDesign=design;
     const vars={background:'--theme-background',surface:'--theme-surface',text:'--theme-text',primary:'--theme-primary',navBackground:'--theme-nav-background',navText:'--theme-nav-text',accent:'--theme-accent'};
     Object.entries(vars).forEach(([key,name])=>{if(/^#[0-9a-f]{6}$/i.test(colors[key]||''))root.style.setProperty(name,colors[key]);});
     const fonts={Vazirmatn:'Vazirmatn,Tahoma,sans-serif',Tahoma:'Tahoma,sans-serif',Arial:'Arial,sans-serif',Georgia:'Georgia,serif'};
