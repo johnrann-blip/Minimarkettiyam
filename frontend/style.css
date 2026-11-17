@@ -645,3 +645,84 @@ body[data-avelora-design="charcoal-champagne"] .product{border-radius:8px;backgr
  body[data-avelora-design] .section-head h2{font-size:25px}
  body[data-avelora-design] .site-footer{margin-top:42px;padding:34px 14px}
 }
+
+
+/* AVELORA six preset layouts — structural differences, not palette-only skins */
+#themeSectionsRoot{display:flex;flex-direction:column;gap:0;min-width:0}
+#themeSectionsRoot>.theme-custom-section{width:min(1240px,calc(100% - 32px));margin:28px auto;padding:clamp(20px,4vw,48px)}
+#themeSectionsRoot>.theme-custom-section img{display:block;max-width:100%;height:auto;max-height:420px;object-fit:cover;border-radius:14px}
+#themeSectionsRoot>.theme-custom-section h2{font-size:clamp(22px,3vw,34px)}
+#themeSectionsRoot>.theme-custom-section p{line-height:2}
+body.avelora-theme-active .hero-editorial{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(280px,.92fr);align-items:center;gap:clamp(20px,4vw,64px)}
+body.avelora-theme-active .hero-copy{min-width:0}
+body.avelora-theme-active .hero-visual{min-width:0}
+body.avelora-theme-active .hero-visual img{display:block;width:100%;height:100%;object-fit:cover}
+body.avelora-theme-active .site-footer{width:100%}
+body.avelora-theme-active .theme-mobile-hidden{display:none!important}
+body.avelora-theme-active .theme-desktop-hidden{display:none!important}
+
+/* 1 — Black Gold: cinematic split hero and compact editorial product tiles */
+body[data-avelora-design="black-gold"] .hero-editorial{grid-template-columns:1.05fr .95fr!important;min-height:610px;border-radius:2px;padding:clamp(28px,6vw,88px);background-image:linear-gradient(105deg,#11100f 0%,#211c16 100%)}
+body[data-avelora-design="black-gold"] .hero-visual{height:clamp(390px,44vw,570px);border-radius:2px}
+body[data-avelora-design="black-gold"] .hero-copy{border-right:2px solid #b89455;padding-right:clamp(18px,3vw,42px)}
+body[data-avelora-design="black-gold"] main#products .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+body[data-avelora-design="black-gold"] .product{border-radius:2px}
+body[data-avelora-design="black-gold"] .product img,body[data-avelora-design="black-gold"] .product .placeholder{height:clamp(230px,27vw,340px)}
+
+/* 2 — Warm Classic: centered boutique masthead and soft, framed product catalog */
+body[data-avelora-design="warm-classic"] .hero-editorial{display:flex!important;flex-direction:column-reverse;justify-content:center;gap:26px;max-width:1120px;min-height:0;text-align:center;border-radius:4px;background:linear-gradient(145deg,#f3eadc,#fffaf2);padding:clamp(24px,5vw,64px)}
+body[data-avelora-design="warm-classic"] .hero-copy{max-width:760px;text-align:center}
+body[data-avelora-design="warm-classic"] .hero-copy p{margin-inline:auto}
+body[data-avelora-design="warm-classic"] .hero-visual{width:min(100%,760px);height:clamp(260px,38vw,430px);border:9px solid #fff8ed;border-radius:3px;box-shadow:0 15px 40px #68463220}
+body[data-avelora-design="warm-classic"] main#products .grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+body[data-avelora-design="warm-classic"] .product{border-radius:4px;box-shadow:0 8px 28px #68463212}
+body[data-avelora-design="warm-classic"] .product img,body[data-avelora-design="warm-classic"] .product .placeholder{height:clamp(220px,26vw,320px)}
+
+/* 3 — Emerald Luxe: asymmetric image-led hero and tall framed product cards */
+body[data-avelora-design="emerald-luxe"] .hero-editorial{grid-template-columns:.82fr 1.18fr!important;min-height:590px;border-radius:4px;background:linear-gradient(130deg,#102b25,#1e4035);padding:clamp(24px,5vw,72px)}
+body[data-avelora-design="emerald-luxe"] .hero-visual{grid-column:2;grid-row:1;height:clamp(390px,45vw,560px);border-radius:3px}
+body[data-avelora-design="emerald-luxe"] .hero-copy{grid-column:1;grid-row:1}
+body[data-avelora-design="emerald-luxe"] main#products .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(10px,1.6vw,20px)}
+body[data-avelora-design="emerald-luxe"] .product{border-radius:3px;border-bottom:3px solid #c5a15b}
+body[data-avelora-design="emerald-luxe"] .product img,body[data-avelora-design="emerald-luxe"] .product .placeholder{height:clamp(210px,25vw,310px)}
+
+/* 4 — Rose Minimal: airy centered hero, oval image and quiet floating cards */
+body[data-avelora-design="rose-minimal"] .hero-editorial{display:flex!important;flex-direction:column-reverse;align-items:center;gap:22px;max-width:1080px;min-height:0;text-align:center;border:0;border-radius:34px;background:#fff;padding:clamp(24px,5vw,70px);box-shadow:0 22px 70px #b8757818}
+body[data-avelora-design="rose-minimal"] .hero-copy{text-align:center;max-width:720px}
+body[data-avelora-design="rose-minimal"] .hero-copy p{margin-inline:auto}
+body[data-avelora-design="rose-minimal"] .hero-visual{width:min(78%,650px);height:clamp(250px,35vw,410px);border-radius:48% 48% 46% 12px}
+body[data-avelora-design="rose-minimal"] main#products .grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,2.4vw,30px)}
+body[data-avelora-design="rose-minimal"] .product{border:0;border-radius:22px;box-shadow:0 12px 36px #b8757816}
+body[data-avelora-design="rose-minimal"] .product img,body[data-avelora-design="rose-minimal"] .product .placeholder{height:clamp(220px,26vw,330px);border-radius:22px 22px 0 0}
+
+/* 5 — Navy Silver: architectural reverse split and five-column desktop gallery */
+body[data-avelora-design="navy-silver"] .hero-editorial{grid-template-columns:1.15fr .85fr!important;min-height:560px;border-radius:0;background:linear-gradient(120deg,#e2e8ef,#f8fafc);border-block:1px solid #aab8c8;padding:clamp(24px,5vw,68px)}
+body[data-avelora-design="navy-silver"] .hero-visual{grid-column:1;grid-row:1;height:clamp(360px,40vw,500px);border-radius:0}
+body[data-avelora-design="navy-silver"] .hero-copy{grid-column:2;grid-row:1}
+body[data-avelora-design="navy-silver"] main#products .grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+body[data-avelora-design="navy-silver"] .product{border-radius:2px;box-shadow:0 8px 22px #17283e12}
+body[data-avelora-design="navy-silver"] .product img,body[data-avelora-design="navy-silver"] .product .placeholder{height:clamp(170px,19vw,250px)}
+
+/* 6 — Charcoal Champagne: editorial split, dark surfaces and oversized merchandising */
+body[data-avelora-design="charcoal-champagne"] .hero-editorial{grid-template-columns:.92fr 1.08fr!important;min-height:600px;border-radius:8px;background:linear-gradient(120deg,#242321,#3a3731);padding:clamp(28px,5.5vw,80px)}
+body[data-avelora-design="charcoal-champagne"] .hero-visual{height:clamp(390px,44vw,550px);border-radius:8px}
+body[data-avelora-design="charcoal-champagne"] .hero-copy{padding-inline:8px}
+body[data-avelora-design="charcoal-champagne"] main#products .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(14px,2vw,24px)}
+body[data-avelora-design="charcoal-champagne"] .product{border-radius:8px;background:#302e2a;border-color:#625744;box-shadow:0 16px 40px #0003}
+body[data-avelora-design="charcoal-champagne"] .product img,body[data-avelora-design="charcoal-champagne"] .product .placeholder{height:clamp(220px,25vw,320px)}
+body[data-avelora-design="charcoal-champagne"] .product-info{padding:18px}
+
+@media(max-width:760px){
+ body.avelora-theme-active .hero-editorial{width:calc(100% - 20px);min-height:0;grid-template-columns:1fr!important;margin:12px auto 34px;padding:16px;gap:14px}
+ body.avelora-theme-active .hero-copy,body.avelora-theme-active .hero-visual{grid-column:1!important;grid-row:auto!important}
+ body.avelora-theme-active .hero-visual{width:100%;height:clamp(220px,68vw,340px);border-radius:12px}
+ body.avelora-theme-active main#products .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ body.avelora-theme-active .product img,body.avelora-theme-active .product .placeholder{height:clamp(150px,48vw,220px)}
+ body[data-avelora-design="warm-classic"] .hero-editorial,body[data-avelora-design="rose-minimal"] .hero-editorial{display:flex!important;flex-direction:column-reverse}
+ body[data-avelora-design="warm-classic"] .hero-visual,body[data-avelora-design="rose-minimal"] .hero-visual{width:100%;height:clamp(220px,65vw,320px)}
+ body[data-avelora-design="black-gold"] main#products .grid,body[data-avelora-design="warm-classic"] main#products .grid,body[data-avelora-design="rose-minimal"] main#products .grid,body[data-avelora-design="navy-silver"] main#products .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(min-width:761px) and (max-width:1050px){
+ body[data-avelora-design="navy-silver"] main#products .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ body[data-avelora-design="black-gold"] main#products .grid,body[data-avelora-design="warm-classic"] main#products .grid,body[data-avelora-design="rose-minimal"] main#products .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
