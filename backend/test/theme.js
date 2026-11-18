@@ -1,8 +1,15 @@
 'use strict';
 const assert=require('node:assert/strict');
-const {DEFAULT_THEME,normalizeConfig}=require('../src/theme');
+const {DEFAULT_THEME,normalizeConfig,THEME_DESIGNS}=require('../src/theme');
+const fs=require('node:fs');
+const path=require('node:path');
 const valid=normalizeConfig(DEFAULT_THEME);
 assert.equal(valid.font,'Vazirmatn');
+assert.equal(valid.designId,'classic');
+for(const design of THEME_DESIGNS) assert.equal(normalizeConfig({...DEFAULT_THEME,designId:design}).designId,design);
+const css=fs.readFileSync(path.join(__dirname,'../../frontend/style.css'),'utf8');
+for(const design of THEME_DESIGNS.filter(x=>x!=='classic')) assert.match(css,new RegExp('body\\[data-avelora-design="'+design+'"\\]'));
+assert.doesNotMatch(css,/Keep the approved cream, black and champagne art direction regardless of the previously saved palette/);
 assert.equal(valid.sections.length,4);
 const custom=normalizeConfig({...DEFAULT_THEME,sections:[{id:'hero',type:'hero'},{id:'custom-1',type:'custom',title:'درباره ما',text:'متن',backgroundColor:'#eeeeee',mobileOrder:1,linkUrl:'/category/bags'}]});
 assert.equal(custom.sections[1].type,'custom');

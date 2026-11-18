@@ -818,23 +818,17 @@ main#products{max-width:1440px;margin:24px auto 70px;padding:0 clamp(14px,3vw,36
 }
 @media(max-width:380px){.service-strip span:last-child{display:none}.category-entry-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
-/* Keep the approved cream, black and champagne art direction regardless of the previously saved palette */
-body[data-avelora-design]{background:#fffaf5!important;color:#211b17!important}
-body[data-avelora-design] .top{background:#fffaf5!important;color:#211b17!important;border-color:#e9dfd3!important;box-shadow:0 5px 20px #24180f0b!important}
-body[data-avelora-design] .brand{color:#9a7139!important}
-body[data-avelora-design] .account-open,body[data-avelora-design] .cart{color:#211b17!important;border-color:#d5c2a8!important}
-body[data-avelora-design] .hero-editorial{background:#171411!important;color:#fff!important;border:0!important;border-radius:0!important;box-shadow:none!important}
-body[data-avelora-design] .hero-copy{background:radial-gradient(ellipse at 80% 20%,#46331f,#171411 65%)!important}
-body[data-avelora-design] .hero-copy h1,body[data-avelora-design] .hero-copy p{color:#fff!important}
-body[data-avelora-design] .category-entry,body[data-avelora-design] .product{background:#fff!important;color:#211b17!important;border:1px solid #e9dfd3!important;box-shadow:0 8px 24px #2b1d100c!important}
-body[data-avelora-design] .category-entry strong,body[data-avelora-design] .product h3{color:#211b17!important}
-body[data-avelora-design] .section-head h2{color:#211b17!important}
-body[data-avelora-design] .add,body[data-avelora-design] .primary{background:linear-gradient(110deg,#f6d98f,#c18a3f)!important;color:#24190e!important;border-color:#c59a52!important}
-body[data-avelora-design] .site-footer{background:#211b17!important;color:#f2e6d4!important}
-
-body[data-avelora-design] .hero-editorial{width:100%!important;max-width:none!important;min-height:390px!important;margin:0!important;padding:0!important;border-radius:0!important}
-body[data-avelora-design] .chips button{background:#fff!important;color:#35271c!important;border-color:#e5d7c5!important}
-body[data-avelora-design] .chips button.active{background:#c69a50!important;color:#21170d!important;border-color:#c69a50!important}
-body[data-avelora-design] .dialog-head{background:#211b17!important;color:#fffaf5!important}
-body[data-avelora-design] .account-dialog,body[data-avelora-design] .cart-panel{background:#fffaf5!important;color:#211b17!important}
-@media(max-width:760px){body[data-avelora-design] .hero-editorial{width:100%!important;margin:0!important;padding:0!important;min-height:0!important}}
+/* Theme-aware storefront surfaces: preserve each preset's own palette and layout. */
+body[data-avelora-design] .top{background:var(--theme-nav-background)!important;color:var(--theme-nav-text)!important}
+body[data-avelora-design] .brand,body[data-avelora-design] .top .account-open,body[data-avelora-design] .top .cart{color:var(--theme-nav-text)!important}
+body[data-avelora-design] .category-entry{background:var(--theme-surface);color:var(--theme-text);border-color:color-mix(in srgb,var(--theme-accent) 42%,transparent)}
+body[data-avelora-design] .category-entry strong,body[data-avelora-design] .product h3{color:var(--theme-text)}
+body[data-avelora-design] .section-head h2{color:var(--theme-text)}
+body[data-avelora-design] .product{background:var(--theme-surface);color:var(--theme-text);border-color:color-mix(in srgb,var(--theme-accent) 42%,transparent)}
+body[data-avelora-design] .add,body[data-avelora-design] .primary{background:var(--theme-primary);color:var(--theme-nav-text);border-color:var(--theme-accent)}
+body[data-avelora-design] .site-footer{background:var(--theme-nav-background);color:var(--theme-nav-text);border-top:2px solid var(--theme-accent)}
+body[data-avelora-design] .chips button{background:var(--theme-surface);color:var(--theme-text);border-color:var(--theme-accent)}
+body[data-avelora-design] .chips button.active{background:var(--theme-primary);color:var(--theme-nav-text)}
+body[data-avelora-design] .dialog-head{background:var(--theme-nav-background);color:var(--theme-nav-text)}
+body[data-avelora-design] .account-dialog,body[data-avelora-design] .cart-panel,body[data-avelora-design] .product-dialog{background:var(--theme-surface);color:var(--theme-text)}
+@media(max-width:760px){body[data-avelora-design] .hero-editorial{width:calc(100% - 20px)!important;margin:12px auto 34px!important;padding:16px!important;min-height:0!important;border-radius:16px!important}}
