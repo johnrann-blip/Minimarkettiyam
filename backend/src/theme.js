@@ -1,7 +1,9 @@
 'use strict';
 const express = require('express');
 
+const THEME_DESIGNS = ['classic','black-gold','warm-classic','emerald-luxe','rose-minimal','navy-silver','charcoal-champagne'];
 const DEFAULT_THEME = Object.freeze({
+  designId: 'classic',
   colors: { background:'#fbf9f5', surface:'#ffffff', text:'#29221e', primary:'#3b281f', navBackground:'#3b281f', navText:'#ffffff', accent:'#b68a4c' },
   font: 'Vazirmatn',
   logoUrl: '',
@@ -62,8 +64,9 @@ function normalizeConfig(input) {
     return {id,type,enabled:s.enabled!==false,desktopEnabled:s.desktopEnabled!==false&&s.enabled!==false,mobileEnabled:s.mobileEnabled!==false&&s.enabled!==false,mobileOrder:Number.isInteger(Number(s.mobileOrder))?Math.max(0,Math.min(30,Number(s.mobileOrder))):i,title:String(s.title||'').slice(0,100),text:String(s.text||'').slice(0,600),imageUrl:safeUrl(s.imageUrl),linkUrl:safeLink(s.linkUrl),buttonText:String(s.buttonText||'مشاهده').slice(0,40),backgroundColor:backgroundColor.toLowerCase()};
   });
   const promo=input.promo&&typeof input.promo==='object'?input.promo:{};
+  const designId=THEME_DESIGNS.includes(input.designId)?input.designId:'classic';
   return {
-    colors,font,logoUrl:safeUrl(input.logoUrl),heroImageUrl:safeUrl(input.heroImageUrl),
+    designId,colors,font,logoUrl:safeUrl(input.logoUrl),heroImageUrl:safeUrl(input.heroImageUrl),
     heroSlides:(Array.isArray(input.heroSlides)?input.heroSlides:[]).slice(0,10).map((slide,i)=>({id:String(slide.id||('slide-'+(i+1))).replace(/[^a-z0-9_-]/gi,'').slice(0,40),enabled:slide.enabled!==false,imageUrl:safeUrl(slide.imageUrl),title:String(slide.title||'').slice(0,120),text:String(slide.text||'').slice(0,400),linkUrl:safeLink(slide.linkUrl),buttonText:String(slide.buttonText||'همین حالا خرید کنید').slice(0,40)})).filter(slide=>slide.imageUrl),
     backgroundImageUrl:safeUrl(input.backgroundImageUrl),
     sections:normalized,
@@ -110,4 +113,4 @@ function createThemeAdminRouter({pool}) {
   });
   return router;
 }
-module.exports={createThemePublicRouter,createThemeAdminRouter,DEFAULT_THEME,normalizeConfig};
+module.exports={createThemePublicRouter,createThemeAdminRouter,DEFAULT_THEME,normalizeConfig,THEME_DESIGNS};
