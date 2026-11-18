@@ -1,7 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const colorLabels={background:'پس‌زمینه صفحه',surface:'پس‌زمینه کارت‌ها',text:'رنگ نوشته‌ها',primary:'رنگ اصلی دکمه‌ها',navBackground:'پس‌زمینه منو',navText:'رنگ نوشته منو',accent:'رنگ تأکیدی'};
-const defaults={colors:{background:'#fbf9f5',surface:'#ffffff',text:'#29221e',primary:'#3b281f',navBackground:'#3b281f',navText:'#ffffff',accent:'#b68a4c'},font:'Vazirmatn',logoUrl:'',heroImageUrl:'',heroSlides:[],backgroundImageUrl:'',sections:[{id:'hero',type:'hero',enabled:true,title:'استایل خاص، با AVELORA',text:'کیف، اکسسوری و زیبایی؛ انتخاب‌هایی برای درخشش هر روز تو'},{id:'products',type:'products',enabled:true,title:'محصولات'},{id:'feedback',type:'feedback',enabled:true,title:'نظرت برای ما ارزشمنده'},{id:'footer',type:'footer',enabled:true,title:'ارتباط با ما'}],promo:{enabled:false,title:'',text:'',imageUrl:'',linkUrl:'',buttonText:'مشاهده'}};
+const defaults={designId:'classic',colors:{background:'#fbf9f5',surface:'#ffffff',text:'#29221e',primary:'#3b281f',navBackground:'#3b281f',navText:'#ffffff',accent:'#b68a4c'},font:'Vazirmatn',logoUrl:'',heroImageUrl:'',heroSlides:[],backgroundImageUrl:'',sections:[{id:'hero',type:'hero',enabled:true,title:'استایل خاص، با AVELORA',text:'کیف، اکسسوری و زیبایی؛ انتخاب‌هایی برای درخشش هر روز تو'},{id:'products',type:'products',enabled:true,title:'محصولات'},{id:'feedback',type:'feedback',enabled:true,title:'نظرت برای ما ارزشمنده'},{id:'footer',type:'footer',enabled:true,title:'ارتباط با ما'}],promo:{enabled:false,title:'',text:'',imageUrl:'',linkUrl:'',buttonText:'مشاهده'}};
 
 const luxuryPresets=[
  {id:'black-gold',name:'مشکی و طلایی',tag:'BLACK GOLD',description:'شکوه جسورانه با تضاد عمیق و جزئیات طلایی',font:'Vazirmatn',colors:{background:'#11100f',surface:'#1d1a17',text:'#f5eee2',primary:'#b89455',navBackground:'#090909',navText:'#f5e6c8',accent:'#d6b36b'},sections:[{id:'hero',type:'hero',enabled:true,title:'درخشش، امضای انتخاب تو',text:'کالکشن منتخب AVELORA؛ ظرافتی که دیده می‌شود'},{id:'products',type:'products',enabled:true,title:'منتخب‌های خاص برای تو'},{id:'feedback',type:'feedback',enabled:true,title:'تجربه مشتریان ما'},{id:'footer',type:'footer',enabled:true,title:'همراه تو در انتخابی خاص'}]},
@@ -49,7 +49,7 @@ function applyPreset(id){
  if(!confirm('قالب «'+preset.name+'» بارگذاری شود؟ تغییرات ذخیره‌نشده فرم جایگزین می‌شود؛ تصاویر و لوگوی فعلی حفظ خواهند شد.'))return;
  readForm();
  const keep={logoUrl:config.logoUrl,heroImageUrl:config.heroImageUrl,heroSlides:structuredClone(config.heroSlides),backgroundImageUrl:config.backgroundImageUrl,promo:structuredClone(config.promo)};
- fill({...structuredClone(defaults),colors:{...preset.colors},font:preset.font,sections:structuredClone(preset.sections),...keep});
+ fill({...structuredClone(defaults),designId:preset.id,colors:{...preset.colors},font:preset.font,sections:structuredClone(preset.sections),...keep});
  document.querySelectorAll('[data-preset-card]').forEach(card=>card.classList.toggle('selected',card.dataset.presetCard===id));
  setMessage('قالب «'+preset.name+'» بارگذاری شد. برای اعمال روی سایت، پیش‌نویس را ذخیره و سپس در صورت اطمینان منتشر کن.');
 }
@@ -70,7 +70,7 @@ function preview(){
  readForm();const p=$('preview'),c=config.colors;
  const themes=[['black-gold','#11100f','#b89455','#090909'],['warm-classic','#f3eadc','#684632','#3d2b21'],['emerald-luxe','#102b25','#c5a15b','#0a211c'],['rose-minimal','#fffafa','#b87578','#fff4f2'],['navy-silver','#eef1f5','#344b68','#17283e'],['charcoal-champagne','#242321','#c8ae83','#191817']];
  const matched=themes.find(([id,bg,primary,nav])=>c.background.toLowerCase()===bg&&c.primary.toLowerCase()===primary&&c.navBackground.toLowerCase()===nav);
- const design=matched?.[0]||'classic';p.dataset.design=design;p.className='theme-preview'+(p.classList.contains('preview-mobile')?' preview-mobile':'');
+ const design=config.designId||matched?.[0]||'classic';p.dataset.design=design;p.className='theme-preview'+(p.classList.contains('preview-mobile')?' preview-mobile':'');
  const mobile=p.classList.contains('preview-mobile');
  const logo=config.logoUrl?'<img class="theme-logo" src="'+esc(config.logoUrl)+'" alt="AVELORA">':'<b>AVELORA</b><small>BAGS · BEAUTY · MORE</small>';
  const products='<div class="preview-product-grid"><article><i></i><b>محصول منتخب</b><small>قیمت محصول</small></article><article><i></i><b>تازه‌های فروشگاه</b><small>قیمت محصول</small></article><article><i></i><b>انتخاب ویژه</b><small>قیمت محصول</small></article></div>';
