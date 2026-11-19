@@ -82,7 +82,7 @@ $('#imageFile').addEventListener('change',()=>{
   if(files.some(file=>!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024)){
     message('هر عکس باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.');$('#imageFile').value='';return;
   }
-  $('#imagePreview').innerHTML=files.map(file=>'<img alt="پیش‌نمایش عکس محصول" style="max-width:100px;max-height:100px;object-fit:contain" src="'+URL.createObjectURL(file)+'">').join('');
+  $('#imagePreview').innerHTML=files.map(file=>'<img class="admin-preview-image" alt="پیش‌نمایش عکس محصول" src="'+URL.createObjectURL(file)+'">').join('');
   message(files.length+' عکس انتخاب شد.');
 });
 
@@ -99,7 +99,7 @@ function renderDashboard(){
     if(revenueEl)revenueEl.textContent=faNumber(revenue);
     const counts=[['در انتظار پرداخت', 'awaiting_payment'],['پرداخت‌شده', 'paid'],['آماده‌سازی', 'preparing'],['ارسال‌شده', 'shipped'],['تکمیل‌شده', 'completed'],['لغوشده', 'cancelled']];
     const chart=$('#orderStatusChart');
-    if(chart){const max=Math.max(1,...counts.map(([,key])=>rows.filter(o=>o.status===key).length));chart.innerHTML=counts.map(([label,key])=>{const count=rows.filter(o=>o.status===key).length;return '<div class="status-row"><span>'+label+'</span><div class="status-track"><i style="width:'+Math.round(count/max*100)+'%"></i></div><b>'+faNumber(count)+'</b></div>'}).join('')||'<p class="muted">سفارشی ثبت نشده است.</p>';}
+    if(chart){const max=Math.max(1,...counts.map(([,key])=>rows.filter(o=>o.status===key).length));chart.innerHTML=counts.map(([label,key])=>{const count=rows.filter(o=>o.status===key).length;return '<div class="status-row"><span>'+label+'</span><div class="status-track"><progress max="100" value="'+Math.round(count/max*100)+'">'+Math.round(count/max*100)+'%</progress></div><b>'+faNumber(count)+'</b></div>'}).join('')||'<p class="muted">سفارشی ثبت نشده است.</p>';}
   }
   if(dashboardData.products){const active=dashboardData.products.filter(isProductActive);if(productEl)productEl.textContent=faNumber(active.length);if(lowEl)lowEl.textContent=faNumber(active.filter(p=>Number(p.stock)<=3).length);}
 }
@@ -371,7 +371,7 @@ $('#products').addEventListener('click', async event => {
       form.elements.stock.value = p.stock;
       form.elements.image_url.value = p.image_url || '';
       window.currentProductImages=(p.images||[]).map(x=>x.image_url);
-      $('#imagePreview').innerHTML=window.currentProductImages.map(url=>'<img alt="عکس فعلی محصول" style="max-width:100px;max-height:100px;object-fit:contain" src="'+escapeHtml(url)+'">').join('');
+      $('#imagePreview').innerHTML=window.currentProductImages.map(url=>'<img class="admin-preview-image" alt="عکس فعلی محصول" src="'+escapeHtml(url)+'">').join('');
       $('#productColors').innerHTML='';
       (p.colors||[]).forEach(color=>addColorRow(color));
       form.elements.image_file.value = '';
@@ -692,5 +692,10 @@ $('#feedbackList').addEventListener('click',async event=>{
     await loadFeedback();
   }catch(error){message(error.message);button.disabled=false;}
 });
+
+// The dashboard uses an external script so the production CSP can remain strict.
+try { document.documentElement.dataset.adminTheme = localStorage.getItem('avelora-admin-theme') === 'light' ? 'light' : 'dark'; } catch { document.documentElement.dataset.adminTheme = 'dark'; }
+const adminThemeToggle=$('#adminThemeToggle');
+if(adminThemeToggle){const paintThemeButton=()=>{adminThemeToggle.textContent=document.documentElement.dataset.adminTheme==='dark'?'☼ حالت روشن':'☾ حالت تیره';};paintThemeButton();adminThemeToggle.addEventListener('click',()=>{const next=document.documentElement.dataset.adminTheme==='dark'?'light':'dark';document.documentElement.dataset.adminTheme=next;try{localStorage.setItem('avelora-admin-theme',next);}catch{}paintThemeButton();});}
 
 checkAdminSession();
