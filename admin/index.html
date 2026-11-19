@@ -37,14 +37,14 @@
     <div class="sidebar-caption">مدیریت فروشگاه</div>
     <nav class="admin-nav">
       <a class="is-current" href="#overviewPanel"><span>◈</span> داشبورد اصلی</a>
-      <a href="#ordersAdmin"><span>▣</span> سفارش‌ها</a>
-      <a href="#productAdmin"><span>▧</span> افزودن محصول</a>
-      <a href="#productsAdmin"><span>◇</span> فهرست محصولات</a>
-      <a href="#archiveAdmin"><span>▤</span> بایگانی محصولات</a>
-      <a href="#customerAdmin"><span>♙</span> مشتریان</a>
-      <a href="#feedbackAdmin"><span>✧</span> دیدگاه‌ها</a>
-      <a href="#storeSettings"><span>⚙</span> تنظیمات فروشگاه</a>
-      <a href="#managerAdmin"><span>♧</span> مدیران و دسترسی‌ها</a>
+      <a href="#ordersAdmin" data-admin-access="orders"><span>▣</span> سفارش‌ها</a>
+      <a href="#productAdmin" data-admin-access="product-edit"><span>▧</span> افزودن محصول</a>
+      <a href="#productsAdmin" data-admin-access="products"><span>◇</span> فهرست محصولات</a>
+      <a href="#archiveAdmin" data-admin-access="archive"><span>▤</span> بایگانی محصولات</a>
+      <a href="#customerAdmin" data-admin-access="customers"><span>♙</span> مشتریان</a>
+      <a href="#feedbackAdmin" data-admin-access="owner"><span>✧</span> دیدگاه‌ها</a>
+      <a href="#storeSettings" data-admin-access="owner"><span>⚙</span> تنظیمات فروشگاه</a>
+      <a href="#managerAdmin" data-admin-access="owner"><span>♧</span> مدیران و دسترسی‌ها</a>
     </nav>
     <div class="sidebar-bottom"><span class="live-dot"></span> پنل مدیریت AVELORA</div>
   </aside>
@@ -59,7 +59,7 @@
         <article class="metric-card"><span class="metric-icon">◇</span><span class="metric-label">محصولات فعال</span><strong id="metricProducts">—</strong><small>در فهرست فروشگاه</small></article>
         <article class="metric-card"><span class="metric-icon">⌁</span><span class="metric-label">محصولات کم‌موجودی</span><strong id="metricLowStock">—</strong><small>موجودی ۳ عدد یا کمتر</small></article>
       </div>
-      <div class="overview-lower"><article class="insight-card"><div class="card-heading"><div><span class="eyebrow">ORDER FLOW</span><h3>وضعیت سفارش‌ها</h3></div><span class="muted">بر اساس فهرست دریافتی</span></div><div id="orderStatusChart" class="status-chart"><p class="muted">پس از دریافت اطلاعات سفارش‌ها نمایش داده می‌شود.</p></div></article><article class="insight-card"><div class="card-heading"><div><span class="eyebrow">QUICK ACCESS</span><h3>دسترسی سریع</h3></div></div><div class="quick-links"><a href="#productAdmin"><span>＋</span><b>افزودن محصول</b><small>ثبت کالای جدید</small></a><a href="#ordersAdmin"><span>↗</span><b>پیگیری سفارش‌ها</b><small>مشاهده و به‌روزرسانی</small></a><a href="#storeSettings"><span>⚙</span><b>تنظیمات فروشگاه</b><small>اطلاعات و پرداخت</small></a></div></article></div>
+      <div class="overview-lower"><article class="insight-card"><div class="card-heading"><div><span class="eyebrow">ORDER FLOW</span><h3>وضعیت سفارش‌ها</h3></div><span class="muted">بر اساس فهرست دریافتی</span></div><div id="orderStatusChart" class="status-chart"><p class="muted">پس از دریافت اطلاعات سفارش‌ها نمایش داده می‌شود.</p></div></article><article class="insight-card"><div class="card-heading"><div><span class="eyebrow">QUICK ACCESS</span><h3>دسترسی سریع</h3></div></div><div class="quick-links"><a href="#productAdmin" data-admin-access="product-edit"><span>＋</span><b>افزودن محصول</b><small>ثبت کالای جدید</small></a><a href="#ordersAdmin" data-admin-access="orders"><span>↗</span><b>پیگیری سفارش‌ها</b><small>مشاهده و به‌روزرسانی</small></a><a href="#storeSettings" data-admin-access="owner"><span>⚙</span><b>تنظیمات فروشگاه</b><small>اطلاعات و پرداخت</small></a></div></article></div>
     </section>
 
     <button id="logoutButton" type="button">خروج از حساب مدیریت</button>
