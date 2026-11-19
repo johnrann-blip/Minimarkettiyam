@@ -86,6 +86,24 @@ $('#imageFile').addEventListener('change',()=>{
   message(files.length+' عکس انتخاب شد.');
 });
 
+
+const dashboardData = { orders:null, products:null };
+const faNumber = value => Number(value || 0).toLocaleString('fa-IR');
+function renderDashboard(){
+  const orderEl=$('#metricOrders'), revenueEl=$('#metricRevenue'), productEl=$('#metricProducts'), lowEl=$('#metricLowStock');
+  if(dashboardData.orders){
+    const rows=dashboardData.orders;
+    if(orderEl)orderEl.textContent=faNumber(rows.length);
+    const verified=rows.filter(o=>o.payment_status==='verified' && o.status!=='cancelled');
+    const revenue=verified.reduce((sum,o)=>sum+Number(o.total_toman||0),0);
+    if(revenueEl)revenueEl.textContent=faNumber(revenue);
+    const counts=[['در انتظار پرداخت', 'awaiting_payment'],['پرداخت‌شده', 'paid'],['آماده‌سازی', 'preparing'],['ارسال‌شده', 'shipped'],['تکمیل‌شده', 'completed'],['لغوشده', 'cancelled']];
+    const chart=$('#orderStatusChart');
+    if(chart){const max=Math.max(1,...counts.map(([,key])=>rows.filter(o=>o.status===key).length));chart.innerHTML=counts.map(([label,key])=>{const count=rows.filter(o=>o.status===key).length;return '<div class="status-row"><span>'+label+'</span><div class="status-track"><i style="width:'+Math.round(count/max*100)+'%"></i></div><b>'+faNumber(count)+'</b></div>'}).join('')||'<p class="muted">سفارشی ثبت نشده است.</p>';}
+  }
+  if(dashboardData.products){const active=dashboardData.products.filter(isProductActive);if(productEl)productEl.textContent=faNumber(active.length);if(lowEl)lowEl.textContent=faNumber(active.filter(p=>Number(p.stock)<=3).length);}
+}
+
 async function loadAdminWorkspace(admin) {
   $('#adminWorkspace').hidden = false;
   const owner = admin?.role === 'owner';
@@ -302,6 +320,7 @@ async function products() {
   try {
     const data = await request('/api/admin/products');
     if (!Array.isArray(data)) throw new Error('پاسخ فهرست محصولات معتبر نیست.');
+    dashboardData.products=data;renderDashboard();
     const activeProducts = data.filter(isProductActive);
     const archivedProducts = data.filter(p => !isProductActive(p));
 
@@ -570,6 +589,7 @@ async function orders() {
   try {
     const data = await request('/api/admin/orders');
     if (!Array.isArray(data)) throw new Error('پاسخ سفارش‌ها معتبر نیست.');
+    dashboardData.orders=data;renderDashboard();
 
     $('#orders').innerHTML = data.map(o => `
       <div class="order">
