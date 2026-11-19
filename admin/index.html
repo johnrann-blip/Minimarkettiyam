@@ -40,7 +40,8 @@
     <a class="admin-brand" href="/admin"><span class="brand-mark">A</span><span><b>AVELORA</b><small>ADMIN STUDIO</small></span></a>
     <div class="sidebar-caption">مدیریت فروشگاه</div>
     <nav class="admin-nav">
-      <a href="#ordersAdmin"><span>◈</span> نمای کلی و سفارش‌ها</a>
+      <a class="is-current" href="#overviewPanel"><span>◈</span> داشبورد اصلی</a>
+      <a href="#ordersAdmin"><span>▣</span> سفارش‌ها</a>
       <a href="#productAdmin"><span>▧</span> افزودن محصول</a>
       <a href="#productsAdmin"><span>◇</span> فهرست محصولات</a>
       <a href="#archiveAdmin"><span>▤</span> بایگانی محصولات</a>
@@ -52,7 +53,18 @@
     <div class="sidebar-bottom"><span class="live-dot"></span> پنل مدیریت AVELORA</div>
   </aside>
   <div class="admin-content">
-    <div class="admin-topbar"><span>CONTROL CENTER <i>/</i> داشبورد مدیریت</span><button id="adminThemeToggle" type="button" aria-label="تغییر حالت نمایش">☼ تغییر پوسته</button></div>
+    <div class="admin-topbar"><span>AVELORA <i>/</i> CONTROL CENTER <i>/</i> مدیریت فروشگاه</span><div class="topbar-actions"><span class="secure-label"><span class="live-dot"></span> اتصال امن مدیریت</span><button id="adminThemeToggle" type="button" aria-label="تغییر حالت نمایش">☼ تغییر پوسته</button></div></div>
+    <section id="overviewPanel" class="overview-panel" aria-labelledby="overviewTitle">
+      <div class="overview-hero"><div><span class="eyebrow">BAGS · BEAUTY · MORE</span><h2 id="overviewTitle">به استودیوی مدیریت AVELORA خوش آمدید</h2><p>نمایی یکپارچه از فروشگاه، سفارش‌ها و عملکرد روزانه شما.</p></div><div class="hero-monogram" aria-hidden="true">A</div></div>
+      <div class="overview-heading"><div><span class="eyebrow">STORE PERFORMANCE</span><h3>خلاصه عملکرد فروشگاه</h3></div><span class="overview-live"><i></i> داده‌های واقعی پنل</span></div>
+      <div class="metric-grid">
+        <article class="metric-card"><span class="metric-icon">▣</span><span class="metric-label">کل سفارش‌ها</span><strong id="metricOrders">—</strong><small>سفارش‌های ثبت‌شده</small></article>
+        <article class="metric-card"><span class="metric-icon">◈</span><span class="metric-label">مجموع پرداخت تأییدشده</span><strong id="metricRevenue">—</strong><small>بر اساس پرداخت‌های تأییدشده · تومان</small></article>
+        <article class="metric-card"><span class="metric-icon">◇</span><span class="metric-label">محصولات فعال</span><strong id="metricProducts">—</strong><small>در فهرست فروشگاه</small></article>
+        <article class="metric-card"><span class="metric-icon">⌁</span><span class="metric-label">محصولات کم‌موجودی</span><strong id="metricLowStock">—</strong><small>موجودی ۳ عدد یا کمتر</small></article>
+      </div>
+      <div class="overview-lower"><article class="insight-card"><div class="card-heading"><div><span class="eyebrow">ORDER FLOW</span><h3>وضعیت سفارش‌ها</h3></div><span class="muted">بر اساس فهرست دریافتی</span></div><div id="orderStatusChart" class="status-chart"><p class="muted">پس از دریافت اطلاعات سفارش‌ها نمایش داده می‌شود.</p></div></article><article class="insight-card"><div class="card-heading"><div><span class="eyebrow">QUICK ACCESS</span><h3>دسترسی سریع</h3></div></div><div class="quick-links"><a href="#productAdmin"><span>＋</span><b>افزودن محصول</b><small>ثبت کالای جدید</small></a><a href="#ordersAdmin"><span>↗</span><b>پیگیری سفارش‌ها</b><small>مشاهده و به‌روزرسانی</small></a><a href="#storeSettings"><span>⚙</span><b>تنظیمات فروشگاه</b><small>اطلاعات و پرداخت</small></a></div></article></div>
+    </section>
 
     <button id="logoutButton" type="button">خروج از حساب مدیریت</button>
     <details id="changePasswordPanel">
