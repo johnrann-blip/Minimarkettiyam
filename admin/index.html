@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>مدیریت AVELORA</title>
-  <link rel="stylesheet" href="/admin/admin.css?v=20261119-admin-luxe-1">
+  <link rel="stylesheet" href="/admin/admin.css?v=20261119-gemini-luxe-2">
 <style>
 .manager-permissions { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; margin:12px 0; }
 .manager-permissions label { display:flex; align-items:center; gap:8px; }
@@ -36,6 +36,24 @@
   </section>
   <p id="authMessage" role="status"></p>
   <div id="adminWorkspace" hidden>
+  <aside class="admin-sidebar" aria-label="ناوبری مدیریت">
+    <a class="admin-brand" href="/admin"><span class="brand-mark">A</span><span><b>AVELORA</b><small>ADMIN STUDIO</small></span></a>
+    <div class="sidebar-caption">مدیریت فروشگاه</div>
+    <nav class="admin-nav">
+      <a href="#ordersAdmin"><span>◈</span> نمای کلی و سفارش‌ها</a>
+      <a href="#productAdmin"><span>▧</span> افزودن محصول</a>
+      <a href="#productsAdmin"><span>◇</span> فهرست محصولات</a>
+      <a href="#archiveAdmin"><span>▤</span> بایگانی محصولات</a>
+      <a href="#customerAdmin"><span>♙</span> مشتریان</a>
+      <a href="#feedbackAdmin"><span>✧</span> دیدگاه‌ها</a>
+      <a href="#storeSettings"><span>⚙</span> تنظیمات فروشگاه</a>
+      <a href="#managerAdmin"><span>♧</span> مدیران و دسترسی‌ها</a>
+    </nav>
+    <div class="sidebar-bottom"><span class="live-dot"></span> پنل مدیریت AVELORA</div>
+  </aside>
+  <div class="admin-content">
+    <div class="admin-topbar"><span>CONTROL CENTER <i>/</i> داشبورد مدیریت</span><button id="adminThemeToggle" type="button" aria-label="تغییر حالت نمایش">☼ تغییر پوسته</button></div>
+
     <button id="logoutButton" type="button">خروج از حساب مدیریت</button>
     <details id="changePasswordPanel">
       <summary>تغییر رمز عبور مدیریت</summary>
@@ -201,7 +219,9 @@
 
   <p id="msg" role="status"></p>
   </div>
+  </div>
 </main>
-<script src="/admin/admin.js?v=20261113-owner-login-flow-3"></script>
+<script>(()=>{const key='avelora-admin-theme';const saved=localStorage.getItem(key)||'dark';document.documentElement.dataset.adminTheme=saved;const btn=document.getElementById('adminThemeToggle');if(btn){const paint=()=>{btn.textContent=document.documentElement.dataset.adminTheme==='dark'?'☼ حالت روشن':'☾ حالت تیره'};paint();btn.addEventListener('click',()=>{const next=document.documentElement.dataset.adminTheme==='dark'?'light':'dark';document.documentElement.dataset.adminTheme=next;localStorage.setItem(key,next);paint()})}})();</script>
+<script src="/admin/admin.js?v=20261119-gemini-luxe-2"></script>
 </body>
 </html>
