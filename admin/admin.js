@@ -115,6 +115,8 @@ async function loadAdminWorkspace(admin) {
   const customerAccess = can('customers.view') || can('customers.manage');
   // Store settings include bank/payment details; keep them owner-only.
   const settingsAccess = owner;
+  const accessMap = {orders:orderAccess,'product-edit':can('products.create')||can('products.update'),products:productAccess,archive:can('products.archive'),customers:customerAccess,owner};
+  document.querySelectorAll('[data-admin-access]').forEach(link=>{link.hidden=!accessMap[link.dataset.adminAccess];});
   $('#advertisingAdminLink').hidden = !owner;
   $('#appearanceAdminLink').hidden = !owner;
   $('#feedbackAdmin').hidden = !owner;
