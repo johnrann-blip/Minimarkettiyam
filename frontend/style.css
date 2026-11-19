@@ -985,3 +985,33 @@ main#products{max-width:1500px;margin:0 auto 90px;padding:0 clamp(14px,4vw,58px)
  html{scroll-behavior:auto}
  *,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
+
+
+/* Theme palette compatibility: luxury depth, without flattening admin presets. */
+:root{
+  --av-gold:var(--theme-accent,#c9a66b);
+  --av-line:color-mix(in srgb,var(--theme-accent,#c9a66b) 34%,transparent);
+}
+.hero.hero-editorial{
+  color:var(--theme-nav-text,#f6ead5);
+  background:
+    radial-gradient(ellipse at 80% 15%,color-mix(in srgb,var(--theme-accent,#c9a66b) 24%,transparent),transparent 42%),
+    linear-gradient(125deg,
+      color-mix(in srgb,var(--theme-nav-background,#11100f) 92%,#000),
+      var(--theme-nav-background,#242019) 55%,
+      color-mix(in srgb,var(--theme-nav-background,#11100f) 88%,#000));
+  border-color:color-mix(in srgb,var(--theme-accent,#c9a66b) 58%,transparent);
+}
+.hero-copy h1{color:var(--theme-nav-text,#f6ead5)!important}
+.hero-copy p{color:color-mix(in srgb,var(--theme-nav-text,#f6ead5) 82%,transparent)!important}
+.eyebrow{color:var(--theme-accent,#c9a66b)!important}
+.primary,.add{
+  background:linear-gradient(115deg,
+    color-mix(in srgb,var(--theme-primary,#c9a66b) 82%,white),
+    var(--theme-primary,#c9a66b) 58%,
+    color-mix(in srgb,var(--theme-primary,#c9a66b) 78%,black))!important;
+  color:var(--theme-nav-text,#21180e)!important;
+  border-color:var(--theme-accent,#e1c28b)!important;
+}
+.category-entry:before{background:color-mix(in srgb,var(--theme-accent,#c9a66b) 12%,transparent)}
+.product:before{background:linear-gradient(90deg,transparent,var(--theme-accent,#c9a66b),transparent)}
