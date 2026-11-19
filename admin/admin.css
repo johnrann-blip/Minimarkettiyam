@@ -1,8 +1,102 @@
-body{margin:0;background:#f7f1e9;color:#35261d;font-family:Tahoma,sans-serif}main{max-width:850px;margin:30px auto;padding:18px}section{background:white;padding:18px;border-radius:14px;margin:18px 0}input,select,textarea,button{display:block;width:100%;box-sizing:border-box;margin:9px 0;padding:12px;border:1px solid #d8c8b7;border-radius:8px;font:inherit}button{background:#3b281f;color:white;cursor:pointer}.order{border:1px solid #eadfD4;padding:12px;margin:10px 0;border-radius:9px}.muted{color:#796858;font-size:13px}
+:root{
+  color-scheme:light;
+  --ink:#28221e;--muted:#81766d;--line:#e9dfd4;--paper:#fffdfa;--canvas:#f3eee8;
+  --espresso:#30231d;--espresso-2:#473329;--gold:#b89461;--gold-soft:#f3e8d7;
+  --green:#2f7660;--red:#a34c46;--shadow:0 14px 38px rgba(48,35,29,.07);
+  font-family:Vazirmatn,Tahoma,Arial,sans-serif
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(ellipse at 8% 0%,#fffaf2 0,transparent 38%),var(--canvas);color:var(--ink);font-family:Vazirmatn,Tahoma,Arial,sans-serif;line-height:1.8}
+main{max-width:1480px;margin:0 auto;padding:30px clamp(14px,3vw,42px) 72px}
+h1{font-size:clamp(23px,3vw,34px);line-height:1.5;margin:0 0 24px;color:var(--espresso);letter-spacing:-.6px}
+h1:before{content:"AVELORA  /  CONTROL CENTER";display:block;font:700 10px/1.5 Arial,sans-serif;letter-spacing:2.5px;color:var(--gold);margin-bottom:8px;direction:ltr;text-align:right}
+h2{font-size:19px;line-height:1.6;color:var(--espresso);margin:0 0 16px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+h3{font-size:14px;color:var(--espresso-2);margin:22px 0 10px}
+p{margin:8px 0 14px}
+a{color:#8a673f;text-decoration:none;font-weight:700}
+a:hover{color:var(--espresso);text-decoration:underline}
+section{min-width:0;background:var(--paper);border:1px solid rgba(185,148,97,.2);border-radius:18px;padding:clamp(16px,2vw,25px);margin:16px 0;box-shadow:var(--shadow)}
+#loginPanel,#bootstrapPanel{max-width:520px;margin:8vh auto 24px;padding:30px}
+#loginPanel h2,#bootstrapPanel h2{font-size:22px}
+#loginForm,#bootstrapForm{display:grid;gap:10px}
+#adminWorkspace{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;align-items:start}
+#adminWorkspace>section{margin:0;grid-column:span 6}
+#adminWorkspace>#productAdmin,#adminWorkspace>#productsAdmin{grid-column:span 6}
+#adminWorkspace>#archiveAdmin,#adminWorkspace>#storeSettings{grid-column:1/-1}
+#adminWorkspace>#ordersAdmin,#adminWorkspace>#customerAdmin,#adminWorkspace>#managerAdmin,#adminWorkspace>#feedbackAdmin{grid-column:span 6}
+#adminWorkspace>p,#adminWorkspace>details{grid-column:1/-1}
+#adminWorkspace>p:has(a){display:flex;gap:10px;flex-wrap:wrap;margin:0}
+#adminWorkspace>p:has(a) a{display:inline-flex;align-items:center;min-height:42px;padding:8px 16px;border:1px solid var(--line);border-radius:12px;background:#fff}
+#logoutButton{grid-column:1/-1;justify-self:start;width:auto;min-width:190px;background:transparent;color:var(--espresso);border:1px solid var(--line)}
+#changePasswordPanel{grid-column:1/-1;background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 16px}
+#changePasswordPanel summary{cursor:pointer;font-weight:700;color:var(--espresso)}
+#changePasswordForm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:8px;align-items:center;margin-top:12px}
+#changePasswordForm input,#changePasswordForm button{margin:0}
+#changePasswordForm button{width:auto;white-space:nowrap}
+input,select,textarea,button{font:inherit}
+input,select,textarea{display:block;width:100%;min-width:0;margin:8px 0;padding:12px 13px;color:var(--ink);background:#fff;border:1px solid #e5dacf;border-radius:10px;outline:none;transition:border-color .18s,box-shadow .18s}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,148,97,.14)}
+input::placeholder,textarea::placeholder{color:#a79b90}
+input[type=checkbox]{width:17px;height:17px;accent-color:var(--espresso);margin:0;flex:0 0 auto}
+input[type=file]{padding:9px;background:#faf7f2}
+input[type=color]{height:46px;padding:4px}
+textarea{min-height:100px;resize:vertical}
+button{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:auto;min-height:42px;margin:7px 5px 7px 0;padding:9px 17px;border:1px solid var(--espresso);border-radius:10px;background:linear-gradient(135deg,var(--espresso),#594032);color:#fff;font-weight:700;cursor:pointer;box-shadow:0 5px 12px rgba(48,35,29,.1);transition:transform .18s,filter .18s,box-shadow .18s}
+button:hover{filter:brightness(1.12);transform:translateY(-1px);box-shadow:0 8px 17px rgba(48,35,29,.15)}
+button:active{transform:translateY(0)}
+button:disabled{opacity:.5;cursor:not-allowed;transform:none}
+button[type=button]{}
+#cancelEdit,.remove-product-color{background:#fff;color:var(--red);border-color:#e8c9c4;box-shadow:none}
+#refresh,#refreshProducts,#refreshCustomers,#refreshManagers,#refreshFeedback{background:#f7f1e8;color:var(--espresso);border-color:#e6d7c4;box-shadow:none}
+.muted{color:var(--muted);font-size:12px;line-height:1.9}
+#msg,#authMessage,#passwordMessage,#settingsMessage,#managerMessage{padding:10px 13px;border-radius:10px;color:var(--espresso);background:#f7f1e8;font-size:13px}
+#authMessage:empty,#passwordMessage:empty,#settingsMessage:empty,#managerMessage:empty,#msg:empty{display:none}
+#gatewayStatus{padding:12px 14px;border-radius:12px;background:#f7f1e8;border:1px solid var(--line);margin:12px 0}
+#productForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px}
+#productForm>*{min-width:0}
+#productForm [name=description],#productForm .product-colors-editor,#productForm #imagePreview,#productForm label[for=imageFile],#productForm #imageFile,#productForm [name=image_url],#productForm button{grid-column:1/-1}
+#productForm #submitProduct,#productForm #cancelEdit{justify-self:start}
+.product-colors-editor{padding:14px;border:1px dashed #d9c6ae;border-radius:13px;background:#fcf9f4}
+.product-colors-editor h3{margin-top:0}
+.product-color-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,.5fr) auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #f0e9e1}
+.product-color-row input,.product-color-row button{margin:0}
+.product-color-row button{width:auto}
+.product-image-previews{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
+.product-image-previews img{width:92px;height:92px;object-fit:cover;border:1px solid var(--line);border-radius:12px;padding:3px;background:#fff}
+#products,#orders,#customers,#archivedProducts,#feedbackList,#managerList{display:grid;gap:10px;min-width:0}
+#products>*,#orders>*,#customers>*,#archivedProducts>*,#feedbackList>*,#managerList>*{min-width:0;overflow-wrap:anywhere}
+.order,.product-card,.customer-card,.feedback-card{border:1px solid var(--line);padding:14px;margin:8px 0;border-radius:13px;background:#fff}
+.order{border-right:3px solid var(--gold)}
+#productArchive{background:#faf7f2;border:1px solid var(--line);border-radius:14px;padding:14px}
+#productArchive summary{font-weight:700;cursor:pointer;color:var(--espresso)}
+#settingsForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 14px}
+#settingsForm h3,#settingsForm p,#settingsForm button,#settingsForm textarea{grid-column:1/-1}
+#settingsForm label{display:block;color:var(--muted);font-size:12px;margin-top:8px}
+#settingsForm .setting-check{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#faf7f2}
+.manager-permissions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}
+.manager-permissions label{display:flex;align-items:center;gap:9px;padding:10px 12px;background:#faf7f2;border:1px solid var(--line);border-radius:10px;font-size:12px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.row>*{min-width:0}
+#feedbackStatus{max-width:260px}
 [hidden]{display:none!important}
-.setting-check{display:flex;align-items:center;gap:10px;margin:14px 0}
-.setting-check input{width:auto;margin:0}
-#settingsForm h3{margin-top:24px}
-#settingsMessage{font-weight:bold}
-
-.product-image-previews{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.product-image-previews img{border:1px solid #eadfd4;border-radius:8px;padding:3px}.product-color-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(100px,.55fr) auto;gap:8px;align-items:center}.product-color-row button{width:auto;margin:0;background:#7b3b36}.product-colors-editor{border-top:1px solid #eadfd4;margin-top:18px;padding-top:10px}@media(max-width:520px){.product-color-row{grid-template-columns:1fr 1fr}.product-color-row button{grid-column:1/-1}}
+@media(max-width:900px){
+  #adminWorkspace>section,#adminWorkspace>#productAdmin,#adminWorkspace>#productsAdmin,#adminWorkspace>#ordersAdmin,#adminWorkspace>#customerAdmin,#adminWorkspace>#managerAdmin,#adminWorkspace>#feedbackAdmin{grid-column:1/-1}
+}
+@media(max-width:600px){
+  main{padding:18px 12px 48px}
+  h1{font-size:23px;margin-bottom:18px}
+  #adminWorkspace{display:block}
+  #adminWorkspace>section{margin:12px 0}
+  section{border-radius:14px;padding:15px}
+  #productForm,#settingsForm{grid-template-columns:1fr}
+  #productForm>* ,#settingsForm>*{grid-column:1}
+  #productForm #submitProduct,#productForm #cancelEdit{width:100%}
+  #changePasswordForm{grid-template-columns:1fr}
+  #changePasswordForm button{width:100%}
+  .manager-permissions{grid-template-columns:1fr}
+  .product-color-row{grid-template-columns:1fr 1fr}
+  .product-color-row button{grid-column:1/-1;width:100%}
+  button{min-height:44px}
+  #logoutButton{width:100%}
+}
