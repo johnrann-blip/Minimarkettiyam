@@ -109,19 +109,23 @@ async function loadAdminWorkspace(admin) {
   const owner = admin?.role === 'owner';
   window.isStoreOwner = owner;
   const permissions = new Set(admin?.permissions || []);
+  window.adminPermissions = permissions;
   const can = permission => owner || permissions.has(permission);
   const productAccess = can('products.view') || can('products.create') || can('products.update') || can('products.archive');
   const orderAccess = can('orders.view') || can('orders.update');
   const customerAccess = can('customers.view') || can('customers.manage');
   // Store settings include bank/payment details; keep them owner-only.
   const settingsAccess = owner;
-  const accessMap = {orders:orderAccess,'product-edit':can('products.create')||can('products.update'),products:productAccess,archive:can('products.archive'),customers:customerAccess,owner};
+  const auditAccess = can('audit.view');
+  const accessMap = {orders:orderAccess,'product-edit':can('products.create')||can('products.update'),products:productAccess,archive:can('products.archive'),customers:customerAccess,owner,audit:auditAccess};
   document.querySelectorAll('[data-admin-access]').forEach(link=>{link.hidden=!accessMap[link.dataset.adminAccess];});
   $('#advertisingAdminLink').hidden = !owner;
   $('#appearanceAdminLink').hidden = !owner;
   $('#feedbackAdmin').hidden = !owner;
   if(owner) loadFeedback();
   $('#managerAdmin').hidden = !owner;
+  $('#auditAdmin').hidden = !auditAccess;
+  $('#activeSessionsPanel').hidden = !owner;
   $('#productAdmin').hidden = !(can('products.create') || can('products.update'));
   $('#productsAdmin').hidden = !productAccess;
   $('#archiveAdmin').hidden = !can('products.archive');
@@ -137,6 +141,7 @@ async function loadAdminWorkspace(admin) {
   if (customerAccess) tasks.push(customers());
   if (settingsAccess) tasks.push(loadStoreSettings());
   if (owner) tasks.push(loadManagers(), advertisingSummary());
+  if (auditAccess) tasks.push(loadAudit(owner));
   await Promise.all(tasks);
 }
 
@@ -666,6 +671,40 @@ $('#archivedProducts').addEventListener('click', async event => {
   }
 });
 
+
+
+async function loadAudit(owner=false){
+  const host=$('#auditLogs');
+  if(!host)return;
+  host.textContent='در حال دریافت گزارش فعالیت‌ها...';
+  try{
+    const rows=await request('/api/admin/auth/audit');
+    if(!Array.isArray(rows))throw new Error('ساختار گزارش فعالیت معتبر نیست.');
+    host.replaceChildren();
+    if(!rows.length)host.textContent='هنوز رویدادی ثبت نشده است.';
+    rows.forEach(row=>{
+      const article=document.createElement('article');article.className='order audit-entry';
+      const title=document.createElement('b');title.textContent=(row.username||'سیستم')+' — '+(row.action||'');
+      const resource=document.createElement('p');resource.textContent=(row.resource||'')+(row.resource_id?' · شناسه '+row.resource_id:'');
+      const detail=document.createElement('p');detail.className='muted';
+      detail.textContent=[row.request_method,row.request_path,'پاسخ '+row.response_status,row.created_at?new Date(row.created_at).toLocaleString('fa-IR'):''].filter(Boolean).join(' · ');
+      article.append(title,resource,detail);host.append(article);
+    });
+    if(owner){
+      const sessions=await request('/api/admin/auth/sessions');
+      if(!Array.isArray(sessions))throw new Error('ساختار نشست‌های فعال معتبر نیست.');
+      const target=$('#activeSessions');target.replaceChildren();
+      if(!sessions.length)target.textContent='نشست فعالی وجود ندارد.';
+      sessions.forEach(session=>{
+        const article=document.createElement('article');article.className='order';
+        const title=document.createElement('b');title.textContent=(session.display_name||session.username)+' (@'+session.username+')';
+        const detail=document.createElement('p');detail.textContent='آخرین فعالیت: '+(session.last_seen_at?new Date(session.last_seen_at).toLocaleString('fa-IR'):'نامشخص');
+        article.append(title,detail);target.append(article);
+      });
+    }
+  }catch(error){host.textContent=error.message;}
+}
+$('#refreshAudit')?.addEventListener('click',()=>loadAudit(window.isStoreOwner===true));
 
 async function loadFeedback(){
   if($('#feedbackAdmin').hidden)return;
