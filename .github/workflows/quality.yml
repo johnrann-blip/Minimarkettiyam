@@ -2,7 +2,7 @@ name: AVELORA quality checks
 
 on:
   push:
-    branches: [main, feature/admin-auth-migration]
+    branches: [main, feature/admin-auth-migration, feature/avelora-gemini-admin-integration]
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
