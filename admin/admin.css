@@ -146,3 +146,62 @@ html[data-admin-theme="light"] #adminWorkspace>.admin-content>#overviewPanel{bac
 .manager-permissions{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin:12px 0}.manager-permissions label{display:flex;align-items:center;gap:8px}
 
 .audit-entry{border-inline-start:3px solid #b89562}.audit-entry p{overflow-wrap:anywhere}
+
+
+/* AVELORA final UI polish — CSS-only; existing DOM, IDs, classes and behavior stay intact */
+:root{--lux-focus:rgba(212,175,55,.38);--lux-radius:18px}
+::selection{background:rgba(212,175,55,.28);color:inherit}
+:focus-visible{outline:2px solid #e1c36e;outline-offset:3px}
+html{scroll-padding-top:22px;scrollbar-color:#6e5934 #111113;scrollbar-width:thin}
+body{font-feature-settings:"ss01" 1,"kern" 1; text-rendering:optimizeLegibility}
+.admin-content{min-width:0}
+.admin-topbar{position:relative;border-bottom:1px solid rgba(212,175,55,.12);margin-bottom:2px}
+.admin-topbar>span{font-size:10px;line-height:1.8}
+.admin-sidebar{backdrop-filter:blur(14px)}
+.admin-brand{border-bottom:1px solid rgba(212,175,55,.12);margin-bottom:8px}
+.admin-nav a{min-height:42px;border:1px solid transparent}
+.admin-nav a.is-current{box-shadow:inset -2px 0 0 #e2c36e}
+.admin-nav a:focus-visible,.quick-links a:focus-visible{outline-offset:2px}
+#adminWorkspace>.admin-content>section{position:relative;overflow:hidden}
+#adminWorkspace>.admin-content>section:not(#overviewPanel){transition:border-color .2s ease,box-shadow .2s ease}
+#adminWorkspace>.admin-content>section:not(#overviewPanel):hover{border-color:rgba(212,175,55,.3);box-shadow:0 17px 42px rgba(0,0,0,.24)}
+#adminWorkspace>.admin-content>section>h2{display:flex;align-items:center;gap:10px}
+#adminWorkspace>.admin-content>section>h2:before{content:"";display:inline-block;width:3px;height:19px;border-radius:3px;background:linear-gradient(#f0d98b,#98752a);flex:0 0 auto}
+input,select,textarea{min-height:44px;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}
+textarea{min-height:104px}
+input:hover,select:hover,textarea:hover{border-color:#65563a}
+input[type=checkbox]{min-height:17px}
+input[type=file]{min-height:44px}
+button{min-height:43px;letter-spacing:-.1px}
+button:focus-visible{outline-color:#f0d98b}
+.order,.product-card,.customer-card,.feedback-card{border-radius:15px;transition:border-color .18s ease,transform .18s ease,background .18s ease}
+.order:hover,.product-card:hover,.customer-card:hover,.feedback-card:hover{border-color:rgba(212,175,55,.38)}
+#products,#orders,#customers,#archivedProducts,#feedbackList,#managerList,#auditLogs,#activeSessions{gap:11px}
+#products:empty,#orders:empty,#customers:empty,#archivedProducts:empty,#feedbackList:empty,#managerList:empty,#auditLogs:empty,#activeSessions:empty{min-height:74px;border:1px dashed rgba(212,175,55,.2);border-radius:13px;background:rgba(212,175,55,.025)}
+#products,#orders,#customers,#archivedProducts,#feedbackList,#managerList,#auditLogs,#activeSessions{color:#c9c0b2;font-size:13px;line-height:2}
+#gatewayStatus{line-height:1.9}
+#changePasswordPanel{border-radius:15px}
+#changePasswordPanel summary,#productArchive summary{padding:3px 2px}
+.metric-card,.insight-card{backdrop-filter:blur(8px)}
+.metric-card:focus-within,.insight-card:focus-within{border-color:rgba(212,175,55,.42)}
+.status-track{border:1px solid rgba(212,175,55,.1)}
+.quick-links a{min-height:108px}
+.audit-entry{padding:13px 15px;border-radius:12px;background:rgba(212,175,55,.045)}
+html[data-admin-theme="light"]{scrollbar-color:#b9a27b #f3eee8}
+html[data-admin-theme="light"] .admin-sidebar{border-color:#e9dfd4;box-shadow:0 12px 34px rgba(48,35,29,.07)}
+html[data-admin-theme="light"] .admin-brand{border-color:#e9dfd4}
+html[data-admin-theme="light"] .admin-nav a.is-current{background:#f3e8d7;border-color:#e5d3b8;color:#473329;box-shadow:inset -2px 0 0 #b89461}
+html[data-admin-theme="light"] .admin-nav a.is-current span{color:#9a743d}
+html[data-admin-theme="light"] #adminWorkspace>.admin-content>section:not(#overviewPanel):hover{box-shadow:0 12px 30px rgba(48,35,29,.08)}
+html[data-admin-theme="light"] input:hover,html[data-admin-theme="light"] select:hover,html[data-admin-theme="light"] textarea:hover{border-color:#b89461}
+html[data-admin-theme="light"] .order:hover,html[data-admin-theme="light"] .product-card:hover,html[data-admin-theme="light"] .customer-card:hover,html[data-admin-theme="light"] .feedback-card:hover{border-color:#c8ae83}
+html[data-admin-theme="light"] #products,html[data-admin-theme="light"] #orders,html[data-admin-theme="light"] #customers,html[data-admin-theme="light"] #archivedProducts,html[data-admin-theme="light"] #feedbackList,html[data-admin-theme="light"] #managerList,html[data-admin-theme="light"] #auditLogs,html[data-admin-theme="light"] #activeSessions{color:#51463b}
+@media(max-width:760px){
+ .admin-topbar{padding:8px 2px 12px}
+ .admin-nav a{min-height:40px}
+ #adminWorkspace>.admin-content>section{border-radius:15px}
+ .quick-links a{min-height:0}
+}
+@media(prefers-reduced-motion:reduce){
+ #adminWorkspace>.admin-content>section,.order,.product-card,.customer-card,.feedback-card,.admin-nav a{transition:none!important}
+}
