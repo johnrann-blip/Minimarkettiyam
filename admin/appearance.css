@@ -145,3 +145,9 @@ html[data-admin-theme="light"] .preset-card-body p{color:#796858}
 html[data-admin-theme="light"] #authStatus{background:#f7f1e8;color:#473329;border-color:#e9dfd4}
 html[data-admin-theme="light"] .theme-actions{background:rgba(255,253,250,.94);border-color:#e9dfd4}
 @media(max-width:600px){.theme-actions{position:static}.theme-actions button{flex:1;min-width:0}.preset-card:hover{transform:none}}
+
+
+.preview-empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;min-height:132px;margin:14px auto;padding:24px 18px;max-width:520px;border:1px dashed var(--preview-accent);border-radius:15px;background:color-mix(in srgb,var(--preview-surface) 84%,transparent);color:var(--preview-text);text-align:center}
+.preview-empty-state>span{font-size:24px;color:var(--preview-accent)}
+.preview-empty-state>b{font-size:14px;font-weight:700}
+.preview-empty-state>small{max-width:390px;color:var(--preview-text);opacity:.72;line-height:1.9}
