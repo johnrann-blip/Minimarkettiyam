@@ -55,6 +55,41 @@ function resetProductForm() {
 
 $('#cancelEdit').onclick = resetProductForm;
 
+function renderProductImagePreview(newFiles=[]) {
+  const existing=window.currentProductImages||[];
+  const currentMarkup=existing.map((url,index)=>`
+    <div class="admin-image-preview-item">
+      <img class="admin-preview-image" alt="عکس فعلی محصول ${index+1}" src="${escapeHtml(url)}">
+      <div class="admin-image-preview-actions">
+        <button type="button" data-image-up="${index}" ${index===0?'disabled':''} aria-label="انتقال عکس به قبل">↑</button>
+        <button type="button" data-image-down="${index}" ${index===existing.length-1?'disabled':''} aria-label="انتقال عکس به بعد">↓</button>
+        <button type="button" data-image-remove="${index}" aria-label="حذف عکس">حذف</button>
+      </div>
+    </div>`).join('');
+  const pendingMarkup=newFiles.map((file,index)=>`
+    <div class="admin-image-preview-item">
+      <img class="admin-preview-image" alt="پیش‌نمایش عکس جدید ${index+1}" src="${URL.createObjectURL(file)}">
+      <span class="admin-image-pending-label">عکس جدید</span>
+    </div>`).join('');
+  $('#imagePreview').innerHTML=currentMarkup+pendingMarkup;
+}
+$('#imagePreview').addEventListener('click',event=>{
+  const remove=event.target.closest('[data-image-remove]');
+  const up=event.target.closest('[data-image-up]');
+  const down=event.target.closest('[data-image-down]');
+  if(!remove&&!up&&!down)return;
+  const index=Number((remove||up||down).dataset.imageRemove??(up||{}).dataset?.imageUp??(down||{}).dataset?.imageDown);
+  const images=window.currentProductImages||[];
+  if(!Number.isInteger(index)||index<0||index>=images.length)return;
+  if(remove)images.splice(index,1);
+  else if(up&&index>0)[images[index-1],images[index]]=[images[index],images[index-1]];
+  else if(down&&index<images.length-1)[images[index+1],images[index]]=[images[index],images[index+1]];
+  const imageField=$('#productForm').elements.image_url;
+  if(images.length)imageField.value=images[0];else if(remove)imageField.value='';
+  renderProductImagePreview([...$('#imageFile').files]);
+  message('گالری تصاویر به‌روزرسانی شد؛ برای ثبت تغییرات، ذخیره محصول را بزن.');
+});
+
 // Show immediate feedback even if browser validation prevents form submission.
 $('#submitProduct').addEventListener('click', () => {
   message('دکمه ذخیره انتخاب شد؛ در حال بررسی اطلاعات محصول...');
@@ -78,12 +113,12 @@ function selectedColors(){
 }
 $('#imageFile').addEventListener('change',()=>{
   const files=[...$('#imageFile').files];
-  if(files.length>12){message('حداکثر ۱۲ عکس برای هر محصول مجاز است.');$('#imageFile').value='';return;}
+  if((window.currentProductImages||[]).length+files.length>12){message('هر محصول حداکثر ۱۲ عکس دارد؛ تعداد عکس‌های فعلی را در نظر بگیر.');$('#imageFile').value='';renderProductImagePreview();return;}
   if(files.some(file=>!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024)){
-    message('هر عکس باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.');$('#imageFile').value='';return;
+    message('هر عکس باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.');$('#imageFile').value='';renderProductImagePreview();return;
   }
-  $('#imagePreview').innerHTML=files.map(file=>'<img class="admin-preview-image" alt="پیش‌نمایش عکس محصول" src="'+URL.createObjectURL(file)+'">').join('');
-  message(files.length+' عکس انتخاب شد.');
+  renderProductImagePreview(files);
+  message(files.length+' عکس جدید انتخاب شد.');
 });
 
 
@@ -282,9 +317,10 @@ $('#productForm').onsubmit = async event => {
       uploaded.push(result.image_url);
     }
     const existing=window.currentProductImages||[];
-    data.images=uploaded.length?([...existing,...uploaded].slice(0,12)):existing;
-    if(data.image_url&&!data.images.length)data.images=[data.image_url];
-    if(!data.images.length)delete data.images;
+    data.images=[...existing,...uploaded];
+    if(data.images.length)data.image_url=data.images[0];
+    else if(!data.image_url)delete data.images;
+    if(data.images.length>12)throw new Error('هر محصول حداکثر ۱۲ عکس دارد.');
     await request(editing?'/api/admin/products/'+encodeURIComponent(id):'/api/admin/products',{
       method:editing?'PATCH':'POST',body:JSON.stringify(data)
     });
@@ -393,7 +429,8 @@ $('#products').addEventListener('click', async event => {
       form.elements.stock.value = p.stock;
       form.elements.image_url.value = p.image_url || '';
       window.currentProductImages=(p.images||[]).map(x=>x.image_url);
-      $('#imagePreview').innerHTML=window.currentProductImages.map(url=>'<img class="admin-preview-image" alt="عکس فعلی محصول" src="'+escapeHtml(url)+'">').join('');
+      if(!window.currentProductImages.length&&p.image_url)window.currentProductImages=[p.image_url];
+      renderProductImagePreview();
       $('#productColors').innerHTML='';
       (p.colors||[]).forEach(color=>addColorRow(color));
       form.elements.image_file.value = '';
