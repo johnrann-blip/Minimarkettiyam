@@ -268,6 +268,8 @@ $('#productForm').onsubmit = async event => {
   data.sale_price_toman=data.sale_price_toman===''?null:Number(data.sale_price_toman);
   data.colors=selectedColors();
   const editing=Boolean(id), button=$('#submitProduct');
+  const allowed = window.isStoreOwner || window.adminPermissions?.has(editing ? 'products.update' : 'products.create');
+  if(!allowed){message(editing?'مجوز ویرایش محصول را نداری.':'مجوز ثبت محصول را نداری.');return;}
   button.disabled=true;button.textContent='در حال آپلود عکس‌ها و ذخیره...';
   try{
     const uploaded=[];
@@ -323,6 +325,18 @@ function renderProductCard(p, archived = false) {
   `;
 }
 
+
+function applyProductPermissions(){
+  const can=permission=>window.isStoreOwner||window.adminPermissions?.has(permission);
+  document.querySelectorAll('[data-edit]').forEach(button=>button.hidden=!can('products.update'));
+  document.querySelectorAll('[data-toggle],[data-remove],[data-restore]').forEach(button=>button.hidden=!can('products.archive'));
+  document.querySelectorAll('[data-permanent-delete]').forEach(button=>button.hidden=!window.isStoreOwner);
+}
+function applyOrderPermissions(){
+  const canUpdate=window.isStoreOwner||window.adminPermissions?.has('orders.update');
+  document.querySelectorAll('#orders [data-status],#orders select[id^="s"]').forEach(control=>control.hidden=!canUpdate);
+}
+
 async function products() {
   try {
     const data = await request('/api/admin/products');
@@ -336,6 +350,7 @@ async function products() {
     $('#archivedProducts').innerHTML = archivedProducts.map(p => renderProductCard(p, true)).join('')
       || 'بایگانی خالی است.';
     $('#archivedProductsCount').textContent = `(${archivedProducts.length.toLocaleString('fa-IR')})`;
+    applyProductPermissions();
   } catch (error) {
     $('#products').textContent = error.message;
     $('#archivedProducts').textContent = error.message;
@@ -624,6 +639,7 @@ async function orders() {
         <button type="button" data-status="${escapeHtml(o.id)}">ذخیره وضعیت</button>
       </div>
     `).join('') || 'سفارشی ثبت نشده است.';
+    applyOrderPermissions();
   } catch (error) {
     $('#orders').textContent = error.message;
   }
