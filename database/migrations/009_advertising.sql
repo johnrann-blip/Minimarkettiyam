@@ -1,5 +1,3 @@
-BEGIN;
-
 CREATE TABLE IF NOT EXISTS advertising_packages (
   id BIGSERIAL PRIMARY KEY,
   code VARCHAR(40) NOT NULL UNIQUE,
@@ -77,4 +75,3 @@ CREATE TABLE IF NOT EXISTS advertising_events (
 CREATE INDEX IF NOT EXISTS idx_advertising_events_campaign_time
   ON advertising_events(campaign_id,occurred_at DESC);
 
-COMMIT;
