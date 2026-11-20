@@ -598,7 +598,15 @@ async function loadManagers() {
         <p>وضعیت: ${manager.is_active ? 'فعال' : 'غیرفعال'}</p>
         <p>مجوزها: ${(manager.permissions || []).map(p => escapeHtml(managerPermissions.find(x => x[0] === p)?.[1] || p)).join('، ') || 'بدون مجوز'}</p>
         <p class="muted">آخرین ورود: ${manager.last_login_at ? new Date(manager.last_login_at).toLocaleString('fa-IR') : 'هنوز وارد نشده'}</p>
-        <button type="button" data-manager-toggle="${escapeHtml(manager.id)}" data-active="${manager.is_active ? '1' : '0'}">${manager.is_active ? 'غیرفعال‌کردن حساب' : 'فعال‌کردن حساب'}</button>
+        <div class="row">
+          <button type="button" data-manager-edit="${escapeHtml(manager.id)}">ویرایش دسترسی‌ها و رمز</button>
+          <button type="button" data-manager-toggle="${escapeHtml(manager.id)}" data-active="${manager.is_active ? '1' : '0'}">${manager.is_active ? 'غیرفعال‌کردن حساب' : 'فعال‌کردن حساب'}</button>
+        </div>
+        <div class="manager-permissions" data-manager-editor hidden>
+          ${managerPermissions.map(([permission,label])=>'<label><input type="checkbox" data-manager-permission value="'+escapeHtml(permission)+'" '+((manager.permissions||[]).includes(permission)?'checked':'')+'> '+escapeHtml(label)+'</label>').join('')}
+          <label>رمز جدید اختیاری (حداقل ۱۲ نویسه)<input type="password" data-manager-password minlength="12" maxlength="200" autocomplete="new-password" placeholder="برای تغییر رمز وارد کن"></label>
+          <button type="button" data-manager-save="${escapeHtml(manager.id)}">ذخیره دسترسی‌ها</button>
+        </div>
       </div>
     `).join('') || 'هنوز حساب مدیریتی دیگری ساخته نشده است.';
   } catch(error) { $('#managerList').textContent = error.message; }
@@ -622,6 +630,32 @@ $('#managerForm').onsubmit = async event => {
 };
 
 $('#managerList').addEventListener('click', async event => {
+  const editButton=event.target.closest('[data-manager-edit]');
+  if(editButton){
+    const card=editButton.closest('.order');
+    const editor=card?.querySelector('[data-manager-editor]');
+    if(editor)editor.hidden=!editor.hidden;
+    return;
+  }
+  const saveButton=event.target.closest('[data-manager-save]');
+  if(saveButton){
+    const card=saveButton.closest('.order');
+    const editor=card?.querySelector('[data-manager-editor]');
+    if(!editor)return;
+    const permissions=[...editor.querySelectorAll('[data-manager-permission]:checked')].map(input=>input.value);
+    const password=editor.querySelector('[data-manager-password]')?.value||'';
+    if(password&&password.length<12){$('#managerMessage').textContent='رمز جدید باید حداقل ۱۲ نویسه داشته باشد.';return;}
+    const payload={permissions};
+    if(password)payload.password=password;
+    saveButton.disabled=true;
+    try{
+      await request('/api/admin/auth/managers/'+encodeURIComponent(saveButton.dataset.managerSave),{method:'PATCH',body:JSON.stringify(payload)});
+      $('#managerMessage').textContent='دسترسی‌ها و اطلاعات حساب مدیر به‌روزرسانی شد.';
+      await loadManagers();
+    }catch(error){$('#managerMessage').textContent=error.message;}
+    finally{saveButton.disabled=false;}
+    return;
+  }
   const button = event.target.closest('[data-manager-toggle]');
   if (!button) return;
   const active = button.dataset.active === '1';
