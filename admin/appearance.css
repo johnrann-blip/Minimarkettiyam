@@ -105,3 +105,5 @@ body{background:#f3eee8}main{max-width:1050px}.theme-grid{display:grid;grid-temp
 .preset-card.selected{outline:2px solid #b58d58;outline-offset:2px}
 .preset-card.selected [data-apply-preset]{box-shadow:0 0 0 2px #b58d5880}
 .preview-hero,.preview-products,.preview-feedback,.preview-footer,.preview-custom{order:var(--mobile-order,0)}
+
+.theme-preview{display:flex;flex-direction:column;background-repeat:no-repeat;background-position:center;background-size:cover}
