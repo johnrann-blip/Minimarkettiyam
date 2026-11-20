@@ -108,10 +108,14 @@
       const used=new Set();
       const configuredCoreTypes=new Set(sections.filter(item=>item&&Object.prototype.hasOwnProperty.call(core,item.type)).map(item=>item.type));
       sections.forEach((item,index)=>{
-        if(!item||item.enabled===false)return;
-        if(item.type==='custom'){wrapper.append(makeCustom(item,index));return;}
+        if(!item)return;
         const node=core[item.type];
-        if(node&&!used.has(node)){node.hidden=false;node.style.order=String(index);node.style.setProperty('--mobile-order',String(Number(item.mobileOrder??index)));node.classList.toggle('theme-mobile-hidden',item.mobileEnabled===false);node.classList.toggle('theme-desktop-hidden',item.desktopEnabled===false);wrapper.append(node);used.add(node);}
+        if(item.enabled===false){
+          if(node){node.hidden=true;node.style.setProperty('display','none','important');}
+          return;
+        }
+        if(item.type==='custom'){wrapper.append(makeCustom(item,index));return;}
+        if(node&&!used.has(node)){node.hidden=false;node.style.removeProperty('display');node.style.order=String(index);node.style.setProperty('--mobile-order',String(Number(item.mobileOrder??index)));node.classList.toggle('theme-mobile-hidden',item.mobileEnabled===false);node.classList.toggle('theme-desktop-hidden',item.desktopEnabled===false);wrapper.append(node);used.add(node);}
         if(item.type==='hero'&&homeAd&&!used.has(homeAd)){wrapper.append(homeAd);used.add(homeAd);}
       });
       // Preserve legacy storefront sections only when an older config has no entry for that section.
