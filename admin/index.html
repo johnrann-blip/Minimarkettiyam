@@ -45,6 +45,7 @@
       <a href="#feedbackAdmin" data-admin-access="owner"><span>✧</span> دیدگاه‌ها</a>
       <a href="#storeSettings" data-admin-access="owner"><span>⚙</span> تنظیمات فروشگاه</a>
       <a href="#managerAdmin" data-admin-access="owner"><span>♧</span> مدیران و دسترسی‌ها</a>
+      <a href="#auditAdmin" data-admin-access="audit"><span>▤</span> گزارش فعالیت‌ها</a>
     </nav>
     <div class="sidebar-bottom"><span class="live-dot"></span> پنل مدیریت AVELORA</div>
   </aside>
@@ -217,6 +218,14 @@
       <button id="refreshFeedback" type="button">به‌روزرسانی دیدگاه‌ها</button>
     </div>
     <div id="feedbackList"></div>
+  </section>
+
+  <section id="auditAdmin" hidden>
+    <h2>گزارش فعالیت مدیران</h2>
+    <p class="muted">آخرین ۳۰۰ رویداد ثبت‌شده. مشاهده بر اساس مجوز audit.view؛ نشست‌های فعال فقط برای مالک.</p>
+    <button id="refreshAudit" type="button">به‌روزرسانی گزارش‌ها</button>
+    <div id="auditLogs" aria-live="polite">گزارشی بارگذاری نشده است.</div>
+    <div id="activeSessionsPanel" hidden><h3>نشست‌های فعال</h3><div id="activeSessions"></div></div>
   </section>
 
   <section id="ordersAdmin">
