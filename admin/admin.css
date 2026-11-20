@@ -216,3 +216,8 @@ html[data-admin-theme="light"] #products,html[data-admin-theme="light"] #orders,
 html[data-admin-theme="light"] .admin-image-preview-item{background:#fffdfa;border-color:#e9dfd4}
 html[data-admin-theme="light"] .admin-image-pending-label{color:#896a37}
 @media(max-width:600px){.admin-image-preview-actions{gap:3px}.admin-image-preview-actions button{padding:4px 6px}}
+
+
+.manager-password-field{grid-column:1/-1;display:grid!important;grid-template-columns:1fr;align-items:stretch!important;gap:8px!important}
+.manager-password-field input{width:100%;min-width:0}
+html[data-admin-theme="light"] .manager-password-field{background:#fffdfa!important}
