@@ -51,6 +51,16 @@ function updateSelectedPreset(){
   if(button)button.setAttribute('aria-pressed',selected?'true':'false');
  });
 }
+function validateThemeConfig(){
+ const current=readForm();
+ const invalidColor=Object.entries(current.colors).find(([,value])=>!/^#[0-9a-f]{6}$/i.test(String(value||'')));
+ if(invalidColor)throw new Error('رنگ «'+(colorLabels[invalidColor[0]]||invalidColor[0])+'» باید یک کد HEX شش‌رقمی معتبر باشد.');
+ if(current.sections.length<2||current.sections.length>20)throw new Error('چیدمان باید حداقل ۲ و حداکثر ۲۰ بخش داشته باشد.');
+ const ids=current.sections.map(section=>String(section.id||''));
+ if(new Set(ids).size!==ids.length)throw new Error('شناسه بخش‌ها تکراری است؛ بخش تکراری را حذف و دوباره تلاش کن.');
+ if(current.heroSlides.length>10)throw new Error('حداکثر ۱۰ بنر قابل ثبت است.');
+ return current;
+}
 function renderPresets(){
  const host=$('luxuryPresets');if(!host)return;
  host.innerHTML=luxuryPresets.map(p=>'<article class="preset-card" data-preset-card="'+p.id+'"><div class="preset-art"><div class="preset-art-nav"></div><div class="preset-art-hero"><i></i><b></b><span></span></div><div class="preset-art-products"><i></i><i></i><i></i></div></div><div class="preset-card-body"><div class="preset-card-title"><strong>'+p.name+'</strong><small>'+p.tag+'</small></div><p>'+p.description+'</p><div class="preset-swatches"><i></i><i></i><i></i><i></i><i></i></div><button type="button" data-apply-preset="'+p.id+'" aria-pressed="false">انتخاب این قالب</button></div></article>').join('');
@@ -128,8 +138,8 @@ $('heroSlidesEditor').addEventListener('input',e=>{if(e.target.dataset.heroSlide
 $('heroSlidesEditor').addEventListener('change',async e=>{if(e.target.dataset.heroSlideFile!==undefined){const i=Number(e.target.dataset.heroSlideFile);try{const url=await uploadImage(e.target.files[0]);if(url){config.heroSlides[i].imageUrl=url;renderHeroSlides();setMessage('تصویر بنر بارگذاری شد. برای اعمال، ذخیره و انتشار را انجام بده.');}}catch(err){setMessage(err.message);}}});
 $('heroSlidesEditor').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const i=Number(b.dataset.slideUp??b.dataset.slideDown??b.dataset.slideRemove);if(b.dataset.slideRemove!==undefined)config.heroSlides.splice(i,1);else if(b.dataset.slideUp!==undefined&&i>0)[config.heroSlides[i-1],config.heroSlides[i]]=[config.heroSlides[i],config.heroSlides[i-1]];else if(b.dataset.slideDown!==undefined&&i<config.heroSlides.length-1)[config.heroSlides[i+1],config.heroSlides[i]]=[config.heroSlides[i],config.heroSlides[i+1]];renderHeroSlides();});
 $('addSection').onclick=()=>{const type=$('newSection').value;if(config.sections.length>=20)return setMessage('حداکثر ۲۰ بخش مجاز است.');if(type!=='custom'&&config.sections.some(s=>s.type===type))return setMessage('این بخش از قبل در صفحه وجود دارد.');const id=type==='custom'?'custom-'+Date.now().toString(36):type;config.sections.push({id,type,enabled:true,title:type==='custom'?'عنوان بخش جدید':labels[type],text:'',imageUrl:'',linkUrl:'',buttonText:'مشاهده',backgroundColor:'',mobileOrder:config.sections.length,desktopEnabled:true,mobileEnabled:true});renderSections();preview();setMessage('بخش اضافه شد؛ عنوان و محتوایش را تنظیم کن.');};
-$('saveDraft').onclick=async()=>{try{await uploadSelectedImages();const d=await request('/api/admin/theme/draft',{method:'PUT',body:JSON.stringify(readForm())});fill(d.draft_config);setMessage('پیش‌نویس با موفقیت ذخیره شد؛ هنوز برای مشتریان منتشر نشده است.');}catch(e){setMessage(e.message);}};
-$('publish').onclick=async()=>{if(!confirm('قالب فعلی برای همه بازدیدکنندگان منتشر شود؟'))return;try{await uploadSelectedImages();await request('/api/admin/theme/draft',{method:'PUT',body:JSON.stringify(readForm())});await request('/api/admin/theme/publish',{method:'POST',body:'{}'});setMessage('قالب جدید منتشر شد. صفحه فروشگاه را تازه‌سازی کن.');}catch(e){setMessage(e.message);}};
+$('saveDraft').onclick=async()=>{try{validateThemeConfig();await uploadSelectedImages();const d=await request('/api/admin/theme/draft',{method:'PUT',body:JSON.stringify(readForm())});fill(d.draft_config);setMessage('پیش‌نویس با موفقیت ذخیره شد؛ هنوز برای مشتریان منتشر نشده است.');}catch(e){setMessage(e.message);}};
+$('publish').onclick=async()=>{if(!confirm('قالب فعلی برای همه بازدیدکنندگان منتشر شود؟'))return;try{validateThemeConfig();await uploadSelectedImages();await request('/api/admin/theme/draft',{method:'PUT',body:JSON.stringify(readForm())});await request('/api/admin/theme/publish',{method:'POST',body:'{}'});setMessage('قالب جدید منتشر شد. صفحه فروشگاه را تازه‌سازی کن.');}catch(e){setMessage(e.message);}};
 $('reset').onclick=async()=>{if(!confirm('پیش‌نویس به قالب پایه بازگردد؟ نسخه منتشرشده تغییر نمی‌کند.'))return;try{const d=await request('/api/admin/theme/reset',{method:'POST',body:'{}'});fill(d.draft_config);setMessage('پیش‌نویس به قالب پایه بازگشت.');}catch(e){setMessage(e.message);}};
 renderPresets();
 $('luxuryPresets').addEventListener('click',e=>{const b=e.target.closest('[data-apply-preset]');if(b)applyPreset(b.dataset.applyPreset);});
