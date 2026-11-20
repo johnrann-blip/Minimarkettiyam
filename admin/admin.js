@@ -323,9 +323,9 @@ $('#productForm').onsubmit = async event => {
     }
     const existing=window.currentProductImages||[];
     data.images=[...existing,...uploaded];
-    if(data.images.length)data.image_url=data.images[0];
-    // Send an explicit empty array when the owner removes every image.
-    // Omitting `images` on PATCH tells the API to preserve the saved gallery.
+    data.image_url=data.images[0]||'';
+    // Send an explicit empty gallery and clear the legacy cover URL too.
+    // Otherwise the storefront can keep showing the old image after all gallery items are removed.
     if(data.images.length>12)throw new Error('هر محصول حداکثر ۱۲ عکس دارد.');
     await request(editing?'/api/admin/products/'+encodeURIComponent(id):'/api/admin/products',{
       method:editing?'PATCH':'POST',body:JSON.stringify(data)
