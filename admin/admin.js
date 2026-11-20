@@ -604,7 +604,7 @@ async function loadManagers() {
         </div>
         <div class="manager-permissions" data-manager-editor hidden>
           ${managerPermissions.map(([permission,label])=>'<label><input type="checkbox" data-manager-permission value="'+escapeHtml(permission)+'" '+((manager.permissions||[]).includes(permission)?'checked':'')+'> '+escapeHtml(label)+'</label>').join('')}
-          <label>رمز جدید اختیاری (حداقل ۱۲ نویسه)<input type="password" data-manager-password minlength="12" maxlength="200" autocomplete="new-password" placeholder="برای تغییر رمز وارد کن"></label>
+          <label class="manager-password-field">رمز جدید اختیاری (حداقل ۱۲ نویسه)<input type="password" data-manager-password minlength="12" maxlength="200" autocomplete="new-password" placeholder="برای تغییر رمز وارد کن"></label>
           <button type="button" data-manager-save="${escapeHtml(manager.id)}">ذخیره دسترسی‌ها</button>
         </div>
       </div>
