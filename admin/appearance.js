@@ -100,14 +100,14 @@ function preview(){
  const mobile=p.classList.contains('preview-mobile');
  const safeCssUrl=value=>{const url=String(value||'').trim();return (/^https:\/\/[^\s"'()]+$/i.test(url)||/^\/uploads\/[A-Za-z0-9._~/%?&=+-]+$/.test(url))?'url('+JSON.stringify(url)+')':'';};
  const logo=config.logoUrl?'<img class="theme-logo" src="'+esc(config.logoUrl)+'" alt="AVELORA">':'<b>AVELORA</b><small>BAGS · BEAUTY · MORE</small>';
- const products='<div class="preview-product-grid"><article><i></i><b>محصول منتخب</b><small>قیمت محصول</small></article><article><i></i><b>تازه‌های فروشگاه</b><small>قیمت محصول</small></article><article><i></i><b>انتخاب ویژه</b><small>قیمت محصول</small></article></div>';
+ const products='<div class="preview-empty-state"><span aria-hidden="true">✧</span><b>هنوز محصولی ثبت نشده است</b><small>پس از افزودن محصولات واقعی، ویترین فروشگاه در این بخش نمایش داده می‌شود.</small></div>';
  const parts=['<header class="preview-nav">'+logo+'<span>خانه　 محصولات　 درباره ما　 ♡　 سبد خرید</span></header>'];
  for(const [i,s] of config.sections.entries()){
   if(!s.enabled||(mobile&&s.mobileEnabled===false)||(!mobile&&s.desktopEnabled===false))continue;
   const order=Number(s.mobileOrder??i);
   if(s.type==='hero')parts.push('<section class="preview-hero" data-preview-order="'+order+'"><div><small>کالکشن منتخب AVELORA</small><h2>'+esc(selectedSlide?.title||s.title)+'</h2><p>'+esc(selectedSlide?.text||s.text)+'</p><button type="button">'+esc(selectedSlide?.buttonText||'مشاهده مجموعه')+'</button></div><figure>✦</figure></section>');
   else if(s.type==='products')parts.push('<section class="preview-products" data-preview-order="'+order+'"><small>THE AVELORA EDIT</small><h2>'+esc(s.title)+'</h2>'+products+'</section>');
-  else if(s.type==='feedback')parts.push('<section class="preview-feedback" data-preview-order="'+order+'"><h2>'+esc(s.title)+'</h2><p>«تجربه‌ای دلنشین از انتخاب تا دریافت سفارش»</p></section>');
+  else if(s.type==='feedback')parts.push('<section class="preview-feedback" data-preview-order="'+order+'"><h2>'+esc(s.title)+'</h2><div class="preview-empty-state"><span aria-hidden="true">✧</span><b>هنوز دیدگاهی ثبت نشده است</b><small>پس از تأیید دیدگاه‌های واقعی مشتریان، این بخش نمایش داده می‌شود.</small></div></section>');
   else if(s.type==='footer')parts.push('<section class="preview-footer" data-preview-order="'+order+'"><b>AVELORA</b><p>'+esc(s.title)+'</p><small>BAGS · BEAUTY · MORE</small></section>');
   else parts.push('<section class="preview-custom" data-preview-order="'+order+'" data-preview-background="'+esc(s.backgroundColor||c.surface)+'">'+(s.imageUrl?'<img src="'+esc(s.imageUrl)+'" alt="">':'')+'<h2>'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p></section>');
  }
