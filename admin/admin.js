@@ -44,9 +44,9 @@ async function categories() {
 
 function resetProductForm() {
   $('#productForm').reset();
-  $('#imagePreview').innerHTML = '';
   $('#productColors').innerHTML = '';
   window.currentProductImages=[];
+  renderProductImagePreview();
   $('#productForm [name="id"]').value = '';
   $('#formTitle').textContent = 'افزودن محصول';
   $('#submitProduct').textContent = 'ثبت محصول';
@@ -56,6 +56,8 @@ function resetProductForm() {
 $('#cancelEdit').onclick = resetProductForm;
 
 function renderProductImagePreview(newFiles=[]) {
+  (window.productPreviewObjectUrls||[]).forEach(url=>URL.revokeObjectURL(url));
+  window.productPreviewObjectUrls=[];
   const existing=window.currentProductImages||[];
   const currentMarkup=existing.map((url,index)=>`
     <div class="admin-image-preview-item">
@@ -66,11 +68,14 @@ function renderProductImagePreview(newFiles=[]) {
         <button type="button" data-image-remove="${index}" aria-label="حذف عکس">حذف</button>
       </div>
     </div>`).join('');
-  const pendingMarkup=newFiles.map((file,index)=>`
-    <div class="admin-image-preview-item">
-      <img class="admin-preview-image" alt="پیش‌نمایش عکس جدید ${index+1}" src="${URL.createObjectURL(file)}">
+  const pendingMarkup=newFiles.map((file,index)=>{
+    const previewUrl=URL.createObjectURL(file);
+    window.productPreviewObjectUrls.push(previewUrl);
+    return `<div class="admin-image-preview-item">
+      <img class="admin-preview-image" alt="پیش‌نمایش عکس جدید ${index+1}" src="${previewUrl}">
       <span class="admin-image-pending-label">عکس جدید</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   $('#imagePreview').innerHTML=currentMarkup+pendingMarkup;
 }
 $('#imagePreview').addEventListener('click',event=>{
@@ -78,7 +83,7 @@ $('#imagePreview').addEventListener('click',event=>{
   const up=event.target.closest('[data-image-up]');
   const down=event.target.closest('[data-image-down]');
   if(!remove&&!up&&!down)return;
-  const index=Number((remove||up||down).dataset.imageRemove??(up||{}).dataset?.imageUp??(down||{}).dataset?.imageDown);
+  const index=Number(remove?remove.dataset.imageRemove:up?up.dataset.imageUp:down.dataset.imageDown);
   const images=window.currentProductImages||[];
   if(!Number.isInteger(index)||index<0||index>=images.length)return;
   if(remove)images.splice(index,1);
