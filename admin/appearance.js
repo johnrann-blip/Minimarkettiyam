@@ -29,6 +29,9 @@ function readForm(){
  config.promo={enabled:$('promoEnabled').checked,title:$('promoTitle').value,text:$('promoText').value,imageUrl:$('promoImageUrl').value.trim(),linkUrl:$('promoLinkUrl').value.trim(),buttonText:$('promoButtonText').value||'مشاهده'};
  document.querySelectorAll('[data-color-text]').forEach(el=>config.colors[el.dataset.colorText]=el.value);
  document.querySelectorAll('[data-color]').forEach(el=>config.colors[el.dataset.color]=el.value);
+ const matchingPreset=luxuryPresets.find(p=>['background','primary','navBackground'].every(key=>String(config.colors[key]||'').toLowerCase()===String(p.colors[key]||'').toLowerCase()));
+ config.designId=matchingPreset?matchingPreset.id:'classic';
+ updateSelectedPreset();
  document.querySelectorAll('[data-field]').forEach(el=>{const item=config.sections[Number(el.dataset.index)];if(item)item[el.dataset.field]=el.dataset.field==='mobileOrder'?Number(el.value):el.value;});
  return config;
 }
@@ -36,13 +39,22 @@ function fill(c){
  config={...structuredClone(defaults),...c,heroSlides:Array.isArray(c.heroSlides)?c.heroSlides.map(s=>({...s})):[],colors:{...defaults.colors,...c.colors},promo:{...defaults.promo,...c.promo},sections:Array.isArray(c.sections)?c.sections.map(s=>({...s})):structuredClone(defaults.sections)};
  $('logoUrl').value=config.logoUrl||'';$('heroImageUrl').value=config.heroImageUrl||'';$('backgroundImageUrl').value=config.backgroundImageUrl||'';$('font').value=config.font||'Vazirmatn';
  $('promoEnabled').checked=!!config.promo.enabled;$('promoTitle').value=config.promo.title||'';$('promoText').value=config.promo.text||'';$('promoImageUrl').value=config.promo.imageUrl||'';$('promoLinkUrl').value=config.promo.linkUrl||'';$('promoButtonText').value=config.promo.buttonText||'مشاهده';
- renderColors();renderSections();renderHeroSlides();preview();
+ renderColors();renderSections();renderHeroSlides();updateSelectedPreset();preview();
 }
 
+function updateSelectedPreset(){
+ const active=config.designId||'classic';
+ document.querySelectorAll('[data-preset-card]').forEach(card=>{
+  const selected=card.dataset.presetCard===active;
+  card.classList.toggle('selected',selected);
+  const button=card.querySelector('[data-apply-preset]');
+  if(button)button.setAttribute('aria-pressed',selected?'true':'false');
+ });
+}
 function renderPresets(){
- const host=$('luxuryPresets');
- if(!host)return;
- host.innerHTML=luxuryPresets.map(p=>'<article class="preset-card" data-preset-card="'+p.id+'"><div class="preset-art" style="--p-bg:'+p.colors.background+';--p-surface:'+p.colors.surface+';--p-text:'+p.colors.text+';--p-primary:'+p.colors.primary+';--p-nav:'+p.colors.navBackground+';--p-accent:'+p.colors.accent+'"><div class="preset-art-nav"></div><div class="preset-art-hero"><i></i><b></b><span></span></div><div class="preset-art-products"><i></i><i></i><i></i></div></div><div class="preset-card-body"><div class="preset-card-title"><strong>'+p.name+'</strong><small>'+p.tag+'</small></div><p>'+p.description+'</p><div class="preset-swatches">'+[p.colors.background,p.colors.surface,p.colors.primary,p.colors.accent,p.colors.navBackground].map(c=>'<i style="background:'+c+'"></i>').join('')+'</div><button type="button" data-apply-preset="'+p.id+'">انتخاب این قالب</button></div></article>').join('');
+ const host=$('luxuryPresets');if(!host)return;
+ host.innerHTML=luxuryPresets.map(p=>'<article class="preset-card" data-preset-card="'+p.id+'"><div class="preset-art"><div class="preset-art-nav"></div><div class="preset-art-hero"><i></i><b></b><span></span></div><div class="preset-art-products"><i></i><i></i><i></i></div></div><div class="preset-card-body"><div class="preset-card-title"><strong>'+p.name+'</strong><small>'+p.tag+'</small></div><p>'+p.description+'</p><div class="preset-swatches"><i></i><i></i><i></i><i></i><i></i></div><button type="button" data-apply-preset="'+p.id+'" aria-pressed="false">انتخاب این قالب</button></div></article>').join('');
+ updateSelectedPreset();
 }
 function applyPreset(id){
  const preset=luxuryPresets.find(p=>p.id===id);if(!preset)return;
@@ -67,25 +79,39 @@ async function uploadSelectedImages(){
  readForm();
 }
 function preview(){
- readForm();const p=$('preview'),c=config.colors;
- const themes=[['black-gold','#11100f','#b89455','#090909'],['warm-classic','#f3eadc','#684632','#3d2b21'],['emerald-luxe','#102b25','#c5a15b','#0a211c'],['rose-minimal','#fffafa','#b87578','#fff4f2'],['navy-silver','#eef1f5','#344b68','#17283e'],['charcoal-champagne','#242321','#c8ae83','#191817']];
- const matched=themes.find(([id,bg,primary,nav])=>c.background.toLowerCase()===bg&&c.primary.toLowerCase()===primary&&c.navBackground.toLowerCase()===nav);
- const design=config.designId||matched?.[0]||'classic';p.dataset.design=design;p.className='theme-preview'+(p.classList.contains('preview-mobile')?' preview-mobile':'');
+ readForm();
+ const p=$('preview'),c=config.colors;
+ p.dataset.design=config.designId||'classic';
+ p.className='theme-preview'+(p.classList.contains('preview-mobile')?' preview-mobile':'');
  const mobile=p.classList.contains('preview-mobile');
+ const safeCssUrl=value=>{const url=String(value||'').trim();return (/^https:\/\/[^\s"'()]+$/i.test(url)||/^\/uploads\/[A-Za-z0-9._~/%?&=+-]+$/.test(url))?'url('+JSON.stringify(url)+')':'';};
  const logo=config.logoUrl?'<img class="theme-logo" src="'+esc(config.logoUrl)+'" alt="AVELORA">':'<b>AVELORA</b><small>BAGS · BEAUTY · MORE</small>';
  const products='<div class="preview-product-grid"><article><i></i><b>محصول منتخب</b><small>قیمت محصول</small></article><article><i></i><b>تازه‌های فروشگاه</b><small>قیمت محصول</small></article><article><i></i><b>انتخاب ویژه</b><small>قیمت محصول</small></article></div>';
  const parts=['<header class="preview-nav">'+logo+'<span>خانه　 محصولات　 درباره ما　 ♡　 سبد خرید</span></header>'];
- for(const [i,s] of config.sections.entries()){if(!s.enabled||(mobile&&s.mobileEnabled===false)||(!mobile&&s.desktopEnabled===false))continue;
-  if(s.type==='hero')parts.push('<section class="preview-hero" style="--mobile-order:'+Number(s.mobileOrder??i)+';background-image:'+(config.heroImageUrl?'linear-gradient(#0003,#0003),url('+JSON.stringify(config.heroImageUrl)+')':'none')+'"><div><small>کالکشن منتخب AVELORA</small><h2>'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p><button>مشاهده مجموعه</button></div><figure>✦</figure></section>');
-  else if(s.type==='products')parts.push('<section class="preview-products" style="--mobile-order:'+Number(s.mobileOrder??i)+'"><small>THE AVELORA EDIT</small><h2>'+esc(s.title)+'</h2>'+products+'</section>');
-  else if(s.type==='feedback')parts.push('<section class="preview-feedback" style="--mobile-order:'+Number(s.mobileOrder??i)+'"><h2>'+esc(s.title)+'</h2><p>«تجربه‌ای دلنشین از انتخاب تا دریافت سفارش»</p></section>');
-  else if(s.type==='footer')parts.push('<section class="preview-footer" style="--mobile-order:'+Number(s.mobileOrder??i)+'"><b>AVELORA</b><p>'+esc(s.title)+'</p><small>BAGS · BEAUTY · MORE</small></section>');
-  else parts.push('<section class="preview-custom" style="--mobile-order:'+Number(s.mobileOrder??i)+';background:'+esc(s.backgroundColor||c.surface)+'">'+(s.imageUrl?'<img src="'+esc(s.imageUrl)+'" alt="">':'')+'<h2>'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p></section>');
+ for(const [i,s] of config.sections.entries()){
+  if(!s.enabled||(mobile&&s.mobileEnabled===false)||(!mobile&&s.desktopEnabled===false))continue;
+  const order=Number(s.mobileOrder??i);
+  if(s.type==='hero')parts.push('<section class="preview-hero" data-preview-order="'+order+'"><div><small>کالکشن منتخب AVELORA</small><h2>'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p><button>مشاهده مجموعه</button></div><figure>✦</figure></section>');
+  else if(s.type==='products')parts.push('<section class="preview-products" data-preview-order="'+order+'"><small>THE AVELORA EDIT</small><h2>'+esc(s.title)+'</h2>'+products+'</section>');
+  else if(s.type==='feedback')parts.push('<section class="preview-feedback" data-preview-order="'+order+'"><h2>'+esc(s.title)+'</h2><p>«تجربه‌ای دلنشین از انتخاب تا دریافت سفارش»</p></section>');
+  else if(s.type==='footer')parts.push('<section class="preview-footer" data-preview-order="'+order+'"><b>AVELORA</b><p>'+esc(s.title)+'</p><small>BAGS · BEAUTY · MORE</small></section>');
+  else parts.push('<section class="preview-custom" data-preview-order="'+order+'" data-preview-background="'+esc(s.backgroundColor||c.surface)+'">'+(s.imageUrl?'<img src="'+esc(s.imageUrl)+'" alt="">':'')+'<h2>'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p></section>');
  }
  if(config.promo.enabled)parts.push('<section class="preview-promo"><h2>'+esc(config.promo.title)+'</h2><p>'+esc(config.promo.text)+'</p></section>');
- p.innerHTML=parts.join('');p.style.setProperty('--preview-bg',c.background);p.style.setProperty('--preview-text',c.text);p.style.setProperty('--preview-nav',c.navBackground);p.style.setProperty('--preview-nav-text',c.navText);p.style.setProperty('--preview-surface',c.surface);p.style.setProperty('--preview-primary',c.primary);p.style.setProperty('--preview-accent',c.accent);p.style.background=config.backgroundImageUrl?'linear-gradient(#ffffffb8,#ffffffb8),url("'+config.backgroundImageUrl.replace(/"/g,'%22')+'")':c.background;p.style.color=c.text;p.style.fontFamily=config.font+',Tahoma,sans-serif';
+ p.innerHTML=parts.join('');
+ p.querySelectorAll('[data-preview-order]').forEach(el=>el.style.setProperty('--mobile-order',String(Number(el.dataset.previewOrder)||0)));
+ const hero=p.querySelector('.preview-hero'),heroImage=safeCssUrl(config.heroImageUrl);
+ if(hero&&heroImage)hero.style.backgroundImage='linear-gradient(#0003,#0003),'+heroImage;
+ p.querySelectorAll('[data-preview-background]').forEach(el=>{const color=el.dataset.previewBackground;if(/^#[0-9a-f]{6}$/i.test(color))el.style.backgroundColor=color;});
+ p.style.setProperty('--preview-bg',c.background);p.style.setProperty('--preview-text',c.text);
+ p.style.setProperty('--preview-nav',c.navBackground);p.style.setProperty('--preview-nav-text',c.navText);
+ p.style.setProperty('--preview-surface',c.surface);p.style.setProperty('--preview-primary',c.primary);p.style.setProperty('--preview-accent',c.accent);
+ const backgroundImage=safeCssUrl(config.backgroundImageUrl);
+ p.style.background=backgroundImage?'linear-gradient(#ffffffb8,#ffffffb8),'+backgroundImage:c.background;
+ p.style.color=c.text;p.style.fontFamily=config.font+',Tahoma,sans-serif';
+ updateSelectedPreset();
 }
-async function init(){try{const me=await request('/api/admin/auth/me');if(me.admin?.role!=='owner')throw new Error('فقط مالک فروشگاه اجازه مدیریت ظاهر را دارد.');const data=await request('/api/admin/theme');$('authStatus').textContent='دسترسی مالک تأیید شد.';$('editor').hidden=false;fill(data.draft_config||defaults);}catch(e){$('authStatus').textContent=e.message+' برای ادامه از پنل مدیریت وارد شو.';}}
+async function init(){try{const me=await request('/api/admin/auth/me');if(me.admin?.role!=='owner')throw new Error('فقط مالک فروشگاه اجازه مدیریت ظاهر را دارد.');const data=await request('/api/admin/theme');$('authStatus').textContent='دسترسی مالک تأیید شد.';$('editor').hidden=false;fill(data.draft_config||defaults);const published=data.published_config?.designId||'classic',draft=config.designId||'classic';setMessage(published===draft?'قالب انتخاب‌شده با نسخه منتشرشده هماهنگ است.':'پیش‌نویس با قالب منتشرشده متفاوت است؛ برای اعمال تغییرات، ابتدا ذخیره و سپس انتشار را انتخاب کن.');}catch(e){$('authStatus').textContent=e.message+' برای ادامه از پنل مدیریت وارد شو.';}}
 $('colors').addEventListener('input',e=>{if(e.target.dataset.color){const t=document.querySelector('[data-color-text="'+e.target.dataset.color+'"]');if(t)t.value=e.target.value;}preview();});
 $('colors').addEventListener('change',e=>{if(e.target.dataset.colorText){const c=document.querySelector('[data-color="'+e.target.dataset.colorText+'"]');if(/^#[0-9a-fA-F]{6}$/.test(e.target.value)&&c)c.value=e.target.value;}preview();});
 $('sections').addEventListener('input',e=>{if(e.target.dataset.field){const item=config.sections[Number(e.target.dataset.index)];if(item)item[e.target.dataset.field]=e.target.value;}preview();});
