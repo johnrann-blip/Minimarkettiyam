@@ -324,7 +324,8 @@ $('#productForm').onsubmit = async event => {
     const existing=window.currentProductImages||[];
     data.images=[...existing,...uploaded];
     if(data.images.length)data.image_url=data.images[0];
-    else if(!data.image_url)delete data.images;
+    // Send an explicit empty array when the owner removes every image.
+    // Omitting `images` on PATCH tells the API to preserve the saved gallery.
     if(data.images.length>12)throw new Error('هر محصول حداکثر ۱۲ عکس دارد.');
     await request(editing?'/api/admin/products/'+encodeURIComponent(id):'/api/admin/products',{
       method:editing?'PATCH':'POST',body:JSON.stringify(data)
