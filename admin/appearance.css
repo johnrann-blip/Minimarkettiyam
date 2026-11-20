@@ -111,3 +111,37 @@ body{background:#f3eee8}main{max-width:1050px}.theme-grid{display:grid;grid-temp
 .slide-enabled{display:flex;align-items:center;gap:8px;margin:8px 0}.slide-enabled input{width:auto}.preview-slide-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;padding:12px;background:var(--preview-surface,#fff);border-block:1px solid var(--preview-line, #ddd)}.preview-slide-gallery figure{margin:0;min-width:0}.preview-slide-gallery img{display:block;width:100%;height:76px;object-fit:cover;border-radius:8px}.preview-slide-gallery figcaption{font-size:10px;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .preview-slide-gallery button{min-width:0;margin:0;padding:5px;background:transparent;border:1px solid transparent;color:inherit;text-align:right}.preview-slide-gallery button.is-selected{border-color:var(--preview-accent);background:var(--preview-bg)}.preview-slide-gallery button img{height:76px}.preview-slide-gallery button span{display:block;font-size:10px;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+
+/* Matching luxury appearance studio skin; all existing editor controls and IDs remain unchanged */
+body{background:radial-gradient(ellipse at 85% -10%,rgba(212,175,55,.1),transparent 36%),#0d0d0f}
+body>main>h1{margin-bottom:10px}
+body>main>p>a{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border:1px solid rgba(212,175,55,.2);border-radius:10px;background:#19191c;color:#e7d4a9}
+#authStatus{padding:10px 14px;border:1px solid rgba(212,175,55,.18);border-radius:12px;background:#201d18;color:#e8d9b9}
+#editor>section{overflow:hidden}
+.preset-library{background:linear-gradient(145deg,#19191c,#121214);border-color:rgba(212,175,55,.24)}
+.preset-count{border-color:#8e713e;color:#e3c783;background:rgba(212,175,55,.07)}
+.preset-card{background:linear-gradient(160deg,#202023,#171719);border-color:#39332a;color:#f0e6d6}
+.preset-card:hover{transform:translateY(-3px);border-color:rgba(212,175,55,.48);box-shadow:0 14px 30px rgba(0,0,0,.28)}
+.preset-card.selected{border-color:#d4af37;background:linear-gradient(160deg,#26231e,#171719)}
+.preset-card-title strong{color:#f3e8d6}
+.preset-card-body p{color:#b4a996}
+.preset-card-body button{background:linear-gradient(135deg,#d7b85d,#a9822b);color:#17130c;border-color:#e3c66f}
+.theme-section-card,.hero-slide-admin{background:linear-gradient(145deg,#202023,#171719);border-color:rgba(212,175,55,.2);border-radius:14px;color:#eee5d8}
+.theme-section-head{padding-bottom:8px;border-bottom:1px solid rgba(212,175,55,.12)}
+.theme-section-fields{padding-top:5px}
+.theme-section-toggles label,.slide-enabled{color:#d7c9ae}
+.theme-actions{position:sticky;bottom:10px;z-index:4;padding:10px;border:1px solid rgba(212,175,55,.18);border-radius:14px;background:rgba(17,17,19,.92);backdrop-filter:blur(12px)}
+.theme-actions button{min-width:130px}
+.hero-slide-admin img{border:1px solid rgba(212,175,55,.2);background:#111}
+.theme-preview{border-color:rgba(212,175,55,.3);box-shadow:0 18px 48px rgba(0,0,0,.28)}
+.preview-slide-gallery{border-color:var(--preview-line);border-radius:0 0 14px 14px}
+.preview-slide-gallery button{border-radius:9px}
+.preview-slide-gallery button:focus-visible{outline:2px solid var(--preview-accent);outline-offset:2px}
+html[data-admin-theme="light"] body{background:#f3eee8}
+html[data-admin-theme="light"] .preset-library,html[data-admin-theme="light"] .preset-card,html[data-admin-theme="light"] .theme-section-card,html[data-admin-theme="light"] .hero-slide-admin{background:#fffdfa;color:#28221e;border-color:#e9dfd4}
+html[data-admin-theme="light"] .preset-card-title strong{color:#30231d}
+html[data-admin-theme="light"] .preset-card-body p{color:#796858}
+html[data-admin-theme="light"] #authStatus{background:#f7f1e8;color:#473329;border-color:#e9dfd4}
+html[data-admin-theme="light"] .theme-actions{background:rgba(255,253,250,.94);border-color:#e9dfd4}
+@media(max-width:600px){.theme-actions{position:static}.theme-actions button{flex:1;min-width:0}.preset-card:hover{transform:none}}
