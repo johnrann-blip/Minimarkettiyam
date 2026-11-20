@@ -88,9 +88,13 @@ async function uploadSelectedImages(){
  for(const el of document.querySelectorAll('[data-section-file]')){const file=el.files[0];if(file){const i=Number(el.dataset.sectionFile);config.sections[i].imageUrl=await uploadImage(file);el.value='';const input=document.querySelector('[data-field="imageUrl"][data-index="'+i+'"]');if(input)input.value=config.sections[i].imageUrl;}}
  readForm();
 }
+let previewSlideIndex=0;
 function preview(){
  readForm();
  const p=$('preview'),c=config.colors;
+ const visibleSlides=config.heroSlides.filter(slide=>slide&&slide.enabled!==false&&slide.imageUrl);
+ if(previewSlideIndex>=visibleSlides.length)previewSlideIndex=0;
+ const selectedSlide=visibleSlides[previewSlideIndex]||null;
  p.dataset.design=config.designId||'classic';
  p.className='theme-preview'+(p.classList.contains('preview-mobile')?' preview-mobile':'');
  const mobile=p.classList.contains('preview-mobile');
@@ -101,7 +105,7 @@ function preview(){
  for(const [i,s] of config.sections.entries()){
   if(!s.enabled||(mobile&&s.mobileEnabled===false)||(!mobile&&s.desktopEnabled===false))continue;
   const order=Number(s.mobileOrder??i);
-  if(s.type==='hero')parts.push('<section class="preview-hero" data-preview-order="'+order+'"><div><small>کالکشن منتخب AVELORA</small><h2>'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p><button>مشاهده مجموعه</button></div><figure>✦</figure></section>');
+  if(s.type==='hero')parts.push('<section class="preview-hero" data-preview-order="'+order+'"><div><small>کالکشن منتخب AVELORA</small><h2>'+esc(selectedSlide?.title||s.title)+'</h2><p>'+esc(selectedSlide?.text||s.text)+'</p><button type="button">'+esc(selectedSlide?.buttonText||'مشاهده مجموعه')+'</button></div><figure>✦</figure></section>');
   else if(s.type==='products')parts.push('<section class="preview-products" data-preview-order="'+order+'"><small>THE AVELORA EDIT</small><h2>'+esc(s.title)+'</h2>'+products+'</section>');
   else if(s.type==='feedback')parts.push('<section class="preview-feedback" data-preview-order="'+order+'"><h2>'+esc(s.title)+'</h2><p>«تجربه‌ای دلنشین از انتخاب تا دریافت سفارش»</p></section>');
   else if(s.type==='footer')parts.push('<section class="preview-footer" data-preview-order="'+order+'"><b>AVELORA</b><p>'+esc(s.title)+'</p><small>BAGS · BEAUTY · MORE</small></section>');
@@ -109,10 +113,9 @@ function preview(){
  }
  if(config.promo.enabled)parts.push('<section class="preview-promo"><h2>'+esc(config.promo.title)+'</h2><p>'+esc(config.promo.text)+'</p></section>');
  p.innerHTML=parts.join('');
- const visibleSlides=config.heroSlides.filter(slide=>slide&&slide.enabled!==false&&slide.imageUrl);
- if(visibleSlides.length){const gallery=document.createElement('div');gallery.className='preview-slide-gallery';gallery.setAttribute('aria-label','پیش‌نمایش تصاویر اسلایدر');visibleSlides.forEach((slide,index)=>{const item=document.createElement('figure');const image=document.createElement('img');image.src=slide.imageUrl;image.alt=slide.title||('بنر '+(index+1));const caption=document.createElement('figcaption');caption.textContent=slide.title||('بنر '+(index+1));item.append(image,caption);gallery.append(item);});p.insertBefore(gallery,p.querySelector('.preview-products')||null);}
+ if(visibleSlides.length){const gallery=document.createElement('div');gallery.className='preview-slide-gallery';gallery.setAttribute('aria-label','انتخاب بنر برای پیش‌نمایش');visibleSlides.forEach((slide,index)=>{const button=document.createElement('button');button.type='button';button.className='preview-slide-choice'+(index===previewSlideIndex?' is-selected':'');button.dataset.previewSlideIndex=String(index);const image=document.createElement('img');image.src=slide.imageUrl;image.alt=slide.title||('بنر '+(index+1));const caption=document.createElement('span');caption.textContent=slide.title||('بنر '+(index+1));button.append(image,caption);gallery.append(button);});p.insertBefore(gallery,p.querySelector('.preview-products')||null);gallery.addEventListener('click',event=>{const button=event.target.closest('[data-preview-slide-index]');if(!button)return;previewSlideIndex=Number(button.dataset.previewSlideIndex);preview();});}
  p.querySelectorAll('[data-preview-order]').forEach(el=>el.style.setProperty('--mobile-order',String(Number(el.dataset.previewOrder)||0)));
- const hero=p.querySelector('.preview-hero'),heroImage=safeCssUrl(config.heroImageUrl);
+ const hero=p.querySelector('.preview-hero'),heroImage=safeCssUrl(selectedSlide?.imageUrl||config.heroImageUrl);
  if(hero&&heroImage)hero.style.backgroundImage='linear-gradient(#0003,#0003),'+heroImage;
  p.querySelectorAll('[data-preview-background]').forEach(el=>{const color=el.dataset.previewBackground;if(/^#[0-9a-f]{6}$/i.test(color))el.style.backgroundColor=color;});
  p.style.setProperty('--preview-bg',c.background);p.style.setProperty('--preview-text',c.text);
