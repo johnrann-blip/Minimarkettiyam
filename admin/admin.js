@@ -44,9 +44,9 @@ async function categories() {
 
 function resetProductForm() {
   $('#productForm').reset();
-  $('#imagePreview').innerHTML = '';
   $('#productColors').innerHTML = '';
   window.currentProductImages=[];
+  renderProductImagePreview();
   $('#productForm [name="id"]').value = '';
   $('#formTitle').textContent = 'افزودن محصول';
   $('#submitProduct').textContent = 'ثبت محصول';
@@ -54,6 +54,46 @@ function resetProductForm() {
 }
 
 $('#cancelEdit').onclick = resetProductForm;
+
+function renderProductImagePreview(newFiles=[]) {
+  (window.productPreviewObjectUrls||[]).forEach(url=>URL.revokeObjectURL(url));
+  window.productPreviewObjectUrls=[];
+  const existing=window.currentProductImages||[];
+  const currentMarkup=existing.map((url,index)=>`
+    <div class="admin-image-preview-item">
+      <img class="admin-preview-image" alt="عکس فعلی محصول ${index+1}" src="${escapeHtml(url)}">
+      <div class="admin-image-preview-actions">
+        <button type="button" data-image-up="${index}" ${index===0?'disabled':''} aria-label="انتقال عکس به قبل">↑</button>
+        <button type="button" data-image-down="${index}" ${index===existing.length-1?'disabled':''} aria-label="انتقال عکس به بعد">↓</button>
+        <button type="button" data-image-remove="${index}" aria-label="حذف عکس">حذف</button>
+      </div>
+    </div>`).join('');
+  const pendingMarkup=newFiles.map((file,index)=>{
+    const previewUrl=URL.createObjectURL(file);
+    window.productPreviewObjectUrls.push(previewUrl);
+    return `<div class="admin-image-preview-item">
+      <img class="admin-preview-image" alt="پیش‌نمایش عکس جدید ${index+1}" src="${previewUrl}">
+      <span class="admin-image-pending-label">عکس جدید</span>
+    </div>`;
+  }).join('');
+  $('#imagePreview').innerHTML=currentMarkup+pendingMarkup;
+}
+$('#imagePreview').addEventListener('click',event=>{
+  const remove=event.target.closest('[data-image-remove]');
+  const up=event.target.closest('[data-image-up]');
+  const down=event.target.closest('[data-image-down]');
+  if(!remove&&!up&&!down)return;
+  const index=Number(remove?remove.dataset.imageRemove:up?up.dataset.imageUp:down.dataset.imageDown);
+  const images=window.currentProductImages||[];
+  if(!Number.isInteger(index)||index<0||index>=images.length)return;
+  if(remove)images.splice(index,1);
+  else if(up&&index>0)[images[index-1],images[index]]=[images[index],images[index-1]];
+  else if(down&&index<images.length-1)[images[index+1],images[index]]=[images[index],images[index+1]];
+  const imageField=$('#productForm').elements.image_url;
+  if(images.length)imageField.value=images[0];else if(remove)imageField.value='';
+  renderProductImagePreview([...$('#imageFile').files]);
+  message('گالری تصاویر به‌روزرسانی شد؛ برای ثبت تغییرات، ذخیره محصول را بزن.');
+});
 
 // Show immediate feedback even if browser validation prevents form submission.
 $('#submitProduct').addEventListener('click', () => {
@@ -78,30 +118,54 @@ function selectedColors(){
 }
 $('#imageFile').addEventListener('change',()=>{
   const files=[...$('#imageFile').files];
-  if(files.length>12){message('حداکثر ۱۲ عکس برای هر محصول مجاز است.');$('#imageFile').value='';return;}
+  if((window.currentProductImages||[]).length+files.length>12){message('هر محصول حداکثر ۱۲ عکس دارد؛ تعداد عکس‌های فعلی را در نظر بگیر.');$('#imageFile').value='';renderProductImagePreview();return;}
   if(files.some(file=>!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024)){
-    message('هر عکس باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.');$('#imageFile').value='';return;
+    message('هر عکس باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.');$('#imageFile').value='';renderProductImagePreview();return;
   }
-  $('#imagePreview').innerHTML=files.map(file=>'<img alt="پیش‌نمایش عکس محصول" style="max-width:100px;max-height:100px;object-fit:contain" src="'+URL.createObjectURL(file)+'">').join('');
-  message(files.length+' عکس انتخاب شد.');
+  renderProductImagePreview(files);
+  message(files.length+' عکس جدید انتخاب شد.');
 });
+
+
+const dashboardData = { orders:null, products:null };
+const faNumber = value => Number(value || 0).toLocaleString('fa-IR');
+function renderDashboard(){
+  const orderEl=$('#metricOrders'), revenueEl=$('#metricRevenue'), productEl=$('#metricProducts'), lowEl=$('#metricLowStock');
+  if(dashboardData.orders){
+    const rows=dashboardData.orders;
+    if(orderEl)orderEl.textContent=faNumber(rows.length);
+    const verified=rows.filter(o=>o.payment_status==='verified' && o.status!=='cancelled');
+    const revenue=verified.reduce((sum,o)=>sum+Number(o.total_toman||0),0);
+    if(revenueEl)revenueEl.textContent=faNumber(revenue);
+    const counts=[['در انتظار پرداخت', 'awaiting_payment'],['پرداخت‌شده', 'paid'],['آماده‌سازی', 'preparing'],['ارسال‌شده', 'shipped'],['تکمیل‌شده', 'completed'],['لغوشده', 'cancelled']];
+    const chart=$('#orderStatusChart');
+    if(chart){const max=Math.max(1,...counts.map(([,key])=>rows.filter(o=>o.status===key).length));chart.innerHTML=counts.map(([label,key])=>{const count=rows.filter(o=>o.status===key).length;return '<div class="status-row"><span>'+label+'</span><div class="status-track"><progress max="100" value="'+Math.round(count/max*100)+'">'+Math.round(count/max*100)+'%</progress></div><b>'+faNumber(count)+'</b></div>'}).join('')||'<p class="muted">سفارشی ثبت نشده است.</p>';}
+  }
+  if(dashboardData.products){const active=dashboardData.products.filter(isProductActive);if(productEl)productEl.textContent=faNumber(active.length);if(lowEl)lowEl.textContent=faNumber(active.filter(p=>Number(p.stock)<=3).length);}
+}
 
 async function loadAdminWorkspace(admin) {
   $('#adminWorkspace').hidden = false;
   const owner = admin?.role === 'owner';
   window.isStoreOwner = owner;
   const permissions = new Set(admin?.permissions || []);
+  window.adminPermissions = permissions;
   const can = permission => owner || permissions.has(permission);
   const productAccess = can('products.view') || can('products.create') || can('products.update') || can('products.archive');
   const orderAccess = can('orders.view') || can('orders.update');
   const customerAccess = can('customers.view') || can('customers.manage');
   // Store settings include bank/payment details; keep them owner-only.
   const settingsAccess = owner;
+  const auditAccess = can('audit.view');
+  const accessMap = {orders:orderAccess,'product-edit':can('products.create')||can('products.update'),products:productAccess,archive:can('products.archive'),customers:customerAccess,owner,audit:auditAccess};
+  document.querySelectorAll('[data-admin-access]').forEach(link=>{link.hidden=!accessMap[link.dataset.adminAccess];});
   $('#advertisingAdminLink').hidden = !owner;
   $('#appearanceAdminLink').hidden = !owner;
   $('#feedbackAdmin').hidden = !owner;
   if(owner) loadFeedback();
   $('#managerAdmin').hidden = !owner;
+  $('#auditAdmin').hidden = !auditAccess;
+  $('#activeSessionsPanel').hidden = !owner;
   $('#productAdmin').hidden = !(can('products.create') || can('products.update'));
   $('#productsAdmin').hidden = !productAccess;
   $('#archiveAdmin').hidden = !can('products.archive');
@@ -117,6 +181,7 @@ async function loadAdminWorkspace(admin) {
   if (customerAccess) tasks.push(customers());
   if (settingsAccess) tasks.push(loadStoreSettings());
   if (owner) tasks.push(loadManagers(), advertisingSummary());
+  if (auditAccess) tasks.push(loadAudit(owner));
   await Promise.all(tasks);
 }
 
@@ -243,6 +308,8 @@ $('#productForm').onsubmit = async event => {
   data.sale_price_toman=data.sale_price_toman===''?null:Number(data.sale_price_toman);
   data.colors=selectedColors();
   const editing=Boolean(id), button=$('#submitProduct');
+  const allowed = window.isStoreOwner || window.adminPermissions?.has(editing ? 'products.update' : 'products.create');
+  if(!allowed){message(editing?'مجوز ویرایش محصول را نداری.':'مجوز ثبت محصول را نداری.');return;}
   button.disabled=true;button.textContent='در حال آپلود عکس‌ها و ذخیره...';
   try{
     const uploaded=[];
@@ -255,9 +322,11 @@ $('#productForm').onsubmit = async event => {
       uploaded.push(result.image_url);
     }
     const existing=window.currentProductImages||[];
-    data.images=uploaded.length?([...existing,...uploaded].slice(0,12)):existing;
-    if(data.image_url&&!data.images.length)data.images=[data.image_url];
-    if(!data.images.length)delete data.images;
+    data.images=[...existing,...uploaded];
+    data.image_url=data.images[0]||'';
+    // Send an explicit empty gallery and clear the legacy cover URL too.
+    // Otherwise the storefront can keep showing the old image after all gallery items are removed.
+    if(data.images.length>12)throw new Error('هر محصول حداکثر ۱۲ عکس دارد.');
     await request(editing?'/api/admin/products/'+encodeURIComponent(id):'/api/admin/products',{
       method:editing?'PATCH':'POST',body:JSON.stringify(data)
     });
@@ -298,10 +367,23 @@ function renderProductCard(p, archived = false) {
   `;
 }
 
+
+function applyProductPermissions(){
+  const can=permission=>window.isStoreOwner||window.adminPermissions?.has(permission);
+  document.querySelectorAll('[data-edit]').forEach(button=>button.hidden=!can('products.update'));
+  document.querySelectorAll('[data-toggle],[data-remove],[data-restore]').forEach(button=>button.hidden=!can('products.archive'));
+  document.querySelectorAll('[data-permanent-delete]').forEach(button=>button.hidden=!window.isStoreOwner);
+}
+function applyOrderPermissions(){
+  const canUpdate=window.isStoreOwner||window.adminPermissions?.has('orders.update');
+  document.querySelectorAll('#orders [data-status],#orders select[id^="s"]').forEach(control=>control.hidden=!canUpdate);
+}
+
 async function products() {
   try {
     const data = await request('/api/admin/products');
     if (!Array.isArray(data)) throw new Error('پاسخ فهرست محصولات معتبر نیست.');
+    dashboardData.products=data;renderDashboard();
     const activeProducts = data.filter(isProductActive);
     const archivedProducts = data.filter(p => !isProductActive(p));
 
@@ -310,6 +392,7 @@ async function products() {
     $('#archivedProducts').innerHTML = archivedProducts.map(p => renderProductCard(p, true)).join('')
       || 'بایگانی خالی است.';
     $('#archivedProductsCount').textContent = `(${archivedProducts.length.toLocaleString('fa-IR')})`;
+    applyProductPermissions();
   } catch (error) {
     $('#products').textContent = error.message;
     $('#archivedProducts').textContent = error.message;
@@ -352,7 +435,8 @@ $('#products').addEventListener('click', async event => {
       form.elements.stock.value = p.stock;
       form.elements.image_url.value = p.image_url || '';
       window.currentProductImages=(p.images||[]).map(x=>x.image_url);
-      $('#imagePreview').innerHTML=window.currentProductImages.map(url=>'<img alt="عکس فعلی محصول" style="max-width:100px;max-height:100px;object-fit:contain" src="'+escapeHtml(url)+'">').join('');
+      if(!window.currentProductImages.length&&p.image_url)window.currentProductImages=[p.image_url];
+      renderProductImagePreview();
       $('#productColors').innerHTML='';
       (p.colors||[]).forEach(color=>addColorRow(color));
       form.elements.image_file.value = '';
@@ -515,7 +599,14 @@ async function loadManagers() {
         <p>وضعیت: ${manager.is_active ? 'فعال' : 'غیرفعال'}</p>
         <p>مجوزها: ${(manager.permissions || []).map(p => escapeHtml(managerPermissions.find(x => x[0] === p)?.[1] || p)).join('، ') || 'بدون مجوز'}</p>
         <p class="muted">آخرین ورود: ${manager.last_login_at ? new Date(manager.last_login_at).toLocaleString('fa-IR') : 'هنوز وارد نشده'}</p>
-        <button type="button" data-manager-toggle="${escapeHtml(manager.id)}" data-active="${manager.is_active ? '1' : '0'}">${manager.is_active ? 'غیرفعال‌کردن حساب' : 'فعال‌کردن حساب'}</button>
+        <div class="row">
+          <button type="button" data-manager-edit="${escapeHtml(manager.id)}">ویرایش دسترسی‌ها</button>
+          <button type="button" data-manager-toggle="${escapeHtml(manager.id)}" data-active="${manager.is_active ? '1' : '0'}">${manager.is_active ? 'غیرفعال‌کردن حساب' : 'فعال‌کردن حساب'}</button>
+        </div>
+        <div class="manager-permissions" data-manager-editor hidden>
+          ${managerPermissions.map(([permission,label])=>'<label><input type="checkbox" data-manager-permission value="'+escapeHtml(permission)+'" '+((manager.permissions||[]).includes(permission)?'checked':'')+'> '+escapeHtml(label)+'</label>').join('')}
+          <button type="button" data-manager-save="${escapeHtml(manager.id)}">ذخیره دسترسی‌ها</button>
+        </div>
       </div>
     `).join('') || 'هنوز حساب مدیریتی دیگری ساخته نشده است.';
   } catch(error) { $('#managerList').textContent = error.message; }
@@ -539,6 +630,29 @@ $('#managerForm').onsubmit = async event => {
 };
 
 $('#managerList').addEventListener('click', async event => {
+  const editButton=event.target.closest('[data-manager-edit]');
+  if(editButton){
+    const card=editButton.closest('.order');
+    const editor=card?.querySelector('[data-manager-editor]');
+    if(editor)editor.hidden=!editor.hidden;
+    return;
+  }
+  const saveButton=event.target.closest('[data-manager-save]');
+  if(saveButton){
+    const card=saveButton.closest('.order');
+    const editor=card?.querySelector('[data-manager-editor]');
+    if(!editor)return;
+    const permissions=[...editor.querySelectorAll('[data-manager-permission]:checked')].map(input=>input.value);
+    const payload={permissions};
+    saveButton.disabled=true;
+    try{
+      await request('/api/admin/auth/managers/'+encodeURIComponent(saveButton.dataset.managerSave),{method:'PATCH',body:JSON.stringify(payload)});
+      $('#managerMessage').textContent='دسترسی‌های مدیر به‌روزرسانی شد.';
+      await loadManagers();
+    }catch(error){$('#managerMessage').textContent=error.message;}
+    finally{saveButton.disabled=false;}
+    return;
+  }
   const button = event.target.closest('[data-manager-toggle]');
   if (!button) return;
   const active = button.dataset.active === '1';
@@ -570,6 +684,7 @@ async function orders() {
   try {
     const data = await request('/api/admin/orders');
     if (!Array.isArray(data)) throw new Error('پاسخ سفارش‌ها معتبر نیست.');
+    dashboardData.orders=data;renderDashboard();
 
     $('#orders').innerHTML = data.map(o => `
       <div class="order">
@@ -597,6 +712,7 @@ async function orders() {
         <button type="button" data-status="${escapeHtml(o.id)}">ذخیره وضعیت</button>
       </div>
     `).join('') || 'سفارشی ثبت نشده است.';
+    applyOrderPermissions();
   } catch (error) {
     $('#orders').textContent = error.message;
   }
@@ -645,6 +761,40 @@ $('#archivedProducts').addEventListener('click', async event => {
 });
 
 
+
+async function loadAudit(owner=false){
+  const host=$('#auditLogs');
+  if(!host)return;
+  host.textContent='در حال دریافت گزارش فعالیت‌ها...';
+  try{
+    const rows=await request('/api/admin/auth/audit');
+    if(!Array.isArray(rows))throw new Error('ساختار گزارش فعالیت معتبر نیست.');
+    host.replaceChildren();
+    if(!rows.length)host.textContent='هنوز رویدادی ثبت نشده است.';
+    rows.forEach(row=>{
+      const article=document.createElement('article');article.className='order audit-entry';
+      const title=document.createElement('b');title.textContent=(row.username||'سیستم')+' — '+(row.action||'');
+      const resource=document.createElement('p');resource.textContent=(row.resource||'')+(row.resource_id?' · شناسه '+row.resource_id:'');
+      const detail=document.createElement('p');detail.className='muted';
+      detail.textContent=[row.request_method,row.request_path,'پاسخ '+row.response_status,row.created_at?new Date(row.created_at).toLocaleString('fa-IR'):''].filter(Boolean).join(' · ');
+      article.append(title,resource,detail);host.append(article);
+    });
+    if(owner){
+      const sessions=await request('/api/admin/auth/sessions');
+      if(!Array.isArray(sessions))throw new Error('ساختار نشست‌های فعال معتبر نیست.');
+      const target=$('#activeSessions');target.replaceChildren();
+      if(!sessions.length)target.textContent='نشست فعالی وجود ندارد.';
+      sessions.forEach(session=>{
+        const article=document.createElement('article');article.className='order';
+        const title=document.createElement('b');title.textContent=(session.display_name||session.username)+' (@'+session.username+')';
+        const detail=document.createElement('p');detail.textContent='آخرین فعالیت: '+(session.last_seen_at?new Date(session.last_seen_at).toLocaleString('fa-IR'):'نامشخص');
+        article.append(title,detail);target.append(article);
+      });
+    }
+  }catch(error){host.textContent=error.message;}
+}
+$('#refreshAudit')?.addEventListener('click',()=>loadAudit(window.isStoreOwner===true));
+
 async function loadFeedback(){
   if($('#feedbackAdmin').hidden)return;
   try{
@@ -672,5 +822,10 @@ $('#feedbackList').addEventListener('click',async event=>{
     await loadFeedback();
   }catch(error){message(error.message);button.disabled=false;}
 });
+
+// The dashboard uses an external script so the production CSP can remain strict.
+try { document.documentElement.dataset.adminTheme = localStorage.getItem('avelora-admin-theme') === 'light' ? 'light' : 'dark'; } catch { document.documentElement.dataset.adminTheme = 'dark'; }
+const adminThemeToggle=$('#adminThemeToggle');
+if(adminThemeToggle){const paintThemeButton=()=>{adminThemeToggle.textContent=document.documentElement.dataset.adminTheme==='dark'?'☼ حالت روشن':'☾ حالت تیره';};paintThemeButton();adminThemeToggle.addEventListener('click',()=>{const next=document.documentElement.dataset.adminTheme==='dark'?'light':'dark';document.documentElement.dataset.adminTheme=next;try{localStorage.setItem('avelora-admin-theme',next);}catch{}paintThemeButton();});}
 
 checkAdminSession();

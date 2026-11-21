@@ -55,7 +55,9 @@ document.addEventListener('submit',async event=>{
  if(!form)return;
  event.preventDefault();
  const data=Object.fromEntries(new FormData(form).entries());
- data.starts_at=new Date(data.starts_at).toISOString();data.ends_at=new Date(data.ends_at).toISOString();
+ const start=new Date(data.starts_at),end=new Date(data.ends_at);
+ if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<=start){say('زمان پایان باید معتبر و بعد از زمان شروع باشد.');return;}
+ data.starts_at=start.toISOString();data.ends_at=end.toISOString();
  try{await api('/api/admin/advertising/requests/'+form.dataset.campaignForm+'/campaign',{method:'POST',body:JSON.stringify(data)});say('کمپین با موفقیت زمان‌بندی شد.');await refresh();}catch(error){say(error.message);}
 });
 (async()=>{
