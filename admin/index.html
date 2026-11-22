@@ -220,13 +220,15 @@
     <div id="feedbackList"></div>
   </section>
 
-  <section id="auditAdmin" hidden>
-    <h2>گزارش فعالیت مدیران</h2>
-    <p class="muted">آخرین ۳۰۰ رویداد ثبت‌شده. مشاهده بر اساس مجوز audit.view؛ نشست‌های فعال فقط برای مالک.</p>
-    <button id="refreshAudit" type="button">به‌روزرسانی گزارش‌ها</button>
-    <div id="auditLogs" aria-live="polite">گزارشی بارگذاری نشده است.</div>
-    <div id="activeSessionsPanel" hidden><h3>نشست‌های فعال</h3><div id="activeSessions"></div></div>
-  </section>
+  <details id="auditAdmin" class="audit-panel" hidden>
+    <summary>گزارش فعالیت مدیران <span class="muted">برای مشاهده گزارش کامل باز کنید</span></summary>
+    <div class="audit-panel-content">
+      <p class="muted">آخرین ۳۰۰ رویداد ثبت‌شده. مشاهده بر اساس مجوز audit.view؛ نشست‌های فعال فقط برای مالک.</p>
+      <button id="refreshAudit" type="button">به‌روزرسانی گزارش‌ها</button>
+      <div id="auditLogs" aria-live="polite">گزارشی بارگذاری نشده است.</div>
+      <div id="activeSessionsPanel" hidden><h3>نشست‌های فعال</h3><div id="activeSessions"></div></div>
+    </div>
+  </details>
 
   <section id="ordersAdmin">
     <h2>سفارش‌ها</h2>
