@@ -221,3 +221,17 @@ html[data-admin-theme="light"] .admin-image-pending-label{color:#896a37}
 .manager-password-field{grid-column:1/-1;display:grid!important;grid-template-columns:1fr;align-items:stretch!important;gap:8px!important}
 .manager-password-field input{width:100%;min-width:0}
 html[data-admin-theme="light"] .manager-password-field{background:#fffdfa!important}
+
+
+/* Compact, native collapsible admin activity report */
+.audit-panel{grid-column:1/-1;align-self:start;margin:0;padding:0;border:1px solid var(--line);border-radius:14px;background:#171719;overflow:hidden}
+.audit-panel>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:12px 16px;cursor:pointer;list-style:none;color:#e8d9b9;font-weight:700}
+.audit-panel>summary::-webkit-details-marker{display:none}
+.audit-panel>summary::after{content:'＋';color:var(--gold);font-size:18px}
+.audit-panel[open]>summary::after{content:'−'}
+.audit-panel-content{padding:0 16px 16px;border-top:1px solid var(--line)}
+.audit-panel-content>#auditLogs{max-height:460px;overflow:auto;overscroll-behavior:contain}
+.audit-panel-content .audit-entry{margin:8px 0}
+html[data-admin-theme="light"] .audit-panel{background:#fffdfa;border-color:#e9dfd4}
+html[data-admin-theme="light"] .audit-panel>summary{color:#30231d}
+@media(max-width:600px){.audit-panel>summary{align-items:flex-start;flex-direction:column;gap:2px}.audit-panel-content>#auditLogs{max-height:360px}}
