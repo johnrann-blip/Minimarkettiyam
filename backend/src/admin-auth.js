@@ -4,7 +4,7 @@ const { promisify } = require('util');
 const scrypt = promisify(crypto.scrypt);
 const router = express.Router();
 const COOKIE = 'avelora_admin_session';
-const PERMISSIONS = ['products.view','products.create','products.update','products.archive','products.upload','orders.view','orders.update','customers.view','customers.manage','settings.view','settings.update','accounting.view','accounting.manage','reports.view','admin.access','audit.view'];
+const PERMISSIONS = ['products.view','products.create','products.update','products.archive','products.upload','orders.view','orders.update','customers.view','customers.manage','audit.view'];
 
 function cookieValue(header,name) {
  const entry=String(header||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='));
