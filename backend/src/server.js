@@ -525,7 +525,7 @@ function normalizeDigits(value) {
 }
 
 function normalizeIranMobile(value) {
-  let phone = normalizeDigits(value).trim().replace(/[\\s-]/g, '');
+  let phone = normalizeDigits(value).trim().replace(/[\s-]/g, '');
 
   if (phone.startsWith('+98')) phone = '0' + phone.slice(3);
   else if (phone.startsWith('0098')) phone = '0' + phone.slice(4);
