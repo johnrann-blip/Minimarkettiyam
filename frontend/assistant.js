@@ -88,9 +88,9 @@
   function priceText(p) { return Number.isFinite(currentPrice(p)) ? money(currentPrice(p)) + ' تومان' : 'قیمت ثبت نشده'; }
   function stockText(p) { return Number(p.stock) > 0 ? 'موجود' : 'ناموجود'; }
   function budgetFrom(text) {
-    const match = text.match(/(?:زیر|تا سقف|حداکثر|بودجه|تا)\s*([\d,.]+)/);
+    const match = text.match(/(?:زیر|تا سقف|حداکثر|بودجه|تا)\s*([\d,.]+(?:\s+[\d,.]+)*)/);
     if (!match) return null;
-    let n = Number(match[1].replace(/,/g, ''));
+    let n = Number(match[1].replace(/[\s,٬٫]/g, ''));
     if (!Number.isFinite(n)) return null;
     if (/میلیون/.test(text)) n *= 1000000;
     else if (/هزار/.test(text)) n *= 1000;
