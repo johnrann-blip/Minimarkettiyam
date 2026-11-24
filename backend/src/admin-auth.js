@@ -76,8 +76,9 @@ function createAdminAuth({pool,rateLimit}) {
   if(!process.env.ADMIN_API_KEY||!safeEqual(process.env.ADMIN_API_KEY,req.body?.admin_api_key)) return res.status(401).json({error:'کلید راه‌اندازی مدیریت صحیح نیست.'});
   const username=usernameOf(req.body?.username||'owner'),display=String(req.body?.display_name||'مالک فروشگاه').trim().slice(0,120),password=String(req.body?.password||'');
   if(!validUsername(username)||!display||password.length<12||password.length>200) return res.status(400).json({error:'نام کاربری معتبر و رمز عبور حداقل ۱۲ نویسه‌ای لازم است.'});
-  const client=await pool.connect();
+  let client=null;
   try {
+   client=await pool.connect();
    await client.query('BEGIN'); await client.query('LOCK TABLE admin_users IN EXCLUSIVE MODE');
    const count=await client.query("SELECT COUNT(*)::int AS count FROM admin_users WHERE role='owner'");
    if(count.rows[0].count) { await client.query('ROLLBACK'); return res.status(409).json({error:'حساب مالک قبلاً ساخته شده است؛ از صفحه ورود استفاده کن.'}); }
@@ -88,8 +89,8 @@ function createAdminAuth({pool,rateLimit}) {
    await client.query('COMMIT');
    clearCookie(res);
    await audit(pool,admin,req,'owner.bootstrap','administrators',201); res.status(201).json({admin,permissions:PERMISSIONS,login_required:true});
-  } catch(error) { try { await client.query('ROLLBACK'); } catch {} console.error('Admin bootstrap failed:',error.message); res.status(503).json({error:'راه‌اندازی حساب مالک انجام نشد.'}); }
-  finally { client.release(); }
+  } catch(error) { if(client) { try { await client.query('ROLLBACK'); } catch {} } console.error('Admin bootstrap failed:',error.message); res.status(503).json({error:'راه‌اندازی حساب مالک انجام نشد.'}); }
+  finally { client?.release(); }
  });
  router.post('/login',rateLimit,async(req,res)=>{
   if(req.get('x-admin-request')!=='1') return res.status(403).json({error:'درخواست معتبر نیست.'});

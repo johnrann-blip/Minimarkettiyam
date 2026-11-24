@@ -215,6 +215,47 @@ pool.on('error', error => {
 const toman = n => Number.isSafeInteger(Number(n)) && Number(n) >= 0;
 const orderCode = () => 'MM' + Date.now().toString().slice(-9) + crypto.randomBytes(2).toString('hex').toUpperCase();
 
+async function expireUnpaidOrders() {
+  let client;
+  try {
+    client=await pool.connect();
+    await client.query('BEGIN');
+    const expired=await client.query(
+      `SELECT id FROM orders
+       WHERE status='awaiting_payment'
+         AND payment_expires_at IS NOT NULL
+         AND payment_expires_at<=NOW()
+         AND payment_status<>'verified'
+       ORDER BY payment_expires_at
+       LIMIT 50 FOR UPDATE SKIP LOCKED`
+    );
+    for(const order of expired.rows){
+      const items=await client.query(
+        'SELECT product_id,quantity,color_id FROM order_items WHERE order_id=$1',
+        [order.id]
+      );
+      for(const item of items.rows){
+        if(!item.product_id)continue;
+        if(item.color_id){
+          await client.query('UPDATE product_colors SET stock=stock+$1,updated_at=NOW() WHERE id=$2',[item.quantity,item.color_id]);
+          await client.query('UPDATE products SET stock=(SELECT COALESCE(SUM(stock),0) FROM product_colors WHERE product_id=$1 AND is_active=true),updated_at=NOW() WHERE id=$1',[item.product_id]);
+        }else{
+          await client.query('UPDATE products SET stock=stock+$1,updated_at=NOW() WHERE id=$2',[item.quantity,item.product_id]);
+        }
+      }
+      await client.query(
+        "UPDATE orders SET status='cancelled',updated_at=NOW() WHERE id=$1 AND status='awaiting_payment'",
+        [order.id]
+      );
+    }
+    await client.query('COMMIT');
+    if(expired.rowCount)console.log('AVELORA expired unpaid orders:',expired.rowCount);
+  }catch(error){
+    if(client)await client.query('ROLLBACK').catch(()=>{});
+    console.error('AVELORA unpaid order expiry failed:',error.message);
+  }finally{client?.release()}
+}
+
 app.get('/api/health', async (_req, res) => {
   try { await pool.query('SELECT 1'); res.json({ status: 'ok', service: 'minimarkettiyam-store' }); }
   catch { res.status(503).json({ status: 'database_unavailable' }); }
@@ -228,7 +269,7 @@ app.get('/api/products', async (req, res) => {
     const values = [visitorKey(req) || ''];
     let where = 'p.is_active=true';
     if (req.query.category) { values.push(String(req.query.category)); where += ' AND c.slug=$' + values.length; }
-    if (req.query.q) { values.push('%' + String(req.query.q).slice(0,80) + '%'); where += ' AND (p.name ILIKE $' + values.length + ' OR p.description ILIKE $' + values.length + ')'; }
+    if (req.query.q) { const term=String(req.query.q).slice(0,80).replace(/[\\%_]/g, '\\$&'); values.push('%' + term + '%'); where += ' AND (p.name ILIKE $' + values.length + ' OR p.description ILIKE $' + values.length + ')'; }
     const r = await pool.query(
       `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,c.name AS category_name,c.slug AS category_slug,
               (SELECT COUNT(*)::int FROM product_likes l WHERE l.product_id=p.id) AS likes_count,
@@ -525,7 +566,7 @@ function normalizeDigits(value) {
 }
 
 function normalizeIranMobile(value) {
-  let phone = normalizeDigits(value).trim().replace(/[\\s-]/g, '');
+  let phone = normalizeDigits(value).trim().replace(/[\s-]/g, '');
 
   if (phone.startsWith('+98')) phone = '0' + phone.slice(3);
   else if (phone.startsWith('0098')) phone = '0' + phone.slice(4);
@@ -1207,6 +1248,9 @@ footerSettingsMigration.then(ready => {
     process.exit(1);
   }
   server = app.listen(port, '0.0.0.0', () => console.log(`AVELORA running on ${port}`));
+  expireUnpaidOrders();
+  const orderExpiryTimer=setInterval(expireUnpaidOrders,60*1000);
+  orderExpiryTimer.unref();
 });
 let shuttingDown = false;
 async function shutdown(signal) {

@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { getConfig, tomanToRial, validAuthority } = require('../src/zarinpal');
+const { getConfig, tomanToRial, validAuthority, normalizeIranMobile } = require('../src/zarinpal');
 
 assert.equal(tomanToRial(100), 1000);
 assert.equal(tomanToRial(12500), 125000);
@@ -7,6 +7,11 @@ assert.throws(() => tomanToRial(99));
 assert.throws(() => tomanToRial('not-a-number'));
 assert.equal(validAuthority('A12345678901234567890123456789012345'), true);
 assert.equal(validAuthority('bad'), false);
+assert.equal(normalizeIranMobile('۰۹۱۲ ۳۴۵-۶۷۸۹'), '09123456789');
+assert.equal(normalizeIranMobile('٠٩١٢٣٤٥٦٧٨٩'), '09123456789');
+assert.equal(normalizeIranMobile('+989123456789'), '09123456789');
+assert.equal(normalizeIranMobile('00989123456789'), '09123456789');
+assert.equal(normalizeIranMobile('12345'), null);
 
 const sandbox = getConfig({
   ZARINPAL_MODE: 'sandbox',

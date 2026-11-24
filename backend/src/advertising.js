@@ -116,22 +116,53 @@ function createAdvertisingRouter({pool, rateLimit}) {
          ORDER BY c.created_at DESC LIMIT 5`,
         [placement]
       );
+      const rawVisitor=String(req.get('x-avelora-visitor')||'');
+      const visitorKey=/^[a-f0-9]{32,64}$/i.test(rawVisitor)
+        ? crypto.createHash('sha256').update(rawVisitor.toLowerCase()).digest('hex')
+        : null;
       const delivered=[];
       for (const candidate of candidates.rows) {
-        const updated=await pool.query(
-          `UPDATE advertising_campaigns c SET impressions=c.impressions+1,updated_at=NOW()
-           FROM advertising_packages p,advertising_requests r
-           WHERE c.id=$1 AND p.id=c.package_id AND r.id=c.request_id
-             AND p.placement=$2 AND p.is_active=true AND r.payment_status='paid'
-             AND c.status IN ('active','scheduled') AND c.starts_at<=NOW() AND c.ends_at>NOW()
-             AND (r.target_impressions IS NULL OR c.impressions<r.target_impressions)
-             AND (r.target_clicks IS NULL OR c.clicks<r.target_clicks)
-           RETURNING c.id,c.title,c.image_url,p.placement`,
-          [candidate.id,placement]
-        );
-        if(updated.rowCount){
-          await pool.query("INSERT INTO advertising_events(campaign_id,event_type) VALUES($1,'impression')",[candidate.id]);
-          delivered.push(updated.rows[0]);
+        if(visitorKey){
+          const client=await pool.connect();
+          try{
+            await client.query('BEGIN');
+            const event=await client.query(
+              `INSERT INTO advertising_events(campaign_id,event_type,visitor_key)
+               VALUES($1,'impression',$2) ON CONFLICT DO NOTHING RETURNING id`,
+              [candidate.id,visitorKey]
+            );
+            const updated=await client.query(
+              `UPDATE advertising_campaigns c SET impressions=c.impressions+CASE WHEN $3::boolean THEN 1 ELSE 0 END,updated_at=NOW()
+               FROM advertising_packages p,advertising_requests r
+               WHERE c.id=$1 AND p.id=c.package_id AND r.id=c.request_id
+                 AND p.placement=$2 AND p.is_active=true AND r.payment_status='paid'
+                 AND c.status IN ('active','scheduled') AND c.starts_at<=NOW() AND c.ends_at>NOW()
+                 AND (r.target_impressions IS NULL OR c.impressions<r.target_impressions)
+                 AND (r.target_clicks IS NULL OR c.clicks<r.target_clicks)
+               RETURNING c.id,c.title,c.image_url,p.placement`,
+              [candidate.id,placement,event.rowCount>0]
+            );
+            if(!updated.rowCount && event.rowCount) await client.query('DELETE FROM advertising_events WHERE campaign_id=$1 AND event_type=$2 AND visitor_key=$3',[candidate.id,'impression',visitorKey]);
+            await client.query('COMMIT');
+            if(updated.rowCount)delivered.push(updated.rows[0]);
+          }catch(error){await client.query('ROLLBACK').catch(()=>{});throw error}
+          finally{client.release()}
+        }else{
+          const updated=await pool.query(
+            `UPDATE advertising_campaigns c SET impressions=c.impressions+1,updated_at=NOW()
+             FROM advertising_packages p,advertising_requests r
+             WHERE c.id=$1 AND p.id=c.package_id AND r.id=c.request_id
+               AND p.placement=$2 AND p.is_active=true AND r.payment_status='paid'
+               AND c.status IN ('active','scheduled') AND c.starts_at<=NOW() AND c.ends_at>NOW()
+               AND (r.target_impressions IS NULL OR c.impressions<r.target_impressions)
+               AND (r.target_clicks IS NULL OR c.clicks<r.target_clicks)
+             RETURNING c.id,c.title,c.image_url,p.placement`,
+            [candidate.id,placement]
+          );
+          if(updated.rowCount){
+            await pool.query("INSERT INTO advertising_events(campaign_id,event_type) VALUES($1,'impression')",[candidate.id]);
+            delivered.push(updated.rows[0]);
+          }
         }
       }
       res.set('Cache-Control','no-store');
