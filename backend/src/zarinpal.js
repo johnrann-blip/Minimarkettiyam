@@ -55,11 +55,11 @@ function normalizeIranMobile(value) {
     return String(code >= 0x06F0 && code <= 0x06F9
       ? code - 0x06F0
       : code - 0x0660);
-  }).trim().replace(/[\\s-]/g, '');
+  }).trim().replace(/[\s-]/g, '');
 
   if (phone.startsWith('+98')) phone = '0' + phone.slice(3);
   else if (phone.startsWith('0098')) phone = '0' + phone.slice(4);
-  return /^09\\d{9}$/.test(phone) ? phone : null;
+  return /^09\d{9}$/.test(phone) ? phone : null;
 }
 
 function validAuthority(value) {
@@ -104,8 +104,8 @@ function createZarinpalRouter({ pool, paymentRateLimit }) {
     }
 
     const orderCode = String(req.body?.order_code || '').trim();
-    const phone = String(req.body?.phone || '').replace(/[\s-]/g, '');
-    if (!/^[A-Za-z0-9_-]{8,40}$/.test(orderCode) || !/^09\d{9}$/.test(phone)) {
+    const phone = normalizeIranMobile(req.body?.phone || '');
+    if (!/^[A-Za-z0-9_-]{8,40}$/.test(orderCode) || !phone) {
       return res.status(400).json({ error: 'شماره سفارش یا موبایل معتبر نیست.' });
     }
 
