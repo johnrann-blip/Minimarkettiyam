@@ -133,7 +133,7 @@ function renderProducts(){
 async function loadAdvertising(){
   const placements=['home_banner','product_feed','category_banner'];
   const results=await Promise.all(placements.map(async placement=>{
-    try{const response=await fetch('/api/advertising/campaigns/'+placement);if(!response.ok)return [placement,[]];const data=await response.json();return [placement,Array.isArray(data)?data:[]];}
+    try{const response=await fetch('/api/advertising/campaigns/'+placement,{headers:visitorHeaders});if(!response.ok)return [placement,[]];const data=await response.json();return [placement,Array.isArray(data)?data:[]];}
     catch{return [placement,[]];}
   }));
   for(const [placement,campaigns] of results)adCampaigns[placement]=campaigns;
