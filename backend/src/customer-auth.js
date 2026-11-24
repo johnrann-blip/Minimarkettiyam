@@ -117,7 +117,8 @@ function createCustomerAuth({pool, rateLimit}) {
       req.customer=result.rows[0]||null;
       next();
     } catch(error) {
-      next(error);
+      req.customer=null;
+      next();
     }
   }
   return {router,optionalCustomer};
