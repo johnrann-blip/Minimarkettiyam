@@ -1,20 +1,28 @@
 
-const $=s=>document.querySelector(s);let products=[],cart=JSON.parse(localStorage.getItem('mm_cart')||'[]'),category='',storeSettings=null,adCampaigns={home_banner:[],product_feed:[],category_banner:[]};
+const $=s=>document.querySelector(s);
+function safeStorageGet(key,fallback=null){try{return localStorage.getItem(key)??fallback}catch{return fallback}}
+function safeStorageSet(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}
+function safeStorageRemove(key){try{localStorage.removeItem(key);return true}catch{return false}}
+let products=[],cart=(()=>{try{const value=JSON.parse(safeStorageGet('mm_cart','[]'));return Array.isArray(value)?value:[]}catch{return []}})(),category='',storeSettings=null,adCampaigns={home_banner:[],product_feed:[],category_banner:[]};
 function getVisitorId(){
   const key='avelora_visitor_id';
-  let id=localStorage.getItem(key);
+  let id=safeStorageGet(key);
   if(!/^[a-f0-9]{32,64}$/i.test(id||'')){
     const bytes=new Uint8Array(24);
     if(window.crypto?.getRandomValues)window.crypto.getRandomValues(bytes);
     else for(let i=0;i<bytes.length;i++)bytes[i]=Math.floor(Math.random()*256);
     id=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
-    localStorage.setItem(key,id);
+    safeStorageSet(key,id);
   }
   return id;
 }
 const visitorId=getVisitorId();
 const visitorHeaders={'X-Avelora-Visitor':visitorId};
 const toman=n=>new Intl.NumberFormat('fa-IR').format(Number(n))+' تومان';
+document.querySelector('.mobile-menu')?.addEventListener('click',()=>{
+ const target=document.querySelector('#products');
+ target?.scrollIntoView({behavior:'smooth',block:'start'});
+});
 function renderCategoryImages(){
  document.querySelectorAll('.category-entry').forEach(button=>{
   const slug=button.dataset.category;const product=products.find(p=>p.category_slug===slug&&p.image_url);
@@ -45,6 +53,7 @@ async function loadCategories(){
     $('#categories').querySelectorAll('button').forEach(button=>
       button.addEventListener('click',()=>selectCategory(button.dataset.category))
     );
+    renderCategoryImages();
   }catch(error){
     $('#categories').innerHTML='<span class="category-error">دسته‌بندی‌ها بارگذاری نشدند.</span>';
   }
@@ -65,7 +74,7 @@ async function loadProducts(){
     products=data;
     renderCategoryImages();
     cart=cart.map(line=>{const p=products.find(x=>String(x.id)===String(line.product_id));return p?{...line,name:p.name,price:Number(p.sale_price_toman??p.price_toman)}:line;});
-    localStorage.setItem('mm_cart',JSON.stringify(cart));
+    safeStorageSet('mm_cart',JSON.stringify(cart));
     renderProducts();
     renderCart();
     if(typeof updateCheckout==='function')updateCheckout();
@@ -201,7 +210,7 @@ function addCart(id,colorId=null,colorName='',qty=1){
   else cart.push({product_id:id,color_id:colorId,color_name:colorName,name:p.name,price:Number(p.sale_price_toman??p.price_toman),quantity:qty});
   saveCart();
 }
-function saveCart(){localStorage.setItem('mm_cart',JSON.stringify(cart));$('#cartCount').textContent=tomanCount(cart.reduce((a,x)=>a+x.quantity,0));renderCart();if(typeof updateCheckout==='function')updateCheckout()}
+function saveCart(){safeStorageSet('mm_cart',JSON.stringify(cart));$('#cartCount').textContent=tomanCount(cart.reduce((a,x)=>a+x.quantity,0));renderCart();if(typeof updateCheckout==='function')updateCheckout()}
 function tomanCount(n){return new Intl.NumberFormat('fa-IR').format(n)}
 function renderCart(){$('#cartItems').innerHTML=cart.map((x,i)=>'<div class="cart-line"><span>'+escapeHtml(x.name)+(x.color_name?' — رنگ '+escapeHtml(x.color_name):'')+' × '+tomanCount(x.quantity)+'<br><small>'+toman(x.price*x.quantity)+'</small></span><div><button data-cart-minus="'+i+'" type="button">−</button><button data-cart-plus="'+i+'" type="button">+</button><button data-remove-cart="'+i+'" type="button">حذف</button></div></div>').join('')||'<p>سبد خرید خالی است.</p>';$('#cartTotal').textContent=toman(cart.reduce((a,x)=>a+x.price*x.quantity,0))}
 $('#cartItems').addEventListener('click',event=>{
@@ -390,12 +399,12 @@ $('#orderForm').onsubmit=async e=>{
   try{
     const fingerprint=JSON.stringify(payload);
     let pending=null;
-    try{pending=JSON.parse(localStorage.getItem('mm_pending_order')||'null')}catch{}
+    try{pending=JSON.parse(safeStorageGet('mm_pending_order','null'))}catch{}
     if(!pending||pending.fingerprint!==fingerprint){
       const key=crypto.randomUUID?crypto.randomUUID():
         Array.from(crypto.getRandomValues(new Uint8Array(24)),b=>b.toString(16).padStart(2,'0')).join('');
       pending={key,fingerprint};
-      localStorage.setItem('mm_pending_order',JSON.stringify(pending));
+      safeStorageSet('mm_pending_order',JSON.stringify(pending));
     }
     const r=await fetch('/api/orders',{method:'POST',headers:{
       'Content-Type':'application/json',
@@ -418,7 +427,7 @@ $('#orderForm').onsubmit=async e=>{
       return;
     }
     $('#orderMessage').textContent=`سفارش ${data.order_code} ثبت شد. جمع کالاها: ${toman(data.subtotal_toman)}؛ هزینه ارسال: ${toman(data.shipping_toman)}؛ مبلغ نهایی: ${toman(data.total_toman)}. لطفاً مبلغ را به حساب اعلام‌شده در بخش اطلاعات پرداخت واریز کنید.`;
-    localStorage.removeItem('mm_pending_order');
+    safeStorageRemove('mm_pending_order');
     cart=[];saveCart();e.target.reset();
   }catch(error){
     $('#orderMessage').textContent=error.message;
