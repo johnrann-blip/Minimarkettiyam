@@ -225,9 +225,11 @@ function toggleCart(show){$('#cartPanel').classList.toggle('hidden',!show);$('#s
 $('#cartOpen').addEventListener('click',()=>toggleCart(true));
 $('#cartClose').addEventListener('click',()=>toggleCart(false));
 $('#scrim').addEventListener('click',()=>toggleCart(false));
-$('#search').addEventListener('input',()=>loadProducts());
+let productSearchTimer=null;
+function scheduleProductSearch(){clearTimeout(productSearchTimer);productSearchTimer=setTimeout(()=>loadProducts(),250)}
+$('#search').addEventListener('input',scheduleProductSearch);
 const headerSearch=document.getElementById('headerSearch');
-if(headerSearch)headerSearch.addEventListener('input',()=>{$('#search').value=headerSearch.value;loadProducts();});
+if(headerSearch)headerSearch.addEventListener('input',()=>{$('#search').value=headerSearch.value;scheduleProductSearch();});
 document.getElementById('mobileCart')?.addEventListener('click',()=>document.getElementById('cartOpen')?.click());
 function normalizeMobile(value){
   let phone=String(value??'').replace(/[۰-۹٠-٩]/g,d=>{
