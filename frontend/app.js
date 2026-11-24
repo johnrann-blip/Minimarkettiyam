@@ -450,7 +450,7 @@ loadCategories();loadProducts();loadAdvertising();loadCustomerFeedback();saveCar
       : 'پرداخت سفارش '+(order||'')+' تکمیل یا تأیید نشد. اگر مبلغ از حسابت کسر شده، پیش از پرداخت دوباره با پشتیبانی فروشگاه تماس بگیر.';
   }
   if(status==='success'){
-    cart=[];localStorage.removeItem('mm_pending_order');saveCart();
+    cart=[];safeStorageRemove('mm_pending_order');saveCart();
   }
   params.delete('payment');params.delete('order');
   const query=params.toString();
