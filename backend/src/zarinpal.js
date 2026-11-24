@@ -49,6 +49,19 @@ function tomanToRial(value) {
   return rial;
 }
 
+function normalizeIranMobile(value) {
+  let phone = String(value || '').replace(/[۰-۹٠-٩]/g, digit => {
+    const code = digit.charCodeAt(0);
+    return String(code >= 0x06F0 && code <= 0x06F9
+      ? code - 0x06F0
+      : code - 0x0660);
+  }).trim().replace(/[\\s-]/g, '');
+
+  if (phone.startsWith('+98')) phone = '0' + phone.slice(3);
+  else if (phone.startsWith('0098')) phone = '0' + phone.slice(4);
+  return /^09\\d{9}$/.test(phone) ? phone : null;
+}
+
 function validAuthority(value) {
   return typeof value === 'string' && /^[A-Za-z0-9]{20,80}$/.test(value);
 }
