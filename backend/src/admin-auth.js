@@ -89,7 +89,7 @@ function createAdminAuth({pool,rateLimit}) {
    await client.query('COMMIT');
    clearCookie(res);
    await audit(pool,admin,req,'owner.bootstrap','administrators',201); res.status(201).json({admin,permissions:PERMISSIONS,login_required:true});
-  } catch(error) { try { await client.query('ROLLBACK'); } catch {} console.error('Admin bootstrap failed:',error.message); res.status(503).json({error:'راه‌اندازی حساب مالک انجام نشد.'}); }
+  } catch(error) { if(client) { try { await client.query('ROLLBACK'); } catch {} } console.error('Admin bootstrap failed:',error.message); res.status(503).json({error:'راه‌اندازی حساب مالک انجام نشد.'}); }
   finally { client?.release(); }
  });
  router.post('/login',rateLimit,async(req,res)=>{
