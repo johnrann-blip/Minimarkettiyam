@@ -227,7 +227,7 @@ async function expireUnpaidOrders() {
          AND payment_expires_at<=NOW()
          AND payment_status<>'verified'
        ORDER BY payment_expires_at
-       FOR UPDATE SKIP LOCKED LIMIT 50`
+       LIMIT 50 FOR UPDATE SKIP LOCKED`
     );
     for(const order of expired.rows){
       const items=await client.query(
