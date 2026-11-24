@@ -228,7 +228,7 @@ app.get('/api/products', async (req, res) => {
     const values = [visitorKey(req) || ''];
     let where = 'p.is_active=true';
     if (req.query.category) { values.push(String(req.query.category)); where += ' AND c.slug=$' + values.length; }
-    if (req.query.q) { const term=String(req.query.q).slice(0,80).replace(/[\\%_]/g, '\\if (req.query.q) { values.push('%' + String(req.query.q).slice(0,80) + '%'); where += ' AND (p.name ILIKE $' + values.length + ' OR p.description ILIKE $' + values.length + ')'; }'); values.push('%' + term + '%'); where += ' AND (p.name ILIKE 
+    if (req.query.q) { const term=String(req.query.q).slice(0,80).replace(/[\\%_]/g, '\\$&'); values.push('%' + term + '%'); where += ' AND (p.name ILIKE $' + values.length + ' OR p.description ILIKE $' + values.length + ')'; }
     const r = await pool.query(
       `SELECT p.id,p.sku,p.name,p.description,p.price_toman,p.sale_price_toman,p.cost_price_toman,p.stock,p.image_url,c.name AS category_name,c.slug AS category_slug,
               (SELECT COUNT(*)::int FROM product_likes l WHERE l.product_id=p.id) AS likes_count,
